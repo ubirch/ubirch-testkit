@@ -1,0 +1,3 @@
+config = {
+    'wifi': ['ssid', 'pass'],
+}
