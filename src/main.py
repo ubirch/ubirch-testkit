@@ -38,10 +38,8 @@ regi = proto.message_signed(device_uuid, UBIRCH_PROTOCOL_TYPE_REG, cert)
 r = requests.post("https://key.dev.ubirch.com/api/keyService/v1/pubkey/mpack",
                   headers = {'Content-Type': 'application/octet-stream'},
                   data=regi)
-if r.status_code == 202:
-    print(str(device_uuid)+": new identity registered")
-elif r.status_code == 200:
-    print(str(device_uuid)+": identity already registered")
+if r.status_code == 200:
+    print(str(device_uuid)+": identity registered")
 else:
     print(str(device_uuid)+": ERROR: device identity not registered")
 
