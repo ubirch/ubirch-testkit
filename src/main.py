@@ -64,7 +64,7 @@ class Main:
                 "serialNumber": str(self.uuid)
             }
         })
-        self.ubirch = UbirchClient(self.uuid, cfg.get("env", "dev"))
+        self.ubirch = UbirchClient(self.uuid, self.c8y.get_auth(), cfg.get("env", "dev"))
 
         # initialize the sensor based on the type of the pycom add-on board
         if cfg["type"] == "pysense":
@@ -134,6 +134,8 @@ class Main:
         return data
 
     def loop(self, interval: int = 60):
+        from breathe import Breathe
+        sleep_indicator = Breathe()
         while True:
             pycom.rgbled(0x001100)
             data = self.prepare_data()
@@ -168,7 +170,9 @@ class Main:
             pycom.rgbled(0x004400)
             print("** done")
 
+            sleep_indicator.start()
             time.sleep(interval)
+            sleep_indicator.stop()
 
 
 print("** ubirch-protocol example v1.0")

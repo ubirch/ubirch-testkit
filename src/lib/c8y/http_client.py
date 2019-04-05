@@ -41,6 +41,12 @@ class C8yHTTPClient(object):
 
         print("serial={}, id={}".format(serial, self._id))
 
+    def get_auth(self):
+        if self._credentials:
+            return self._auth
+        else:
+            return None
+
     def bootstrap(self, serial, bootstrap: dict) -> dict:
         credentials = None
         while credentials is None:
