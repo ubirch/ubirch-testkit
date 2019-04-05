@@ -1,2 +1,2 @@
-from .ubirch import *
-from .ubirch_proto import *
+from .ubirch_client import *
+from .ubirch_protocol import *

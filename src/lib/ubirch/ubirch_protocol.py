@@ -16,7 +16,7 @@
 
 import hashlib
 
-import ubinascii as binascii
+import binascii
 import umsgpack as msgpack
 from uuid import UUID
 
@@ -102,11 +102,8 @@ class Protocol(object):
         """
         # sign the message and store the signature
         serialized = self.__serialize(msg)[0:-1]
-        # print("SERI: {}".format(binascii.hexlify(serialized).decode()))
         sha512digest = hashlib.sha512(serialized).digest()
-        # print("HASH: {}".format(binascii.hexlify(sha512digest).decode()))
         signature = self._sign(uuid, sha512digest)
-        # print("SIGN: {}".format(binascii.hexlify(signature).decode()))
         # replace last element in array with the signature
         msg[-1] = signature
         return (signature, self.__serialize(msg))

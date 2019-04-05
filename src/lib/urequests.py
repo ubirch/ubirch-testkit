@@ -122,3 +122,9 @@ def patch(url, **kw):
 
 def delete(url, **kw):
     return request("DELETE", url, **kw)
+
+class AuthBase(object):
+    """Base class that all auth implementations derive from"""
+
+    def __call__(self, r):
+        raise NotImplementedError('Auth hooks must be callable.')

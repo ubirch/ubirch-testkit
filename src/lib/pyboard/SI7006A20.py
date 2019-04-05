@@ -106,4 +106,3 @@ class SI7006A20:
         h = 17.62 * dew_p / (243.12 + dew_p)
         h_ambient = math.pow(10, (h - (17.62 * t_ambient) / (243.12 + t_ambient)) * 0.4343 + 2)
         return h_ambient
-    

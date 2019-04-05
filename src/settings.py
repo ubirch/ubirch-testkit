@@ -1,3 +1,0 @@
-config = {
-    'wifi': ['ssid', 'pass'],
-}
