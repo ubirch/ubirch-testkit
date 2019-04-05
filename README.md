@@ -16,15 +16,30 @@ The example code is made for any Pycom module sitting on a Pysense.
 * Add directory to Atom using `File` -> `Add Project Folder`
 * Use the [Pycom Firmware Upgrader](https://pycom.io/downloads/#firmware) to
   flash the correct binary for your board.
-* Edit [src/settings.py](src/settings.py) and add your wifi SSID and password  
+* Create src/boot.json and add your wifi SSID and password: 
+    ```json
+    {
+      "ssid": "SSID",
+      "password": "password",
+      "timeout": 5000,
+      "retries": 10
+    }
+    ``` 
+* Create src/settings.json and add the Cumulocity bootstrap password to connect:
+    ```json
+    {
+        "type": "pysense",
+        "bootstrap": {
+            "authorization": "Basic XXXXX",
+            "tenant": "ubirch",
+            "host": "management.cumulocity.com"
+        },
+        "interval": 60
+    }
+    ```
 * If the Pymakr plugin is loaded, you should have a terminal at the bottom
   with buttons to upload and run scripts. Simply Upload the code to get going.
-
-# Visualization
-
-To see data in our backend, go to [ubirch](https://ubirch.dev.ubirch.com) and
-register. Ping [@thinkberg](https://twitter.com/thinkberg) to enable your account.
-
-Create a new device with the device UUID that is displayed when running the
-code. If everything is okay, it should start sending temperature and humidity
-as `valueA` and `valueB`.
+* Take note of the UUID displayed in the console window, go to https://ubirch.cumulocity.com
+  and register your device
+* Accept the registration and you're good to go  
+ 
