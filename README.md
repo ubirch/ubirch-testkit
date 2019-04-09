@@ -19,8 +19,9 @@ The example code is made for any Pycom module sitting on a Pysense.
 * Create src/boot.json and add your wifi SSID and password: 
     ```json
     {
-      "ssid": "SSID",
-      "password": "password",
+      "networks": {
+        "ssid": "password"
+      },
       "timeout": 5000,
       "retries": 10
     }
