@@ -155,7 +155,7 @@ class Main:
             # send data certificate (UPP) to UBIRCH
             try:
                 print("** sending measurement certificate ...")
-                (upp, r) = self.ubirch.send(data)
+                (response, r) = self.ubirch.send(data)
             except Exception as e:
                 pycom.rgbled(0x440000)
                 print("!! response: verification failed: {}".format(e))
@@ -165,6 +165,11 @@ class Main:
                     pycom.rgbled(0x550000)
                     print("!! request failed with {}: {}".format(r.status_code, r.content.decode()))
                     time.sleep(2)
+                else:
+                    print(response)
+                    if isinstance(response, dict):
+                        interval = response.get("i", interval)
+
 
             # everything okay
             pycom.rgbled(0x004400)
@@ -177,4 +182,4 @@ class Main:
 
 print("** ubirch-protocol example v1.0")
 main = Main()
-main.loop()
+main.loop(5)

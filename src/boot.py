@@ -1,15 +1,14 @@
 import machine
 import time
-import ujson as json
+import json
 from network import WLAN
 
 
-def connect(ssid: str, password: str, timeout: int, retries: int = 5):
+def connect(networks: dict, timeout: int = 30, retries: int = 5):
     """
     connect to wifi access point
-    :param ssid: the network SSID
-    :param password: network password
-    :param timeout: a timeout, how long to wait for association
+    :param: networks: dict of "ssid": "password"
+    :param: timeout: a timeout, how long to wait for association
     :return:
     """
     # try to join wifi at startup
@@ -19,9 +18,11 @@ def connect(ssid: str, password: str, timeout: int, retries: int = 5):
         nets = wlan.scan()
         print("-- searching for wifi networks...")
         for net in nets:
-            if net.ssid == ssid:
+            if net.ssid in networks:
+                ssid = net.ssid
+                password = networks[net.ssid]
                 print('-- wifi network ' + net.ssid + ' found, connecting ...')
-                wlan.connect(ssid, auth=(net.sec, password), timeout=5000)
+                wlan.connect(ssid, auth=(net.sec, password), timeout=timeout * 1000)
                 while not wlan.isconnected():
                     machine.idle()  # save power while waiting
                 print('-- wifi network connected')
@@ -45,7 +46,7 @@ def connect(ssid: str, password: str, timeout: int, retries: int = 5):
 try:
     with open('boot.json', 'r') as c:
         cfg = json.load(c)
-        connect(cfg.get('ssid'), cfg.get('password'), cfg.get('timeout', 5000), cfg.get('retries'))
+        connect(cfg.get('networks'), cfg.get('timeout', 5000), cfg.get('retries'))
 except Exception as e:
     print("MISSING WIFI CONFIGURATION: wifi.json")
     raise e

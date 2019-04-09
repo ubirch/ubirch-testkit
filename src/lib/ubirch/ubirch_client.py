@@ -80,20 +80,21 @@ class UbirchClient(Protocol):
     def hash(self, data) -> bytes:
         return hashlib.sha512(msgpack.packb(data)).digest()
 
-    def send(self, payload: dict, payload_type: int = 0x00) -> (bytes, requests.Response):
+    def send(self, payload: dict, payload_type: int = 0x00) -> (any, requests.Response):
         """
         Seal the data and send to backend. This includes creating a SHA512 hash of the data
         and sending it to the ubirch backend.
         :param payload: the original data (which will be hashed)
-        :return: the UPP and the REST response from the ubirch backend
+        :return: the parsed response and the REST response from the ubirch backend
         """
         serialized = json.dumps(payload)
         upp = self.message_chained(self._uuid, payload_type, self.hash(serialized))
         r = requests.post(self.__update_url, headers = {'Authorization': self.__auth}, data=upp)
+        response = None
         if r.status_code == 200:
             try:
-                self.message_verify(r.content)
+                response = self.message_verify(r.content)
             except Exception as e:
                 raise Exception(e, r.content)
 
-        return upp, r
+        return response, r

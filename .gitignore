@@ -1,4 +1,4 @@
 *.iml
 .idea/
+src/settings.json
 src/boot.json
-settings.json

@@ -11,7 +11,7 @@ The example code is made for any Pycom module sitting on a Pysense.
 
 * checkout out this repository
   ```
-  $ git checkout https://github.com/ubirch/example-micropython.github
+  $ git checkout https://github.com/ubirch/example-micropython.git
   ```
 * Add directory to Atom using `File` -> `Add Project Folder`
 * Use the [Pycom Firmware Upgrader](https://pycom.io/downloads/#firmware) to
