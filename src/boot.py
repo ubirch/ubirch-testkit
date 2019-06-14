@@ -48,5 +48,5 @@ try:
         cfg = json.load(c)
         connect(cfg.get('networks'), cfg.get('timeout', 5000), cfg.get('retries'))
 except Exception as e:
-    print("MISSING WIFI CONFIGURATION: wifi.json")
+    print("MISSING WIFI CONFIGURATION: boot.json")
     raise e
