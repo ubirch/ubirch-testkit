@@ -10,6 +10,9 @@
       sudo apt install -f
       ```
 1. Start Atom Editor
+1. Open Install Package
+     * Enter `pymakr` in search field
+     * Install pymakr
 1. Connect Device via USB
     * watch console window in Atom to see it worked
 1. Download Pycom Upgrader ([download](https://pycom.io/downloads/))
