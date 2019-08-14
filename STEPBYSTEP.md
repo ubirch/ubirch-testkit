@@ -1,3 +1,10 @@
+## Prerequisites
+* A Pycom Development Board
+* A Pycom Expansion Board or Shield
+* Wifi Access to the Internet
+* You received an Cumulocity Account from UBIRCH
+* You received an Cumulocity Access Token from UBIRCH
+
 ## Prepare Local Environment
 1. Download Atom Editor ([download](https://github.com/atom/atom/releases))
     * Version 1.37.0 or lower
