@@ -31,7 +31,7 @@
     * select the correct firmware for your device (WiPy, Lopy4, GPy, ...)
 1. Run Pycom Upgrader and Flash Firmware
     * On screen the third screen named `COMMUNICATION`select the right COM port and check the `flash from local file` checkbox
-    * select file downloaded in step 8 and continue the process
+    * select file downloaded in step 2 and continue the process
     * wait till flash process finished successfully
 
 ## Configure Pycom Device
