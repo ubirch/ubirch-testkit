@@ -30,7 +30,7 @@
 1. Download UBIRCH Pycom Firmware ([download](https://github.com/ubirch/example-micropython/releases/tag/pybytes-ed25519))
     * select the correct firmware for your device (WiPy, Lopy4, GPy, ...)
 1. Run Pycom Upgrader and Flash Firmware
-    * On screen the third screen named `COMMUNICATION`select the right COM port and check the `flash from local file` checkbox
+    * On the third screen named `COMMUNICATION`select the right serial port / COM port and check the `flash from local file` checkbox
     * select file downloaded in step 2 and continue the process
     * wait till flash process finished successfully
 
