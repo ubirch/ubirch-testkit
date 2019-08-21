@@ -10,9 +10,9 @@ from urequests import Response
 class C8yHTTPClient(object):
     DEBUG = False
 
-    def __init__(self, uuid: UUID, bootstrap: dict, device_info: dict) -> None:
+    def __init__(self, uuid: UUID, bootStrap: dict, device_info: dict) -> None:
         super().__init__()
-        self._C8Y_HOST = "https://{}.cumulocity.com".format(bootstrap["tenant"])
+        self._C8Y_HOST = "https://{}.cumulocity.com".format(bootStrap["tenant"])
 
         serial = str(uuid)
         credentials_file = "{}.ini".format(uuid)
@@ -26,7 +26,7 @@ class C8yHTTPClient(object):
 
         if not self._credentials:
             print("device has no credentials yet, bootstrapping: {}".format(serial))
-            self._credentials = self.bootstrap(serial, bootstrap)
+            self._credentials = self.bootstrap(serial, bootStrap)
             with open(credentials_file, "w+") as f:
                 f.write(json.dumps(self._credentials))
         self._auth = b'Basic '+b2a_base64(b':'.join((
@@ -47,12 +47,18 @@ class C8yHTTPClient(object):
         else:
             return None
 
-    def bootstrap(self, serial, bootstrap: dict) -> dict:
+    def bootstrap(self, serial, bootStrap: dict) -> dict:
+        """
+        Get the credentials from Cumulocity
+        :param serial: serial number of the device
+        :param bootStrap: part of the url for bootstrapping
+        :return: credentials
+        """
         credentials = None
         while credentials is None:
-            tenant = bootstrap["tenant"]
-            host = bootstrap["host"]
-            authorization = bootstrap["authorization"]
+            tenant = bootStrap["tenant"]
+            host = bootStrap["host"]
+            authorization = bootStrap["authorization"]
             r = requests.post("https://" + host + "/devicecontrol/deviceCredentials",
                               headers={
                                   'Authorization': authorization,

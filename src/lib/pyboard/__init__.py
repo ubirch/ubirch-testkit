@@ -4,6 +4,7 @@ from .SI7006A20 import SI7006A20
 from .MPL3115A2 import MPL3115A2,ALTITUDE,PRESSURE
 from .LTR329ALS01 import LTR329ALS01
 from .LIS2HH12 import LIS2HH12
+from .L76GNSS import L76GNSS
 
 
 class Pysense(Pycoproc):
@@ -25,3 +26,4 @@ class Pytrack(Pycoproc):
 
         self.accelerometer = LIS2HH12(self)
         self.voltage = self.read_battery_voltage
+        self.location = L76GNSS(self, timeout=30)
