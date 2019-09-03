@@ -14,16 +14,6 @@ from ubirch import UbirchClient
 # Cumulocity API
 from c8y.http_client import C8yHTTPClient as C8yClient
 
-# load configuration from settings.json file
-# the settings.json should be placed next to this file
-# {
-#  "type": "<TYPE: 'pysense' or 'pytrack'>",
-#  "bootstrap": {
-#     "authorization": "Basic <base64 bootstrap auth>",
-#     "tenant": "<tenant>",
-#     "host": "management.cumulocity.com"
-#   }
-# }
 with open('settings.json', 'r') as c:
     cfg = json.load(c)
 rtc = machine.RTC()
@@ -72,7 +62,7 @@ class Main:
         elif cfg["type"] == "pytrack":
             self.sensor = Pytrack()
 
-    def prepare_data(self):
+    def prepare_data(self, value):
         """
         Prepare the data from the sensor module and return it in the format we need.
         :return: a dictionary (json) with the data
@@ -87,99 +77,104 @@ class Main:
             "time": timestamp_str,
             "type": cfg["type"]
         }
-
-        if isinstance(self.sensor, Pysense):
+        if (value == 1):
             data.update({
-                "c8y_TemperatureSensor": {
-                    "T": {"value": self.sensor.barometer.temperature(), "unit": "C"},
-                },
-                "c8y_HumidityMeasurement": {
-                    "H": {"value": self.sensor.humidity.humidity(), "unit": "%RH"},
-                    "T": {"value": self.sensor.humidity.temperature(), "unit": "C"},
-                    "D": {"value": self.sensor.humidity.dew_point(), "unit": "C"}
-                },
-                "c8y_PressureMeasurement": {
-                    "P": {"value": self.sensor.barometer.pressure(), "unit": "Pa"},
-                    "T": {"value": self.sensor.barometer.temperature(), "unit": "C"}
-                },
-                "c8y_LightMeasurement": {
-                    "B": {"value": self.sensor.light()[0], "unit": "lux"},
-                    "R": {"value": self.sensor.light()[1], "unit": "lux"}
+                "c8y_PouringCoffeee": {
+                    "coffee": {"value": value, "unit": "coffee"}
                 }
             })
 
-        if isinstance(self.sensor, Pysense) or isinstance(self.sensor, Pytrack):
-            accel = self.sensor.accelerometer.acceleration()
-            roll = self.sensor.accelerometer.roll()
-            pitch = self.sensor.accelerometer.pitch()
-
+        else:
             data.update({
-                "c8y_AccelerationMeasurement": {
-                    "x": {"value": accel[0], "unit": "m/s2"},
-                    "y": {"value": accel[1], "unit": "m/s2"},
-                    "z": {"value": accel[2], "unit": "m/s2"},
-                    "roll": {"value": roll, "unit": "d"},
-                    "pitch": {"value": pitch, "unit": "d"}
-                },
+                "c8y_VoltageMeasurement": {
+                    "voltage": {"value": self.sensor.voltage(), "unit": "V"}
+                }
             })
 
-
-            if isinstance(self.sensor, Pycoproc):
-                data.update({
-                    "c8y_VoltageMeasurement": {
-                        "voltage": {"value": self.sensor.voltage(), "unit": "V"}
-                    }
-                })
-
         return data
+
+    def send(self, data):
+        # send data to Cumulocity
+        try:
+            print("** sending measurements ...")
+            self.c8y.measurement(data)
+        except Exception as e:
+            pycom.rgbled(0x110000)
+            print("!! error sending data to backend: "+repr(e))
+            time.sleep(2)
+        else:
+            pycom.rgbled(0x001100)
+
+        # send data certificate (UPP) to UBIRCH
+        try:
+            print("** sending measurement certificate ...")
+            (response, r) = self.ubirch.send(data)
+        except Exception as e:
+            pycom.rgbled(0x440000)
+            print("!! response: verification failed: {}".format(e))
+            time.sleep(2)
+        else:
+            if r.status_code != 202:
+                pycom.rgbled(0x550000)
+                print("!! request failed with {}: {}".format(r.status_code, r.content.decode()))
+                time.sleep(2)
+            else:
+                print(response)
+                if isinstance(response, dict):
+                    interval = response.get("i", interval)
+
+
+        # everything okay
+        pycom.rgbled(0x004400)
+        print("** done")
+        return True
 
     def loop(self, interval: int = 60):
         from breathe import Breathe
         sleep_indicator = Breathe()
+        data_time = 0
+        last_coffee = 0
+        avg_roll = self.sensor.accelerometer.roll()
         while True:
             pycom.rgbled(0x001100)
-            data = self.prepare_data()
+            pitch = self.sensor.accelerometer.pitch()
+            roll = self.sensor.accelerometer.roll()
+            print("** pitch: " + str(pitch))
+            print("** roll: " + str(roll))
 
-            print(json.dumps(data))
-            # send data to Cumulocity
-            try:
-                print("** sending measurements ...")
-                self.c8y.measurement(data)
-            except Exception as e:
-                pycom.rgbled(0x110000)
-                print("!! error sending data to backend: "+repr(e))
-                time.sleep(2)
-            else:
-                pycom.rgbled(0x001100)
+            # detect coffee
+            if (abs(avg_roll - roll) > 20 ):
+                data = self.prepare_data(1)
+                print(json.dumps(data))
 
-            # send data certificate (UPP) to UBIRCH
-            try:
-                print("** sending measurement certificate ...")
-                (response, r) = self.ubirch.send(data)
-            except Exception as e:
-                pycom.rgbled(0x440000)
-                print("!! response: verification failed: {}".format(e))
-                time.sleep(2)
-            else:
-                if r.status_code != 202:
-                    pycom.rgbled(0x550000)
-                    print("!! request failed with {}: {}".format(r.status_code, r.content.decode()))
-                    time.sleep(2)
+                # avoid duplicates
+                if (data_time < 5 or data_time - last_coffee > 5):
+                    # print("should send data")
+                    self.send(data)
                 else:
-                    print(response)
-                    if isinstance(response, dict):
-                        interval = response.get("i", interval)
+                    print("already had a coffee recently, you silly!")
+
+                last_coffee = data_time
+
+            if (data_time > 30):
+                avg_roll = ((avg_roll*30) + roll ) / (30 + 1)
+            else:
+                avg_roll = ((avg_roll*data_time) + roll ) / (data_time + 1)
 
 
-            # everything okay
-            pycom.rgbled(0x004400)
-            print("** done")
+            # ping
+            if (data_time % 100 == 0):
+                data = self.prepare_data(0)
+                print(json.dumps(data))
+                self.send(data)
 
             sleep_indicator.start()
             time.sleep(interval)
             sleep_indicator.stop()
+            data_time = data_time + 1
+            print("** avg_roll: " + str(avg_roll))
 
 
-print("** ubirch-protocol example v1.0")
+print("** ubirch-protocol coffee machine v1.0")
 main = Main()
-main.loop(5)
+main.loop(2)
