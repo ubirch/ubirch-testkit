@@ -161,7 +161,7 @@ class Main:
                 print("!! response: verification failed: {}".format(e))
                 time.sleep(2)
             else:
-                if r.status_code != 202:
+                if r.status_code != 200:
                     pycom.rgbled(0x550000)
                     print("!! request failed with {}: {}".format(r.status_code, r.content.decode()))
                     time.sleep(2)
