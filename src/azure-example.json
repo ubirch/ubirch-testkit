@@ -1,0 +1,6 @@
+{
+    "name": "my-device",
+    "policy": "device",
+    "endpoint": "myIoTHub.azure-devices.net",
+    "key": "IoT Hub shared access device policy primary key"
+}

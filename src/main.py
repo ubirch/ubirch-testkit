@@ -14,6 +14,9 @@ from ubirch import UbirchClient
 # Cumulocity API
 from c8y.http_client import C8yHTTPClient as C8yClient
 
+# azure client
+from azure import AzureClient
+
 # load configuration from settings.json file
 # the settings.json should be placed next to this file
 # {
@@ -66,6 +69,10 @@ class Main:
         })
         self.ubirch = UbirchClient(self.uuid, self.c8y.get_auth(), cfg.get("env", "dev"))
 
+        # create Azure client (MQTT) and establish connection
+        self.azure = AzureClient()
+        self.azure.connect()
+
         # initialize the sensor based on the type of the pycom add-on board
         if cfg["type"] == "pysense":
             self.sensor = Pysense()
@@ -106,7 +113,7 @@ class Main:
     def send(self, data):
         # send data to Cumulocity
         try:
-            print("** sending measurements ...")
+            print("** sending measurements to Cumulocity...")
             self.c8y.measurement(data)
         except Exception as e:
             pycom.rgbled(0x110000)
@@ -114,6 +121,15 @@ class Main:
             time.sleep(2)
         else:
             pycom.rgbled(0x001100)
+
+        # send data to Azure IoT hub
+        try:
+            print("** sending measurements to Azure...")
+            self.azure.send(json.dumps(data))
+        except Exception as e:
+            pycom.rgbled(0x110000)
+            print("!! error sending data to IoT hub: "+repr(e))
+            time.sleep(2)
 
         # send data certificate (UPP) to UBIRCH
         try:

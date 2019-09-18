@@ -1,5 +1,7 @@
 *.iml
 .idea/
+.vscode/
 venv/
-src/settings.json
+src/azure.json
 src/boot.json
+src/settings.json
