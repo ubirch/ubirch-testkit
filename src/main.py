@@ -14,6 +14,16 @@ from ubirch import UbirchClient
 # Cumulocity API
 from c8y.http_client import C8yHTTPClient as C8yClient
 
+# load configuration from settings.json file
+# the settings.json should be placed next to this file
+# {
+#  "type": "<TYPE: 'pysense' or 'pytrack'>",
+#  "bootstrap": {
+#     "authorization": "Basic <base64 bootstrap auth>",
+#     "tenant": "<tenant>",
+#     "host": "management.cumulocity.com"
+#   }
+# }
 with open('settings.json', 'r') as c:
     cfg = json.load(c)
 rtc = machine.RTC()
@@ -114,7 +124,7 @@ class Main:
             print("!! response: verification failed: {}".format(e))
             time.sleep(2)
         else:
-            if r.status_code != 202:
+            if r.status_code != 200:
                 pycom.rgbled(0x550000)
                 print("!! request failed with {}: {}".format(r.status_code, r.content.decode()))
                 time.sleep(2)

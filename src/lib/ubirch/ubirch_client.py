@@ -4,7 +4,7 @@ import os
 import ed25519
 
 import urequests as requests
-from uuid import UUID
+import binascii
 from .ubirch_protocol import *
 
 

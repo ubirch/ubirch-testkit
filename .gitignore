@@ -1,4 +1,5 @@
 *.iml
 .idea/
+venv/
 src/settings.json
 src/boot.json
