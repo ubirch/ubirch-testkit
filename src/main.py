@@ -126,8 +126,7 @@ class Main:
 
             # send data to ubirch data service
             try:
-                print("** sending data point to ubirch data service ...")
-                self.ubirch_data.send(self.sensor.light()[0])
+                self.ubirch_data.send(data)
             except Exception as e:
                 pycom.rgbled(0x110000)
                 print("!! error sending data to ubirch data service: "+repr(e))

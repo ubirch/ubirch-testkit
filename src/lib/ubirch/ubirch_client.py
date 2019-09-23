@@ -11,7 +11,7 @@ from .ubirch_protocol import *
 class UbirchClient(Protocol):
     PUB_DEV = ed25519.VerifyingKey(b'\xa2\x40\x3b\x92\xbc\x9a\xdd\x36\x5b\x3c\xd1\x2f\xf1\x20\xd0\x20\x64\x7f\x84\xea\x69\x83\xf9\x8b\xc4\xc8\x7e\x0f\x4b\xe8\xcd\x66')
 
-    def __init__(self, uuid: UUID, auth: str, env: str = "dev", cfg_root: str = ""):
+    def __init__(self, uuid: UUID, headers: dict, env: str = "dev", cfg_root: str = ""):
         """
         Initialize the ubirch-protocol implementation and read existing
         key or generate a new key pair. Generating a new key pair requires
@@ -20,9 +20,9 @@ class UbirchClient(Protocol):
         super().__init__()
 
         self.__cfg_root = cfg_root
-        self.__auth = auth
 
         self._uuid = uuid
+        self.__headers = headers
         self._env = env
         # self.__update_url = "https://api.ubirch.{}.ubirch.com/api/avatarService/v1/device/update/mpack".format(self._env)
         self.__update_url = "https://niomon.{}.ubirch.com".format(self._env)
@@ -43,7 +43,7 @@ class UbirchClient(Protocol):
         cert = self.get_certificate()
         upp = self.message_signed(self._uuid, UBIRCH_PROTOCOL_TYPE_REG, cert)
         r = requests.post(self.__register_url,
-                          headers = {'Content-Type': 'application/octet-stream'},
+                          headers={'Content-Type': 'application/octet-stream'},
                           data=upp)
         if r.status_code == 200:
             print(str(self._uuid)+": identity registered")
@@ -90,7 +90,7 @@ class UbirchClient(Protocol):
         serialized = json.dumps(payload)
         print("hash: {}".format(binascii.b2a_base64(self.hash(serialized))))
         upp = self.message_chained(self._uuid, payload_type, self.hash(serialized))
-        r = requests.post(self.__update_url, headers = {'Authorization': self.__auth}, data=upp)
+        r = requests.post(self.__update_url, headers=self.__headers, data=upp)
         response = None
         if r.status_code == 200:
             try:
