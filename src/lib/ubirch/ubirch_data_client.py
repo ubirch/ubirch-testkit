@@ -4,18 +4,20 @@ import time
 
 class UbirchDataClient:
 
-    def __init__(self, uuid: UUID, auth: str):
+    def __init__(self, uuid: UUID, cfg: dict):
         self.__uuid = uuid
-        self.__url = 'https://data.dev.ubirch.com/v1/'
-        self.__auth = auth
+        self.__auth = cfg['password']
+        self.__keyService_url = cfg['keyService']
+        self.__niomon_url = cfg['niomon']
+        self.__data_url = cfg['data']
         self.__headers = {'X-Ubirch-Hardware-Id': str(self.__uuid), 'X-Ubirch-Credential': self.__auth}
 
     def send(self, data_point):
         data = {'date': int(time.time()), 'data': data_point}
 
-        r = requests.post(self.__url, headers=self.__headers, json=data)
+        r = requests.post(self.__data_url, headers=self.__headers, json=data)
 
         if r.status_code == 200:
-            print("** success".format(self.__url, r.content))
+            print("** success")
         else:
-            print("!! request to {} failed with {}: {}".format(self.__url, r.status_code, r.text))
+            print("!! request to {} failed with {}: {}".format(self.__data_url, r.status_code, r.text))

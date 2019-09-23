@@ -17,7 +17,7 @@ from ubirch import UbirchDataClient
 #  "type": "<TYPE: 'pysense' or 'pytrack'>",
 #  "auth": "<password for ubirch data service>",
 # }
-with open('settings.json', 'r') as c:
+with open('config.json', 'r') as c:
     cfg = json.load(c)
 rtc = machine.RTC()
 
@@ -42,6 +42,8 @@ class Main:
         self.uuid = UUID(b'UBIR'+ 2*machine.unique_id())
         print("** UUID   : "+str(self.uuid))
 
+        self.ubirch_data = UbirchDataClient(self.uuid, cfg)
+
         # initialize the sensor based on the type of the pycom add-on board
         if cfg["type"] == "pysense":
             self.sensor = Pysense()
@@ -51,8 +53,6 @@ class Main:
             self.sensor = Pycoproc()
         else:
             print("board type not supported.")
-
-        self.ubirch_data = UbirchDataClient(self.uuid, cfg['auth'])
 
     def prepare_data(self):
         """
