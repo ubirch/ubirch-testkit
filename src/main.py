@@ -8,21 +8,14 @@ from uuid import UUID
 import pycom
 from pyboard import Pysense, Pytrack, Pycoproc
 
-# ubirch client (handles protocol and communication)
-from ubirch import UbirchClient
-
-# Cumulocity API
-from c8y.http_client import C8yHTTPClient as C8yClient
+# ubirch data client
+from ubirch import UbirchDataClient
 
 # load configuration from settings.json file
 # the settings.json should be placed next to this file
 # {
 #  "type": "<TYPE: 'pysense' or 'pytrack'>",
-#  "bootstrap": {
-#     "authorization": "Basic <base64 bootstrap auth>",
-#     "tenant": "<tenant>",
-#     "host": "management.cumulocity.com"
-#   }
+#  "auth": "<password for ubirch data service>",
 # }
 with open('settings.json', 'r') as c:
     cfg = json.load(c)
@@ -32,45 +25,34 @@ class Main:
     """
     |  UBIRCH example for pycom modules.
     |
-    |  The devices creates a unique UUID and then registers the device
-    |  at the cumulocity tenant configured in settings.json.
-    |  After the initial start these steps are required:
+    |  The devices creates a unique UUID and sends data to the ubirch data service.
+    |  At the initial start these steps are required:
     |
     |  - start the pycom module with this code
     |  - take note of the UUID printed on the serial console
-    |  - go to 'tenant.cumulocity.com' and register your devices
-    |  - after the connection is recognized, accept the device
+    |  - go to 'https://console.dev.ubirch.com/' and register your device
     |
-    |  The device stores its credentials automatically and will use
-    |  them from then on.
     """
 
     def __init__(self) -> None:
         # disable blue heartbeat blink
         pycom.heartbeat(False)
 
-        # set up ubirch protocol
+        # generate UUID
         self.uuid = UUID(b'UBIR'+ 2*machine.unique_id())
         print("** UUID   : "+str(self.uuid))
-
-        # create Cumulocity client (bootstraps)
-        uname = os.uname()
-        self.c8y = C8yClient(self.uuid, dict(cfg['bootstrap']), {
-            "name": str(self.uuid),
-            "c8y_IsDevice": {},
-            "c8y_Hardware": {
-                "model": uname.machine + "-" + cfg['type'],
-                "revision": uname.release + "-" + uname.version,
-                "serialNumber": str(self.uuid)
-            }
-        })
-        self.ubirch = UbirchClient(self.uuid, self.c8y.get_auth(), cfg.get("env", "dev"))
 
         # initialize the sensor based on the type of the pycom add-on board
         if cfg["type"] == "pysense":
             self.sensor = Pysense()
         elif cfg["type"] == "pytrack":
             self.sensor = Pytrack()
+        elif cfg["type"] == "pycoproc":
+            self.sensor = Pycoproc()
+        else:
+            print("board type not supported.")
+
+        self.ubirch_data = UbirchDataClient(self.uuid, cfg['auth'])
 
     def prepare_data(self):
         """
@@ -90,19 +72,19 @@ class Main:
 
         if isinstance(self.sensor, Pysense):
             data.update({
-                "c8y_TemperatureSensor": {
+                "TemperatureSensor": {
                     "T": {"value": self.sensor.barometer.temperature(), "unit": "C"},
                 },
-                "c8y_HumidityMeasurement": {
+                "HumidityMeasurement": {
                     "H": {"value": self.sensor.humidity.humidity(), "unit": "%RH"},
                     "T": {"value": self.sensor.humidity.temperature(), "unit": "C"},
                     "D": {"value": self.sensor.humidity.dew_point(), "unit": "C"}
                 },
-                "c8y_PressureMeasurement": {
+                "PressureMeasurement": {
                     "P": {"value": self.sensor.barometer.pressure(), "unit": "Pa"},
                     "T": {"value": self.sensor.barometer.temperature(), "unit": "C"}
                 },
-                "c8y_LightMeasurement": {
+                "LightMeasurement": {
                     "B": {"value": self.sensor.light()[0], "unit": "lux"},
                     "R": {"value": self.sensor.light()[1], "unit": "lux"}
                 }
@@ -114,7 +96,7 @@ class Main:
             pitch = self.sensor.accelerometer.pitch()
 
             data.update({
-                "c8y_AccelerationMeasurement": {
+                "AccelerationMeasurement": {
                     "x": {"value": accel[0], "unit": "m/s2"},
                     "y": {"value": accel[1], "unit": "m/s2"},
                     "z": {"value": accel[2], "unit": "m/s2"},
@@ -126,7 +108,7 @@ class Main:
 
             if isinstance(self.sensor, Pycoproc):
                 data.update({
-                    "c8y_VoltageMeasurement": {
+                    "VoltageMeasurement": {
                         "voltage": {"value": self.sensor.voltage(), "unit": "V"}
                     }
                 })
@@ -141,37 +123,16 @@ class Main:
             data = self.prepare_data()
 
             print(json.dumps(data))
-            # send data to Cumulocity
+
+            # send data to ubirch data service
             try:
-                print("** sending measurements ...")
-                self.c8y.measurement(data)
+                print("** sending data point to ubirch data service ...")
+                self.ubirch_data.send(self.sensor.light()[0])
             except Exception as e:
                 pycom.rgbled(0x110000)
-                print("!! error sending data to backend: "+repr(e))
+                print("!! error sending data to ubirch data service: "+repr(e))
                 time.sleep(2)
-            else:
-                pycom.rgbled(0x001100)
 
-            # send data certificate (UPP) to UBIRCH
-            try:
-                print("** sending measurement certificate ...")
-                (response, r) = self.ubirch.send(data)
-            except Exception as e:
-                pycom.rgbled(0x440000)
-                print("!! response: verification failed: {}".format(e))
-                time.sleep(2)
-            else:
-                if r.status_code != 200:
-                    pycom.rgbled(0x550000)
-                    print("!! request failed with {}: {}".format(r.status_code, r.content.decode()))
-                    time.sleep(2)
-                else:
-                    print(response)
-                    if isinstance(response, dict):
-                        interval = response.get("i", interval)
-
-
-            # everything okay
             pycom.rgbled(0x004400)
             print("** done")
 
@@ -180,6 +141,5 @@ class Main:
             sleep_indicator.stop()
 
 
-print("** ubirch-protocol example v1.0")
 main = Main()
 main.loop(5)
