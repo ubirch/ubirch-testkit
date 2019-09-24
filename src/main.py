@@ -58,13 +58,7 @@ class Main:
         :return: a dictionary (json) with the data
         """
 
-        ts = rtc.now()
-        timestamp_str = "{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}.{:03d}Z".format(
-            ts[0], ts[1], ts[2], ts[3], ts[4], ts[5], ts[6] // 1000
-        )
-
         data = {
-            "time": timestamp_str,
             "type": cfg["type"]
         }
 
@@ -74,43 +68,37 @@ class Main:
             pitch = self.sensor.accelerometer.pitch()
 
             data.update({
-                "Accelerometer": {
-                    "X-axis": {"value": accel[0], "unit": "g"},
-                    "Y-axis": {"value": accel[1], "unit": "g"},
-                    "Z-axis": {"value": accel[2], "unit": "g"},
-                    "Roll": {"value": roll, "unit": "deg"},
-                    "Pitch": {"value": pitch, "unit": "deg"}
-                },
+                "A": {
+                    "X": accel[0],
+                    "Y": accel[1],
+                    "Z": accel[2],
+                    "roll": roll,
+                    "pitch": pitch
+                }
             })
 
         if isinstance(self.sensor, Pysense):
             data.update({
-                "HumiditySensor": {
-                    "Humidity": {"value": self.sensor.humidity.humidity(), "unit": "%RH"},
-                    "Temperature": {"value": self.sensor.humidity.temperature(), "unit": "C"},
-                    "DewPoint": {"value": self.sensor.humidity.dew_point(), "unit": "C"}
-                },
-                "Barometer": {
-                    "Pressure": {"value": self.sensor.barometer.pressure(), "unit": "Pa"},
-                    "Temperature": {"value": self.sensor.barometer.temperature(), "unit": "C"}
-                },
-                "LightSensor": {
-                    "Blue": {"value": self.sensor.light()[0], "unit": "lux"},
-                    "Red": {"value": self.sensor.light()[1], "unit": "lux"}
+                "T": self.sensor.barometer.temperature(),
+                "P": self.sensor.barometer.pressure(),
+                "H": self.sensor.humidity.humidity(),
+                "L": {
+                    "B": self.sensor.light()[0],
+                    "R": self.sensor.light()[1]
                 }
             })
 
         if isinstance(self.sensor, Pytrack):
             data.update({
-                "Location": {
-                    "Longitude": {"value": self.sensor.location.coordinates()[0], "unit": "deg"},
-                    "Latitude": {"value": self.sensor.location.coordinates()[1], "unit": "deg"}
+                "GPS": {
+                    "lon": self.sensor.location.coordinates()[0],
+                    "lat": self.sensor.location.coordinates()[1]
                 }
             })
 
         if isinstance(self.sensor, Pycoproc):
             data.update({
-                "Voltage": {"value": self.sensor.voltage(), "unit": "V"}
+                "V": self.sensor.voltage()
             })
 
         return data
@@ -122,7 +110,7 @@ class Main:
             pycom.rgbled(0x112200)
             print("\n** getting measurements:")
             data = self.prepare_data()
-            print("\"data\": " + json.dumps(data))
+            print(json.dumps(data))
 
             # send data to data service and ubirch protocol package (UPP) with hash over data to ubirch backend
             try:
