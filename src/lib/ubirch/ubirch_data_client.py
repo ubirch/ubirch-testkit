@@ -1,3 +1,4 @@
+import binascii
 import time
 from uuid import UUID
 
@@ -14,6 +15,7 @@ class UbirchDataClient:
         self.__auth = cfg['password']
         self.__data_service_url = cfg['data']
         self.__headers = {'X-Ubirch-Hardware-Id': str(self.__uuid), 'X-Ubirch-Credential': self.__auth}
+        self.__msg_type = 0
 
         # this client will generate a new key pair and register the public key at the key service
         self.__ubirch = UbirchClient(uuid, self.__headers, cfg['keyService'], cfg['niomon'])
@@ -21,23 +23,25 @@ class UbirchDataClient:
     def send(self, data: dict):
         print("** sending measurements to ubirch data service ...")
 
-        # pack data map as message with uuid and timestamp
-        msg = {'uuid': self.__uuid.bytes, 'timestamp': int(time.time()), 'data': data}
+        # pack data map as message array with uuid, message type and timestamp
+        msg = [
+            self.__uuid.bytes,
+            self.__msg_type,
+            int(time.time()),
+            data
+        ]
 
         # convert the message to msgpack format
         serialized = bytearray(msgpack.packb(msg, use_bin_type=True))
-        # print(binascii.hexlify(serialized))
+        print(binascii.hexlify(serialized))
 
-        # send message to ubirch data service
+        # send message to ubirch data service (only send UPP if successful)
         r = requests.post(self.__data_service_url, headers=self.__headers, data=serialized)
-
-        if r.status_code == 200:
-            print("** success")
-        else:
+        if r.status_code != 200:
             raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.__data_service_url, r.status_code,
                                                                          r.text))
 
         # send UPP to niomon
         print("** sending measurement certificate ...")
-        self.__ubirch.send(msg)
+        self.__ubirch.send(serialized)
