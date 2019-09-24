@@ -15,7 +15,6 @@
 # limitations under the License.
 
 import hashlib
-
 import umsgpack as msgpack
 from uuid import UUID
 
@@ -31,6 +30,7 @@ CHAINED = ((UBIRCH_PROTOCOL_VERSION << 4) | 0x03)
 UBIRCH_PROTOCOL_TYPE_BIN = 0x00
 UBIRCH_PROTOCOL_TYPE_REG = 0x01
 UBIRCH_PROTOCOL_TYPE_HSK = 0x02
+
 
 class Protocol(object):
     _signatures = {}

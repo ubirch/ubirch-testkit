@@ -11,11 +11,14 @@ from pyboard import Pysense, Pytrack, Pycoproc
 # ubirch data client
 from ubirch import UbirchDataClient
 
-# load configuration from settings.json file
-# the settings.json should be placed next to this file
+# load configuration from config.json file
+# the config.json should be placed next to this file
 # {
 #  "type": "<TYPE: 'pysense' or 'pytrack'>",
-#  "auth": "<password for ubirch data service>",
+#  "password": "<password for ubirch auth and data service>",
+#  "keyService": "<URL of key registration service>",
+#  "niomon": "<URL of authentication service>",
+#  "data": "<URL of data service>",
 # }
 with open('config.json', 'r') as c:
     cfg = json.load(c)
@@ -35,8 +38,6 @@ class Main:
     """
 
     def __init__(self) -> None:
-        # disable blue heartbeat blink
-        pycom.heartbeat(False)
 
         # generate UUID
         self.uuid = UUID(b'UBIR'+ 2*machine.unique_id())
@@ -116,29 +117,26 @@ class Main:
         return data
 
     def loop(self, interval: int = 60):
-        from breathe import Breathe
-        sleep_indicator = Breathe()
+        # disable blue heartbeat blink
+        pycom.heartbeat(False)
         while True:
-            pycom.rgbled(0x001100)
+            pycom.rgbled(0x112200)
+            print("** getting measurements.")
             data = self.prepare_data()
-
-            print(json.dumps(data))
+            print("\"data\": " + json.dumps(data))
 
             # send data to ubirch data service
             try:
                 self.ubirch_data.send(data)
             except Exception as e:
-                pycom.rgbled(0x110000)
+                pycom.rgbled(0x440000)
                 print("!! error sending data to ubirch data service: "+repr(e))
                 time.sleep(2)
 
-            pycom.rgbled(0x004400)
-            print("** done")
-
-            sleep_indicator.start()
+            pycom.rgbled(0x110022)
+            print("** done. going to sleep...")
             time.sleep(interval)
-            sleep_indicator.stop()
 
 
 main = Main()
-main.loop(5)
+main.loop(10)

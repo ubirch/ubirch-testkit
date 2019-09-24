@@ -1,8 +1,6 @@
 import json
 import os
-
 import ed25519
-
 import urequests as requests
 import binascii
 from .ubirch_protocol import *
@@ -11,7 +9,7 @@ from .ubirch_protocol import *
 class UbirchClient(Protocol):
     PUB_DEV = ed25519.VerifyingKey(b'\xa2\x40\x3b\x92\xbc\x9a\xdd\x36\x5b\x3c\xd1\x2f\xf1\x20\xd0\x20\x64\x7f\x84\xea\x69\x83\xf9\x8b\xc4\xc8\x7e\x0f\x4b\xe8\xcd\x66')
 
-    def __init__(self, uuid: UUID, headers: dict, env: str = "dev", cfg_root: str = ""):
+    def __init__(self, uuid: UUID, headers: dict, register_url: str, update_url: str, cfg_root: str = ""):
         """
         Initialize the ubirch-protocol implementation and read existing
         key or generate a new key pair. Generating a new key pair requires
@@ -19,14 +17,11 @@ class UbirchClient(Protocol):
         """
         super().__init__()
 
-        self.__cfg_root = cfg_root
-
         self._uuid = uuid
         self.__headers = headers
-        self._env = env
-        # self.__update_url = "https://api.ubirch.{}.ubirch.com/api/avatarService/v1/device/update/mpack".format(self._env)
-        self.__update_url = "https://niomon.{}.ubirch.com".format(self._env)
-        self.__register_url = "https://key.{}.ubirch.com/api/keyService/v1/pubkey/mpack".format(env)
+        self.__register_url = register_url
+        self.__update_url = update_url
+        self.__cfg_root = cfg_root
         self._key_file = str(uuid)+".bin"
         if self._key_file in os.listdir(self.__cfg_root):
             print("loading key pair for "+str(self._uuid))
