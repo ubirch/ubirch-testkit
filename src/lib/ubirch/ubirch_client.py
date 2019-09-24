@@ -88,7 +88,7 @@ class UbirchClient(Protocol):
         :return: the parsed response and the REST response from the ubirch backend
         """
         serialized = json.dumps(payload)
-        print("hash: {}".format(binascii.b2a_base64(self.hash(serialized))))
+        # print("hash: {}".format(binascii.b2a_base64(self.hash(serialized))))
         upp = self.message_chained(self._uuid, payload_type, self.hash(serialized))
         r = requests.post(self.__update_url, headers=self.__headers, data=upp)
         response = None

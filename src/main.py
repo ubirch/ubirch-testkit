@@ -70,48 +70,50 @@ class Main:
             "type": cfg["type"]
         }
 
-        if isinstance(self.sensor, Pysense):
-            data.update({
-                "TemperatureSensor": {
-                    "T": {"value": self.sensor.barometer.temperature(), "unit": "C"},
-                },
-                "HumidityMeasurement": {
-                    "H": {"value": self.sensor.humidity.humidity(), "unit": "%RH"},
-                    "T": {"value": self.sensor.humidity.temperature(), "unit": "C"},
-                    "D": {"value": self.sensor.humidity.dew_point(), "unit": "C"}
-                },
-                "PressureMeasurement": {
-                    "P": {"value": self.sensor.barometer.pressure(), "unit": "Pa"},
-                    "T": {"value": self.sensor.barometer.temperature(), "unit": "C"}
-                },
-                "LightMeasurement": {
-                    "B": {"value": self.sensor.light()[0], "unit": "lux"},
-                    "R": {"value": self.sensor.light()[1], "unit": "lux"}
-                }
-            })
-
         if isinstance(self.sensor, Pysense) or isinstance(self.sensor, Pytrack):
             accel = self.sensor.accelerometer.acceleration()
             roll = self.sensor.accelerometer.roll()
             pitch = self.sensor.accelerometer.pitch()
 
             data.update({
-                "AccelerationMeasurement": {
-                    "x": {"value": accel[0], "unit": "m/s2"},
-                    "y": {"value": accel[1], "unit": "m/s2"},
-                    "z": {"value": accel[2], "unit": "m/s2"},
-                    "roll": {"value": roll, "unit": "d"},
-                    "pitch": {"value": pitch, "unit": "d"}
+                "acceleration": {
+                    "x": {"value": accel[0], "unit": "g"},
+                    "y": {"value": accel[1], "unit": "g"},
+                    "z": {"value": accel[2], "unit": "g"},
+                    "roll": {"value": roll, "unit": "deg"},
+                    "pitch": {"value": pitch, "unit": "deg"}
                 },
             })
 
+        if isinstance(self.sensor, Pysense):
+            data.update({
+                "humidity": {
+                    "H": {"value": self.sensor.humidity.humidity(), "unit": "%RH"},
+                    "T": {"value": self.sensor.humidity.temperature(), "unit": "C"},
+                    "D": {"value": self.sensor.humidity.dew_point(), "unit": "C"}
+                },
+                "barometer": {
+                    "P": {"value": self.sensor.barometer.pressure(), "unit": "Pa"},
+                    "T": {"value": self.sensor.barometer.temperature(), "unit": "C"}
+                },
+                "light": {
+                    "B": {"value": self.sensor.light()[0], "unit": "lux"},
+                    "R": {"value": self.sensor.light()[1], "unit": "lux"}
+                }
+            })
 
-            if isinstance(self.sensor, Pycoproc):
-                data.update({
-                    "VoltageMeasurement": {
-                        "voltage": {"value": self.sensor.voltage(), "unit": "V"}
-                    }
-                })
+        if isinstance(self.sensor, Pytrack):
+            data.update({
+                "location": {
+                    "longitude": self.sensor.location.coordinates()[0],
+                    "latitude": self.sensor.location.coordinates()[1]
+                }
+            })
+
+        if isinstance(self.sensor, Pycoproc):
+            data.update({
+                "voltage": {"value": self.sensor.voltage(), "unit": "V"}
+            })
 
         return data
 
