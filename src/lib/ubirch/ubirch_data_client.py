@@ -1,7 +1,8 @@
+import time
 from uuid import UUID
+
 import umsgpack as msgpack
 import urequests as requests
-import time
 
 from .ubirch_client import UbirchClient
 
@@ -33,7 +34,9 @@ class UbirchDataClient:
         if r.status_code == 200:
             print("** success")
         else:
-            print("!! request to {} failed with {}: {}".format(self.__data_service_url, r.status_code, r.text))
+            raise Exception(
+                "!! request to {} failed with status code {}: {}".format(self.__data_service_url, r.status_code,
+                                                                         r.text))
 
         # send UPP to niomon
         print("** sending measurement certificate ...")

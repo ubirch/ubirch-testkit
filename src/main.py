@@ -1,13 +1,11 @@
-import os
-import time
-import machine
 import json
+import time
 from uuid import UUID
 
+import machine
 # Pycom specifics
 import pycom
 from pyboard import Pysense, Pytrack, Pycoproc
-
 # ubirch data client
 from ubirch import UbirchDataClient
 
@@ -41,8 +39,9 @@ class Main:
 
         # generate UUID
         self.uuid = UUID(b'UBIR'+ 2*machine.unique_id())
-        print("** UUID   : "+str(self.uuid))
+        print("\n** UUID   : " + str(self.uuid) + "\n")
 
+        # ubirch data client for setting up ubirch protocol, authentication and data service
         self.ubirch_data = UbirchDataClient(self.uuid, cfg)
 
         # initialize the sensor based on the type of the pycom add-on board
@@ -121,20 +120,20 @@ class Main:
         pycom.heartbeat(False)
         while True:
             pycom.rgbled(0x112200)
-            print("** getting measurements.")
+            print("\n** getting measurements:")
             data = self.prepare_data()
             print("\"data\": " + json.dumps(data))
 
-            # send data to ubirch data service
+            # send data to data service and ubirch protocol package (UPP) with hash over data to ubirch backend
             try:
                 self.ubirch_data.send(data)
             except Exception as e:
                 pycom.rgbled(0x440000)
-                print("!! error sending data to ubirch data service: "+repr(e))
+                print(e)
                 time.sleep(2)
 
             pycom.rgbled(0x110022)
-            print("** done. going to sleep...")
+            print("** done. going to sleep ...")
             time.sleep(interval)
 
 
