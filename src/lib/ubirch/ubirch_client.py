@@ -81,13 +81,16 @@ class UbirchClient(Protocol):
         :return: the parsed response and the REST response from the ubirch backend
         """
         upp = self.message_chained(self._uuid, 0x00, self._hash(payload))
+        print("sending UPP to {}".format(self.__update_url))
+        print(binascii.hexlify(upp))
         r = requests.post(self.__update_url, headers=self.__headers, data=upp)
         if r.status_code == 200:
             try:
+                print("** verifying response from {}".format(self.__update_url))
                 response = self.message_verify(r.content)
-                print("** response: verification success from {}: {}".format(self.__update_url, response))
+                print("** response verified: {}".format(response))
             except Exception as e:
-                raise Exception("!! response: verification failed: {}. {}".format(e, binascii.hexlify(r.content)))
+                raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(r.content)))
         else:
             raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.__update_url, r.status_code, r.text))
