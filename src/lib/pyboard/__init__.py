@@ -1,10 +1,9 @@
-from .pycoproc import Pycoproc
-
 from .L76GNSS import L76GNSS
 from .LIS2HH12 import LIS2HH12
 from .LTR329ALS01 import LTR329ALS01
-from .MPL3115A2 import MPL3115A2,ALTITUDE,PRESSURE
+from .MPL3115A2 import MPL3115A2, ALTITUDE, PRESSURE
 from .SI7006A20 import SI7006A20
+from .pycoproc import Pycoproc
 
 
 class Pysense(Pycoproc):
@@ -15,7 +14,7 @@ class Pysense(Pycoproc):
         self.light = LTR329ALS01(self).light
         self.humidity = SI7006A20(self)
         self.barometer = MPL3115A2(self, mode=PRESSURE)
-        # self.altimeter = MPL3115A2(self, mode=ALTITUDE)
+        self.altimeter = MPL3115A2(self, mode=ALTITUDE)
         self.voltage = self.read_battery_voltage
 
 
