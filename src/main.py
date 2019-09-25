@@ -68,11 +68,11 @@ class Main:
             pitch = self.sensor.accelerometer.pitch()
 
             data.update({
-                "Acc": {
-                    "xyz": accel,
-                    "roll": roll,
-                    "pitch": pitch
-                }
+                "AccX": accel[0],
+                "AccY": accel[1],
+                "AccZ": accel[2],
+                "AccRoll": roll,
+                "AccPitch": pitch
             })
 
         if isinstance(self.sensor, Pysense):
@@ -81,12 +81,14 @@ class Main:
                 "P": self.sensor.barometer.pressure(),
                 # "Alt": self.sensor.altimeter.altitude(),
                 "H": self.sensor.humidity.humidity(),
-                "L": self.sensor.light()
+                "L_blue": self.sensor.light()[0],
+                "L_red": self.sensor.light()[1]
             })
 
         if isinstance(self.sensor, Pytrack):
             data.update({
-                "GPS": self.sensor.location.coordinates()
+                "GPS_long": self.sensor.location.coordinates()[0],
+                "GPS_lat": self.sensor.location.coordinates()[1]
             })
 
         return data

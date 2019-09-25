@@ -11,7 +11,6 @@ from .ubirch_client import UbirchClient
 class UbirchDataClient:
 
     def __init__(self, uuid: UUID, cfg: dict):
-        self.__sensor_type = cfg["type"]
         self.__uuid = uuid
         self.__auth = cfg['password']
         self.__data_service_url = cfg['data']
@@ -22,14 +21,12 @@ class UbirchDataClient:
         self.__ubirch = UbirchClient(uuid, self.__headers, cfg['keyService'], cfg['niomon'])
 
     def send(self, data: dict):
-        payload = {self.__sensor_type: data}
-
         # pack data map as message array with uuid, message type and timestamp
         msg = [
             self.__uuid.bytes,
             self.__msg_type,
             int(time.time()),
-            payload
+            data
         ]
 
         # convert the message to msgpack format
