@@ -79,6 +79,7 @@ class Main:
             data.update({
                 "T": self.sensor.barometer.temperature(),
                 "P": self.sensor.barometer.pressure(),
+                # "Alt": self.sensor.altimeter.altitude(),
                 "H": self.sensor.humidity.humidity(),
                 "L": self.sensor.light()
             })
