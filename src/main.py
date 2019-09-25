@@ -5,7 +5,7 @@ from uuid import UUID
 import machine
 # Pycom specifics
 import pycom
-from pyboard import Pysense, Pytrack, Pycoproc
+from pyboard import Pysense, Pytrack
 # ubirch data client
 from ubirch import UbirchDataClient
 
@@ -59,7 +59,7 @@ class Main:
         """
 
         data = {
-            "type": cfg["type"]
+            "V": self.sensor.voltage()
         }
 
         if isinstance(self.sensor, Pysense) or isinstance(self.sensor, Pytrack):
@@ -87,11 +87,6 @@ class Main:
         if isinstance(self.sensor, Pytrack):
             data.update({
                 "GPS": self.sensor.location.coordinates()
-            })
-
-        if isinstance(self.sensor, Pycoproc):
-            data.update({
-                "V": self.sensor.voltage()
             })
 
         return data
