@@ -68,10 +68,8 @@ class Main:
             pitch = self.sensor.accelerometer.pitch()
 
             data.update({
-                "A": {
-                    "X": accel[0],
-                    "Y": accel[1],
-                    "Z": accel[2],
+                "Acc": {
+                    "xyz": accel,
                     "roll": roll,
                     "pitch": pitch
                 }
@@ -82,18 +80,12 @@ class Main:
                 "T": self.sensor.barometer.temperature(),
                 "P": self.sensor.barometer.pressure(),
                 "H": self.sensor.humidity.humidity(),
-                "L": {
-                    "B": self.sensor.light()[0],
-                    "R": self.sensor.light()[1]
-                }
+                "L": self.sensor.light()
             })
 
         if isinstance(self.sensor, Pytrack):
             data.update({
-                "GPS": {
-                    "lon": self.sensor.location.coordinates()[0],
-                    "lat": self.sensor.location.coordinates()[1]
-                }
+                "GPS": self.sensor.location.coordinates()
             })
 
         if isinstance(self.sensor, Pycoproc):
