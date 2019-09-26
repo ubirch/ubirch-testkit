@@ -51,46 +51,43 @@
     ```
     * Replace `<WIFI SSID>` with the name of your wifi network
     * Replace `<WIFI PASSWORD>` with the password to your wifi network
-1. Create a file `settings.json` in the `src` directory of the project tree with the following content
+1. Press the `UPLOAD` button just above the pymakr console window in Atom
+1. Wait for all files to upload. The code will start running on your device and you will see a `** UUID : XXXX` output
+1. copy the **UUID**
+
+## Register Device in Ubirch Web UI
+1. Go to https://console.dev.ubirch.com and register your device:
+    * Once logged in, go to **Things** (in the menu on the left) and click on **ADD NEW DEVICE**
+    * paste the the **UUID** copied in the last step of the previous chapter to the **hwDeviceId** field
+    * enter your board type (pysense or pytrack) in the **description** field
+    * click **create**
+1. Next, click on your device and copy the apiConfig
+1. Create a file `config.json` in the `src` directory of the project tree and paste the apiConfig into it.
+
+   It should look like this:
     ```json
     {
-        "type": "<EXPANSION BOARD>",
-        "bootstrap": {
-            "authorization": "Basic <ACCESS TOKEN>",
-            "tenant": "ubirch",
-            "host": "management.cumulocity.com"
-        },
-        "interval": 60
+      "type": "<TYPE: 'pysense' or 'pytrack'>",
+      "password": "<password for ubirch auth and data service>",
+      "keyService": "<URL of key registration service>",
+      "niomon": "<URL of authentication service>",
+      "data": "<URL of data service>"
     }
     ```
-    * Replace `<EXPANSION BOARD>` with the type of extension board you are using your with your Pycom, valid values are: `pysense`, `pytrack` and **TODO**
-    * Replace `<ACCESS TOKEN>` with the access token you received upfront
-1. Press `UPLOAD` just above the pymakr console window in Atom
-1. Wait for all files to upload until you see a `UUID : XXXX` output, copy the **UUID**!
+1. Press the `UPLOAD` button again
 
-## Configure Device in IoT Platform
-1. Visit [https://ubirch.cumulocity.com](https://ubirch.cumulocity.com)
-1. Login with the credentials you have created after your invitation mail / we provided you
-1. Select the nine-dots menu (top right) and select `Device Management`
-1. Click on menu `Devices` (left) and click on `Registration`
-1. Click on `Register Device` and manually add your device entering the **UUID** copied in the last step of the previous chapter
-    * **also select Pycom as group**
-1. Reset the pycom device (button next to RGB LED)
-1. Wait in Cumulocity for your device until an `Accept` button appears!
-1. Click `Accept`
-1. Select nine-dots menu (top right) and select `Cockpit`
-1. Select Groups (left) and click `Pycom` group
-1. Find your device (check last 4 characters from **UUID**)
-1. Select `Data Explorer` and add Data points in right panel
+**TODO** steps to see data visualization 
+
 1. Enjoy the data coming in from your device
 
 ## (Optional - for experts) Check Blockchain Anchoring [DRAFT]
 1. While the Pycom is connected and running, and Atom is open, check the pymakr console in Atom and wait for a hash of a measurement certificate to appear, e.g.:
-```
-sending measurement certificate ...
-hash: b’w4DhI6HSrDFsczEEdR1U5w2IPQrzAw9gEocYPpYGfJIdDpeQmEuY/aWY1dqqWUeAHmJGQyGKCD0ctVj6KUlTsA==\n’
-```
-    * In this example the hash to copy is **w4DhI6HSrDFsczEEdR1U5w2IPQrzAw9gEocYPpYGfJIdDpeQmEuY/aWY1dqqWUeAHmJGQyGKCD0ctVj6KUlTsA==**
+    ```
+    sending measurement certificate ...
+    hash: b’w4DhI6HSrDFsczEEdR1U5w2IPQrzAw9gEocYPpYGfJIdDpeQmEuY/aWY1dqqWUeAHmJGQyGKCD0ctVj6KUlTsA==\n’
+    ```
+    > In this example the hash to copy is `w4DhI6HSrDFsczEEdR1U5w2IPQrzAw9gEocYPpYGfJIdDpeQmEuY/aWY1dqqWUeAHmJGQyGKCD0ctVj6KUlTsA==`
+
 1. Send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests):
     ```
     curl -s -X POST -H "accept: application/json" -H "Content-Type: text/plain" -d "$HASH" "$URL"
@@ -101,4 +98,5 @@ hash: b’w4DhI6HSrDFsczEEdR1U5w2IPQrzAw9gEocYPpYGfJIdDpeQmEuY/aWY1dqqWUeAHmJGQy
         * https://verify.demo.ubirch.com/api/verify or
         * https://verify.prod.ubirch.com/api/verify
         * depending on the environment you are using
+
 1. The response will list all blockchain anchors containing this measurement certificate. The `txid` (Blockchain Transaction ID) of each anchors entry can be used to lookup the entry in the according blockchain explorer (consider the `blockchain` and `network_type` attribute to find the right explorer)

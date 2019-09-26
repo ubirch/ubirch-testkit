@@ -46,5 +46,5 @@ The example code is made for any Pycom module sitting on a Pysense or Pytrack.
       "data": "<URL of data service>"
     }
     ```
-* Upload the code to the board again and you're good to go. 
+* Upload the file to the board again and you're good to go. 
  
