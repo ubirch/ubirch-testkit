@@ -63,7 +63,7 @@ class Main:
         elif cfg["type"] == "pytrack":
             self.sensor = Pytrack()
         else:
-            print("board type not supported.")
+            print("Expansion board type not supported.\nThis version supports the types \"pysense\" and \"pytrack\"")
 
     def prepare_data(self):
         """
