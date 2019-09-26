@@ -9,18 +9,14 @@ from pyboard import Pysense, Pytrack
 # ubirch data client
 from ubirch import UbirchDataClient
 
-# load configuration from config.json file
-# the config.json should be placed next to this file
-# {
-#  "type": "<TYPE: 'pysense' or 'pytrack'>",
-#  "password": "<password for ubirch auth and data service>",
-#  "keyService": "<URL of key registration service>",
-#  "niomon": "<URL of authentication service>",
-#  "data": "<URL of data service>",
-# }
-with open('config.json', 'r') as c:
-    cfg = json.load(c)
 rtc = machine.RTC()
+
+setup_help_text = """
+* Copy the UUID and register your device at the Ubirch Web UI: https://console.dev.ubirch.com\n
+* Then, create a file \"config.json\" next to main.py and paste the apiConfig into it.\n
+* Upload the file to your device and run again.\n\n
+For more information, take a look at the README.md. of this repository.
+"""
 
 class Main:
     """
@@ -40,6 +36,23 @@ class Main:
         # generate UUID
         self.uuid = UUID(b'UBIR'+ 2*machine.unique_id())
         print("\n** UUID   : " + str(self.uuid) + "\n")
+
+        # load configuration from config.json file
+        # the config.json should be placed next to this file
+        # {
+        #  "type": "<TYPE: 'pysense' or 'pytrack'>",
+        #  "password": "<password for ubirch auth and data service>",
+        #  "keyService": "<URL of key registration service>",
+        #  "niomon": "<URL of authentication service>",
+        #  "data": "<URL of data service>",
+        # }
+        try:
+            with open('config.json', 'r') as c:
+                cfg = json.load(c)
+        except OSError:
+            print(setup_help_text)
+            while True:
+                time.sleep(60)
 
         # ubirch data client for setting up ubirch protocol, authentication and data service
         self.ubirch_data = UbirchDataClient(self.uuid, cfg)
@@ -103,12 +116,12 @@ class Main:
             print(json.dumps(data))
 
             # send data to data service and ubirch protocol package (UPP) with hash over data to ubirch backend
-            try:
-                self.ubirch_data.send(data)
-            except Exception as e:
-                pycom.rgbled(0x440000)
-                print(e)
-                time.sleep(2)
+            # try:
+            self.ubirch_data.send(data)
+            # except Exception as e:
+            #     pycom.rgbled(0x440000)
+            #     print(e)
+            #     time.sleep(2)
 
             pycom.rgbled(0x110022)
             print("** done. going to sleep ...")
@@ -116,4 +129,4 @@ class Main:
 
 
 main = Main()
-main.loop(10)
+main.loop(30)
