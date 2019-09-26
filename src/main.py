@@ -116,12 +116,12 @@ class Main:
             print(json.dumps(data))
 
             # send data to data service and ubirch protocol package (UPP) with hash over data to ubirch backend
-            # try:
-            self.ubirch_data.send(data)
-            # except Exception as e:
-            #     pycom.rgbled(0x440000)
-            #     print(e)
-            #     time.sleep(2)
+            try:
+                self.ubirch_data.send(data)
+            except Exception as e:
+                pycom.rgbled(0x440000)
+                print(e)
+                time.sleep(2)
 
             pycom.rgbled(0x110022)
             print("** done. going to sleep ...")

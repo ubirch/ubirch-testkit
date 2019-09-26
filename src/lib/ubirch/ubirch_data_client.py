@@ -1,9 +1,7 @@
-import binascii
 import time
 from uuid import UUID
+
 import umsgpack as msgpack
-import urequests as requests
-import json
 
 from .ubirch_client import UbirchClient
 
@@ -32,17 +30,20 @@ class UbirchDataClient:
         # convert the message to msgpack format
         serialized = msgpack.packb(msg, use_bin_type=True)
 
-        # send message to ubirch data service (only send UPP if successful)
-        print("** sending measurements to ubirch data service ...")
-        print(binascii.hexlify(serialized))
-        r = requests.post(self.__data_service_url, headers=self.__headers, data=binascii.hexlify(serialized))
+        print("** sending measurement certificate ...")
+        self.__ubirch.send(serialized)
 
-        if r.status_code == 200:
-            # send UPP to niomon
-            print("** sending measurement certificate ...")
-            self.__ubirch.send(serialized)
-        else:
-            print(
-                "!! request to {} failed with status code {}: {}".format(self.__data_service_url, r.status_code,
-                                                                         r.text))
-        r.close()
+        # # send message to ubirch data service (only send UPP if successful)
+        # print("** sending measurements to ubirch data service ...")
+        # print(binascii.hexlify(serialized))
+        # r = requests.post(self.__data_service_url, headers=self.__headers, data=binascii.hexlify(serialized))
+        #
+        # if r.status_code == 200:
+        #     # send UPP to niomon
+        #     print("** sending measurement certificate ...")
+        #     self.__ubirch.send(serialized)
+        # else:
+        #     raise Exception(
+        #         "!! request to {} failed with status code {}: {}".format(self.__data_service_url, r.status_code,
+        #                                                                  r.text))
+        # r.close()
