@@ -1,8 +1,9 @@
 import binascii
 import os
-
+import json
 import ed25519
 import urequests as requests
+import umsgpack as msgpack
 
 from .ubirch_protocol import *
 
@@ -73,15 +74,18 @@ class UbirchClient(Protocol):
             "validNotBefore": not_before
         }
 
-    def send(self, payload: bytes):
+    def hash(self, data) -> bytes:
+        return hashlib.sha512(msgpack.packb(data)).digest()
+
+    def send(self, payload: dict, payload_type: int = 0x00):
         """
         Seal the data and send to backend. This includes creating a SHA512 hash of the data
         and sending it to the ubirch backend.
         :param payload: the original data (which will be hashed)
         :return: the parsed response and the REST response from the ubirch backend
         """
-        upp = self.message_chained(self._uuid, 0x00, self._hash(payload))
-        print("sending UPP to {}".format(self.__update_url))
+        serialized = json.dumps(payload)
+        upp = self.message_chained(self._uuid, payload_type, self.hash(serialized))
         print(binascii.hexlify(upp))
         r = requests.post(self.__update_url, headers=self.__headers, data=upp)
         if r.status_code == 200:
@@ -92,6 +96,6 @@ class UbirchClient(Protocol):
             except Exception as e:
                 raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(r.content)))
         else:
-            raise Exception(
+            print(
                 "!! request to {} failed with status code {}: {}".format(self.__update_url, r.status_code, r.text))
 
