@@ -45,8 +45,9 @@ class UbirchDataClient:
         print("** sending measurements to ubirch data service ...")
         print(json.dumps(msg_map))
         # request needs to be sent twice because of bug in backend
-        r = requests.post(self.__data_service_json_url, headers=self.__headers, json=msg_map)
-        r = requests.post(self.__data_service_json_url, headers=self.__headers, json=msg_map)
+        r = requests.post(self.__data_service_json_url, headers=self.__headers, data=json.dumps(msg_map))
+        r.close()
+        r = requests.post(self.__data_service_json_url, headers=self.__headers, data=json.dumps(msg_map))
         # print(binascii.hexlify(serialized))
         # r = requests.post(self.__data_service_url, headers=self.__headers, data=serialized)
 
@@ -62,3 +63,5 @@ class UbirchDataClient:
             # print(
             #     "!! request to {} failed with status code {}: {}".format(self.__data_service_url, r.status_code,
             #                                                              r.text))
+
+        r.close()
