@@ -1,9 +1,8 @@
 import binascii
 import os
-import json
+
 import ed25519
 import urequests as requests
-import umsgpack as msgpack
 
 from .ubirch_protocol import *
 
@@ -81,8 +80,9 @@ class UbirchClient(Protocol):
         :param payload: the original data (which will be hashed)
         :return: the parsed response and the REST response from the ubirch backend
         """
+        print("hash: {}".format(binascii.b2a_base64(self._hash(payload))))
         upp = self.message_chained(self._uuid, 0x00, self._hash(payload))
-        print(binascii.hexlify(upp))
+        # print(binascii.hexlify(upp))
         r = requests.post(self.__update_url, headers=self.__headers, data=upp)
         if r.status_code == 200:
             try:
@@ -92,6 +92,6 @@ class UbirchClient(Protocol):
             except Exception as e:
                 raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(r.content)))
         else:
-            print(
+            raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.__update_url, r.status_code, r.text))
 
