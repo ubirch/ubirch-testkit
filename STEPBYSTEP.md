@@ -59,10 +59,11 @@
 1. Go to https://console.demo.ubirch.com and register your device:
     * Once logged in, go to **Things** (in the menu on the left) and click on **ADD NEW DEVICE**
     * paste the the **UUID** copied in the last step of the previous chapter to the **hwDeviceId** field
-    * enter your board type (pysense or pytrack) in the **description** field
     * click **create**
 1. Next, click on your device and copy the apiConfig
 1. Create a file `config.json` in the `src` directory of the project tree and paste the apiConfig into it.
+1. add a key-value-pair that will configure the pycom for the expansion board you are using with the key `"type"` 
+    and the value being the expansion board type `"pysense"` or `"pytrack"`
 
    It should look like this:
     ```json

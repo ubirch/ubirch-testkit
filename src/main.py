@@ -14,6 +14,7 @@ rtc = machine.RTC()
 setup_help_text = """
 * Copy the UUID and register your device at the Ubirch Web UI: https://console.demo.ubirch.com\n
 * Then, create a file \"config.json\" next to main.py and paste the apiConfig into it.\n
+* Add the key-value-pair '"type": "<TYPE: 'pysense' or 'pytrack'>",' to the config-file.\n
 * Upload the file to your device and run again.\n\n
 For more information, take a look at the README.md of this repository.
 """

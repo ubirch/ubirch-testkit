@@ -33,10 +33,13 @@ The example code is made for any Pycom module sitting on a Pysense or Pytrack.
 * Go to https://console.demo.ubirch.com to register your device:
     * Once logged in, go to **Things** (in the menu on the left) and click on **ADD NEW DEVICE**
     * paste the UUID in the **hwDeviceId** field
-    * enter your board type (pysense or pytrack) in the **description** field
     * click **create**
 * Next, click on your device, copy the apiConfig, create src/config.json in your project
-  and paste the apiConfig into it. It should look like this:
+  and paste the apiConfig into it.
+* Add a key-value-pair that will configure the pycom for the expansion board you are using with the key `"type"` 
+    and the value being the expansion board type `"pysense"` or `"pytrack"`
+
+   It should look like this:
     ```json
     {
       "type": "<TYPE: 'pysense' or 'pytrack'>",
