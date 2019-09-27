@@ -74,10 +74,14 @@
       "data": "<URL of data service>"
     }
     ```
-1. Press the `UPLOAD` button again
+1. Press the `UPLOAD` button again and you're good to go. 
 
-**TODO** steps to see data visualization 
-
+## Visualize the data
+1. Go to https://grafana.dev.ubirch.com/?orgId=1
+1. Login with your Ubirch Web UI account
+1. Create a new dashboard and go to `Add Query`
+1. Select `Elasticsearch` in the drop-down menu 
+1. Configure your query and make sure your device is still running
 1. Enjoy the data coming in from your device
 
 ## (Optional - for experts) Check Blockchain Anchoring [DRAFT]
