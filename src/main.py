@@ -106,12 +106,11 @@ class Main:
 
         return data
 
-    def printData(self, data: dict):
+    def print_data(self, data: dict):
         print("{")
         for key in sorted(data):
             print("  \"{}\": {},".format(key, data[key]))
         print("}")
-
 
     def loop(self, interval: int = 60):
         # disable blue heartbeat blink
@@ -120,7 +119,7 @@ class Main:
             pycom.rgbled(0x112200)
             print("\n** getting measurements:")
             data = self.prepare_data()
-            self.printData(data)
+            self.print_data(data)
 
             # send data to data service and ubirch protocol package (UPP) with hash over data to ubirch backend
             try:

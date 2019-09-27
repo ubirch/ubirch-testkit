@@ -84,7 +84,7 @@
 1. While the Pycom is connected and running, and Atom is open, check the pymakr console in Atom and wait for a hash of a measurement certificate to appear, e.g.:
     ```
     sending measurement certificate ...
-    hash: b’w4DhI6HSrDFsczEEdR1U5w2IPQrzAw9gEocYPpYGfJIdDpeQmEuY/aWY1dqqWUeAHmJGQyGKCD0ctVj6KUlTsA==\n’
+    hash: b’w4DhI6HSrDFsczEEdR1U5w2IPQrzAw9gEocYPpYGfJIdDpeQmEuY/aWY1dqqWUeAHmJGQyGKCD0ctVj6KUlTsA==’
     ```
     > In this example the hash to copy is `w4DhI6HSrDFsczEEdR1U5w2IPQrzAw9gEocYPpYGfJIdDpeQmEuY/aWY1dqqWUeAHmJGQyGKCD0ctVj6KUlTsA==`
 

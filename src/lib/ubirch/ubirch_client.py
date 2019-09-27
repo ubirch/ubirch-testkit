@@ -80,7 +80,7 @@ class UbirchClient(Protocol):
         :param payload: the original data (which will be hashed)
         :return: the parsed response and the REST response from the ubirch backend
         """
-        print("hash: {}".format(binascii.b2a_base64(self._hash(payload))))
+        print("hash: {}".format(binascii.b2a_base64(self._hash(payload).decode())[:-1]))
         upp = self.message_chained(self._uuid, 0x00, self._hash(payload))
         # print(binascii.hexlify(upp))
         r = requests.post(self.__update_url, headers=self.__headers, data=upp)
