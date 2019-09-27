@@ -2,13 +2,13 @@
 * A Pycom Development Board
 * A Pycom Expansion Board or Shield
 * Wifi Access to the Internet
-* An account at [Ubirch Web UI](https://console.dev.ubirch.com)
+* An account at [Ubirch Web UI](https://console.demo.ubirch.com)
 
 ## Prepare Local Environment
 1. Download and install Atom Editor ([download](https://atom.io/))
-    * *Mac*: download and click on atom-mac.zip and drag the new Atom application into your "Applications" folder.
-    * *Windows*: download and run AtomSetup.exe for 32-bit systems or AtomSetup-x64.exe for 64-bit systems.
-    * *Debian and Ubuntu*: download atom-amd64.deb and run in a terminal:
+    * Mac: download and click on atom-mac.zip
+    * Windows: download and run setup exe
+    * Linux: download .deb file and run
       ```bash
       sudo dpkg -i atom-amd64.deb
       sudo apt install -f
@@ -56,7 +56,7 @@
 1. copy the **UUID**
 
 ## Register Device in Ubirch Web UI
-1. Go to https://console.dev.ubirch.com and register your device:
+1. Go to https://console.demo.ubirch.com and register your device:
     * Once logged in, go to **Things** (in the menu on the left) and click on **ADD NEW DEVICE**
     * paste the the **UUID** copied in the last step of the previous chapter to the **hwDeviceId** field
     * enter your board type (pysense or pytrack) in the **description** field

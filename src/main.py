@@ -12,22 +12,22 @@ from ubirch import UbirchDataClient
 rtc = machine.RTC()
 
 setup_help_text = """
-* Copy the UUID and register your device at the Ubirch Web UI: https://console.dev.ubirch.com\n
+* Copy the UUID and register your device at the Ubirch Web UI: https://console.demo.ubirch.com\n
 * Then, create a file \"config.json\" next to main.py and paste the apiConfig into it.\n
 * Upload the file to your device and run again.\n\n
-For more information, take a look at the README.md. of this repository.
+For more information, take a look at the README.md of this repository.
 """
 
 class Main:
     """
     |  UBIRCH example for pycom modules.
     |
-    |  The devices creates a unique UUID and sends data to the ubirch data service.
+    |  The devices creates a unique UUID and sends data to the ubirch data and auth service.
     |  At the initial start these steps are required:
     |
     |  - start the pycom module with this code
     |  - take note of the UUID printed on the serial console
-    |  - go to 'https://console.dev.ubirch.com/' and register your device
+    |  - go to 'https://console.demo.ubirch.com/' and register your device
     |
     """
 
@@ -106,6 +106,13 @@ class Main:
 
         return data
 
+    def printData(self, data: dict):
+        print("{")
+        for key in sorted(data):
+            print("  \"{}\": {},".format(key, data[key]))
+        print("}")
+
+
     def loop(self, interval: int = 60):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
@@ -113,7 +120,7 @@ class Main:
             pycom.rgbled(0x112200)
             print("\n** getting measurements:")
             data = self.prepare_data()
-            print(json.dumps(data))
+            self.printData(data)
 
             # send data to data service and ubirch protocol package (UPP) with hash over data to ubirch backend
             try:

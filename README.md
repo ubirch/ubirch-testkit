@@ -30,7 +30,7 @@ The example code is made for any Pycom module sitting on a Pysense or Pytrack.
 * If the Pymakr plugin is loaded, you should have a terminal at the bottom
   with buttons to upload and run scripts. Simply upload the code to get going.
 * Take note of the UUID displayed in the console window
-* Go to https://console.dev.ubirch.com to register your device:
+* Go to https://console.demo.ubirch.com to register your device:
     * Once logged in, go to **Things** (in the menu on the left) and click on **ADD NEW DEVICE**
     * paste the UUID in the **hwDeviceId** field
     * enter your board type (pysense or pytrack) in the **description** field
