@@ -39,7 +39,7 @@ class UbirchDataClient:
         # print(binascii.hexlify(serialized))
 
         # send message to ubirch data service (only send UPP if successful)
-        print("** sending measurements to ubirch data service ...")
+        print("** sending measurements ...")
         r = requests.post(self.__data_service_url, headers=self.__headers, data=binascii.hexlify(serialized))
 
         if r.status_code == 200:
