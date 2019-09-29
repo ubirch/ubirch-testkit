@@ -62,7 +62,7 @@
     * click **create**
 1. Next, click on your device and copy the apiConfig
 1. Create a file `config.json` in the `src` directory of the project tree and paste the apiConfig into it.
-1. add a key-value-pair that will configure the pycom for the expansion board you are using with the key `"type"` 
+1. add a key-value-pair that will configure the Pycom for the expansion board you are using with the key `"type"` 
     and the value being the expansion board type `"pysense"` or `"pytrack"`
 
    It should look like this:
@@ -76,6 +76,40 @@
     }
     ```
 1. Press the `UPLOAD` button again and you're good to go. 
+
+On initial start, the Pycom will generate an ed25519 key pair for the device and register the public key at the Ubirch
+key service. After that, it will frequently measure the following data...
+* pysense:
+    ```json
+            {
+                "AccPitch": <"accelerator Pitch in [deg]">,
+                "AccRoll": <"accelerator Roll in [deg]">,
+                "AccX": <"acceleration on x-axis in [G]">,
+                "AccY": <"acceleration on y-axis in [G]">,
+                "AccZ": <"acceleration on z-axis in [G]">,
+                "H": <"relative humidity in [%RH]">,
+                "L_blue": <"ambient light levels (violet-blue wavelength) in [lux]">,
+                "L_red": <"ambient light levels (red wavelength) in [lux]">,
+                "P": <"atmospheric pressure in [Pa]">,
+                "T": <"external temperature in [°C]">,
+                "V": <"supply voltage in [V]">,
+            }
+    ```
+* pytrack:
+    ```json
+            {
+                "AccPitch": <"accelerator Pitch in [deg]">,
+                "AccRoll": <"accelerator Roll in [deg]">,
+                "AccX": <"acceleration on x-axis in [G]">,
+                "AccY": <"acceleration on y-axis in [G]">,
+                "AccZ": <"acceleration on z-axis in [G]">,
+                "GPS_lat": <"longitude in [deg]">,
+                "GPS_long": <"latitude in [deg]">,
+                "V": <"supply voltage in [V]">,
+            }
+    ```
+...and send it to the Ubirch data service. Further, it packs the sha512 hash of the data into a chained UPP (Ubirch Protocol Package)
+which is the certificate of the data's authenticity, and sends it to the Ubirch authentication service for blockchain anchoring.
 
 ## Visualize the data
 1. Go to https://grafana.dev.ubirch.com/?orgId=1
