@@ -136,4 +136,4 @@ class Main:
 
 
 main = Main()
-main.loop(30)
+main.loop(60)

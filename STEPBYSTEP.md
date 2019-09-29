@@ -109,7 +109,7 @@ key service. After that, it will frequently measure the following data...
             }
     ```
 ...and send it to the Ubirch data service. Further, it packs the sha512 hash of the data into a chained UPP (Ubirch Protocol Package)
-which is the certificate of the data's authenticity, and sends it to the Ubirch authentication service for blockchain anchoring.
+which is the certificate of the data's authenticity, and sends it to the Ubirch public blockchain based authentication and timestamping service.
 
 ## Visualize the data
 1. Go to https://grafana.dev.ubirch.com/?orgId=1
