@@ -1,5 +1,6 @@
 *.iml
 .idea/
+.vscode/
 venv/
-src/settings.json
+src/config.json
 src/boot.json
