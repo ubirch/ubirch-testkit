@@ -82,30 +82,30 @@ key service. After that, it will frequently measure the following data...
 * pysense:
     ```json
             {
-                "AccPitch": <"accelerator Pitch in [deg]">,
-                "AccRoll": <"accelerator Roll in [deg]">,
-                "AccX": <"acceleration on x-axis in [G]">,
-                "AccY": <"acceleration on y-axis in [G]">,
-                "AccZ": <"acceleration on z-axis in [G]">,
-                "H": <"relative humidity in [%RH]">,
-                "L_blue": <"ambient light levels (violet-blue wavelength) in [lux]">,
-                "L_red": <"ambient light levels (red wavelength) in [lux]">,
-                "P": <"atmospheric pressure in [Pa]">,
-                "T": <"external temperature in [°C]">,
-                "V": <"supply voltage in [V]">,
+                "AccPitch": "<accelerator Pitch in [deg]>",
+                "AccRoll": "<accelerator Roll in [deg]>",
+                "AccX": "<acceleration on x-axis in [G]>",
+                "AccY": "<acceleration on y-axis in [G]>",
+                "AccZ": "<acceleration on z-axis in [G]>",
+                "H": "<relative humidity in [%RH]>",
+                "L_blue": "<ambient light levels (violet-blue wavelength) in [lux]>",
+                "L_red": "<ambient light levels (red wavelength) in [lux]>",
+                "P": "<atmospheric pressure in [Pa]>",
+                "T": "<external temperature in [°C]>",
+                "V": "<supply voltage in [V]>",
             }
     ```
 * pytrack:
     ```json
             {
-                "AccPitch": <"accelerator Pitch in [deg]">,
-                "AccRoll": <"accelerator Roll in [deg]">,
-                "AccX": <"acceleration on x-axis in [G]">,
-                "AccY": <"acceleration on y-axis in [G]">,
-                "AccZ": <"acceleration on z-axis in [G]">,
-                "GPS_lat": <"longitude in [deg]">,
-                "GPS_long": <"latitude in [deg]">,
-                "V": <"supply voltage in [V]">,
+                "AccPitch": "<accelerator Pitch in [deg]>",
+                "AccRoll": "<accelerator Roll in [deg]>",
+                "AccX": "<acceleration on x-axis in [G]>",
+                "AccY": "<acceleration on y-axis in [G]>",
+                "AccZ": "<acceleration on z-axis in [G]>",
+                "GPS_lat": "<longitude in [deg]>",
+                "GPS_long": "<latitude in [deg]>",
+                "V": "<supply voltage in [V]>",
             }
     ```
 ...and send it to the Ubirch data service. Further, it packs the sha512 hash of the data into a chained UPP (Ubirch Protocol Package)
@@ -120,7 +120,8 @@ which is the certificate of the data's authenticity, and sends it to the Ubirch 
 1. Enjoy the data coming in from your device
 
 ## (Optional - for experts) Check Blockchain Anchoring [DRAFT]
-1. While the Pycom is connected and running, and Atom is open, check the pymakr console in Atom and wait for a hash of a measurement certificate to appear, e.g.:
+1. While the Pycom is connected and running, and Atom is open, check the pymakr console in Atom and wait for a hash of 
+a measurement certificate to appear, e.g.:
     ```
     sending measurement certificate ...
     hash: b’w4DhI6HSrDFsczEEdR1U5w2IPQrzAw9gEocYPpYGfJIdDpeQmEuY/aWY1dqqWUeAHmJGQyGKCD0ctVj6KUlTsA==’
@@ -138,4 +139,6 @@ which is the certificate of the data's authenticity, and sends it to the Ubirch 
         * https://verify.prod.ubirch.com/api/verify
         * depending on the environment you are using
 
-1. The response will list all blockchain anchors containing this measurement certificate. The `txid` (Blockchain Transaction ID) of each anchors entry can be used to lookup the entry in the according blockchain explorer (consider the `blockchain` and `network_type` attribute to find the right explorer)
+1. The response will list all blockchain anchors containing this measurement certificate. The `txid` (Blockchain 
+Transaction ID) of each anchors entry can be used to lookup the entry in the according blockchain explorer (consider 
+the `blockchain` and `network_type` attribute to find the right explorer)

@@ -80,13 +80,13 @@ class UbirchClient(Protocol):
         :param payload: the original data (which will be hashed)
         :return: the parsed response and the REST response from the ubirch backend
         """
-        print("hash: {}".format(binascii.b2a_base64(self._hash(payload).decode())[:-1]))
         upp = self.message_chained(self._uuid, 0x00, self._hash(payload))
         # print(binascii.hexlify(upp))
         r = requests.post(self.__update_url, headers=self.__headers, data=upp)
         if r.status_code == 200:
             try:
                 self.message_verify(r.content)
+                print("hash: {}".format(binascii.b2a_base64(self._hash(payload).decode())[:-1]))
             except Exception as e:
                 raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(r.content)))
         else:
