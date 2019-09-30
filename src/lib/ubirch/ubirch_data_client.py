@@ -17,8 +17,7 @@ class UbirchDataClient:
         self.__headers = {
             'X-Ubirch-Hardware-Id': str(uuid),
             'X-Ubirch-Credential': str(binascii.b2a_base64(self.__auth).decode())[:-1],
-            'X-Ubirch-Auth-Type': 'ubirch',
-            'X-Niomon-Purge-Caches': 'true'
+            'X-Ubirch-Auth-Type': 'ubirch'
         }
         self.__msg_type = 0
 
