@@ -15,8 +15,9 @@
 # limitations under the License.
 
 import hashlib
-import umsgpack as msgpack
 from uuid import UUID
+
+import umsgpack as msgpack
 
 logger = lambda msg: print(__name__+"{}".format(msg))
 
@@ -35,14 +36,11 @@ UBIRCH_PROTOCOL_TYPE_HSK = 0x02
 class Protocol(object):
     _signatures = {}
 
-    def __init__(self, signatures: dict = None, compat=1) -> None:
+    def __init__(self, signatures: dict = None) -> None:
         """
         Initialize the protocol.
         :param signatures: previously known signatures
         """
-        if compat == 1:
-            msgpack.compatibility = True
-
         if signatures is None:
             signatures = {}
         self._signatures = signatures
@@ -99,7 +97,7 @@ class Protocol(object):
         raise NotImplementedError("verification not implemented")
 
     def __serialize(self, msg: any) -> bytearray:
-        return bytearray(msgpack.packb(msg, use_bin_type=True))
+        return bytearray(msgpack.packb(msg))
 
     def _prepare_and_sign(self, uuid: UUID, msg: any) -> (bytes, bytes):
         """

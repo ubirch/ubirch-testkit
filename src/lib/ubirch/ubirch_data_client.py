@@ -35,7 +35,7 @@ class UbirchDataClient:
         ]
 
         # convert the message to msgpack format
-        serialized = msgpack.packb(msg, use_bin_type=True)
+        serialized = msgpack.packb(msg)
         # print(binascii.hexlify(serialized))
 
         # send message to ubirch data service (only send UPP if successful)
