@@ -1,6 +1,7 @@
-import machine
-import time
 import json
+import time
+
+import machine
 from network import WLAN
 
 
@@ -22,7 +23,7 @@ def connect(networks: dict, timeout: int = 30, retries: int = 5):
                 ssid = net.ssid
                 password = networks[net.ssid]
                 print('-- wifi network ' + net.ssid + ' found, connecting ...')
-                wlan.connect(ssid, auth=(net.sec, password), timeout=timeout * 1000)
+                wlan.connect(ssid, auth=(net.sec, password), timeout=timeout)
                 while not wlan.isconnected():
                     machine.idle()  # save power while waiting
                 print('-- wifi network connected')
