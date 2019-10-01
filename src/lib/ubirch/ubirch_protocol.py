@@ -101,7 +101,7 @@ class Protocol(object):
             return bytearray(msgpack.packb(msg))
         else:
             msgpack.compatibility = True
-            serialized = bytearray(msgpack.packb(msg, use_bin_type=True))
+            serialized = bytearray(msgpack.packb(msg))
             msgpack.compatibility = False
             return serialized
 
