@@ -117,7 +117,7 @@ class Protocol(object):
         signature = self._sign(uuid, self._hash(serialized))
         # replace last element in array with the signature
         msg[-1] = signature
-        return (signature, self.__serialize(msg, legacy))
+        return signature, self.__serialize(msg, legacy)
 
     def message_signed(self, uuid: UUID, type: int, payload: any, legacy: bool = False,
                        save_signature: bool = False) -> bytes:
@@ -133,7 +133,7 @@ class Protocol(object):
         msg = [
             SIGNED,
             uuid.bytes,
-            type & 0xffffffff,
+            type & 0xffff,
             payload,
             0
         ]
@@ -164,7 +164,7 @@ class Protocol(object):
             CHAINED,
             uuid.bytes,
             last_signature,
-            type & 0xffffffff,
+            type & 0xffff,
             payload,
             0
         ]
