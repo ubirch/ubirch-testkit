@@ -1,11 +1,19 @@
 import binascii
+import json
 import time
 from uuid import UUID
 
 import umsgpack as msgpack
 import urequests as requests
+from boot import connect
+from network import WLAN
 
 from .ubirch_client import UbirchClient
+
+wlan = WLAN(mode=WLAN.STA)
+# load WLAN configuration
+with open('boot.json', 'r') as b:
+    wlan_cfg = json.load(b)
 
 
 class UbirchDataClient:
@@ -36,6 +44,11 @@ class UbirchDataClient:
         # convert the message to msgpack format
         serialized = msgpack.packb(msg)
         # print(binascii.hexlify(serialized))
+
+        if not wlan.isconnected():
+            print("!! lost wifi connection")
+            print("-- trying to reconnect ...")
+            connect(wlan_cfg('networks'), wlan_cfg('timeout'), wlan_cfg('retries'))
 
         # send message to ubirch data service (only send UPP if successful)
         print("** sending measurements ...")
