@@ -96,10 +96,15 @@ class Protocol(object):
         """
         raise NotImplementedError("verification not implemented")
 
-    def __serialize(self, msg: any) -> bytearray:
-        return bytearray(msgpack.packb(msg))
+    def __serialize(self, msg: any, legacy: bool = False) -> bytearray:
+        if not legacy:
+            msgpack.compatibility = False
+            return bytearray(msgpack.packb(msg))
+        else:
+            msgpack.compatibility = True
+            return bytearray(msgpack.packb(msg, use_bin_type=True))
 
-    def _prepare_and_sign(self, uuid: UUID, msg: any) -> (bytes, bytes):
+    def _prepare_and_sign(self, uuid: UUID, msg: any, legacy: bool = False) -> (bytes, bytes):
         """
         Sign the request when finished. The message is first prepared by serializing and hashing it.
         :param uuid: the uuid of the sender to identify the correct key pair
@@ -107,13 +112,14 @@ class Protocol(object):
         :return: the signature
         """
         # sign the message and store the signature
-        serialized = self.__serialize(msg)[0:-1]
+        serialized = self.__serialize(msg, legacy)[0:-1]
         signature = self._sign(uuid, self._hash(serialized))
         # replace last element in array with the signature
         msg[-1] = signature
-        return (signature, self.__serialize(msg))
+        return (signature, self.__serialize(msg, legacy))
 
-    def message_signed(self, uuid: UUID, type: int, payload: any, save_signature: bool = False) -> bytes:
+    def message_signed(self, uuid: UUID, type: int, payload: any, legacy: bool = False,
+                       save_signature: bool = False) -> bytes:
         """
         Create a new signed ubirch-protocol message.
         :param uuid: the uuid of the device that sends the message, part of the envelope
@@ -131,7 +137,7 @@ class Protocol(object):
             0
         ]
 
-        (signature, serialized) = self._prepare_and_sign(uuid, msg)
+        (signature, serialized) = self._prepare_and_sign(uuid, msg, legacy)
         if save_signature:
             self._signatures[uuid] = signature
 

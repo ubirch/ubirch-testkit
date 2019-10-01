@@ -37,14 +37,17 @@ class UbirchClient(Protocol):
 
         # after boot or restart try to register certificate
         cert = self.get_certificate()
-        upp = self.message_signed(self._uuid, UBIRCH_PROTOCOL_TYPE_REG, cert)
+        upp = self.message_signed(self._uuid, UBIRCH_PROTOCOL_TYPE_REG, cert, legacy=True)
+        # print(binascii.hexlify(upp))
         r = requests.post(self.__register_url,
                           headers={'Content-Type': 'application/octet-stream'},
                           data=upp)
         if r.status_code == 200:
+            r.close()
             print(str(self._uuid)+": identity registered")
         else:
             print(str(self._uuid)+": ERROR: device identity not registered")
+            print("!! request to {} failed with status code {}: {}".format(self.__register_url, r.status_code, r.text))
 
     def _sign(self, uuid: str, message: bytes) -> bytes:
         return self.__sk.sign(message)

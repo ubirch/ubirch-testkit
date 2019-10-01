@@ -9,8 +9,6 @@ from pyboard import Pysense, Pytrack
 # ubirch data client
 from ubirch import UbirchDataClient
 
-rtc = machine.RTC()
-
 setup_help_text = """
 * Copy the UUID and register your device at the Ubirch Web UI: https://console.demo.ubirch.com\n
 * Then, create a file \"config.json\" next to main.py and paste the apiConfig into it.\n
@@ -122,7 +120,7 @@ class Main:
             data = self.prepare_data()
             self.print_data(data)
 
-            # send data to data service and ubirch protocol package (UPP) with hash over data to ubirch backend
+            # send data to ubirch data service and certificate to ubirch auth service
             try:
                 self.ubirch_data.send(data)
             except Exception as e:

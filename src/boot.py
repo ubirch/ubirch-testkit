@@ -21,8 +21,8 @@ def connect(networks: dict, timeout: int = 30, retries: int = 5):
         for net in nets:
             if net.ssid in networks:
                 ssid = net.ssid
-                password = networks[net.ssid]
-                print('-- wifi network ' + net.ssid + ' found, connecting ...')
+                password = networks[ssid]
+                print('-- wifi network ' + ssid + ' found, connecting ...')
                 wlan.connect(ssid, auth=(net.sec, password), timeout=timeout)
                 while not wlan.isconnected():
                     machine.idle()  # save power while waiting
