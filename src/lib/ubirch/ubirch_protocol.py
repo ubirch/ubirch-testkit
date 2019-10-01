@@ -98,11 +98,12 @@ class Protocol(object):
 
     def __serialize(self, msg: any, legacy: bool = False) -> bytearray:
         if not legacy:
-            msgpack.compatibility = False
             return bytearray(msgpack.packb(msg))
         else:
             msgpack.compatibility = True
-            return bytearray(msgpack.packb(msg, use_bin_type=True))
+            serialized = bytearray(msgpack.packb(msg, use_bin_type=True))
+            msgpack.compatibility = False
+            return serialized
 
     def _prepare_and_sign(self, uuid: UUID, msg: any, legacy: bool = False) -> (bytes, bytes):
         """
