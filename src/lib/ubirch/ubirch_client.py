@@ -53,7 +53,7 @@ class UbirchClient(Protocol):
         return self.__sk.sign(message)
 
     def _verify(self, uuid: UUID, message: bytes, signature: bytes) -> bytes:
-        if uuid == self._uuid:
+        if str(uuid) == str(self._uuid):
             return self._vk.verify(signature, message)
         else:
             return self.PUB_DEV.verify(signature, message)
@@ -85,6 +85,7 @@ class UbirchClient(Protocol):
         """
         upp = self.message_chained(self._uuid, 0x00, self._hash(payload))
         # print(binascii.hexlify(upp))
+        # self.message_verify(upp)
         r = requests.post(self.__update_url, headers=self.__headers, data=upp)
         if r.status_code == 200:
             try:
