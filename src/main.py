@@ -10,7 +10,7 @@ import wifi
 from network import WLAN
 from pyboard import Pysense, Pytrack
 # ubirch data client
-from ubirch import UbirchDataClient, ResponseStatusCodeError
+from ubirch import UbirchDataClient, ResponseStatusError
 
 wlan = WLAN(mode=WLAN.STA)
 
@@ -161,10 +161,13 @@ class Main:
                     self.ubirch_data.send(message_backlog.pop())
             except Exception as e:
                 pycom.rgbled(0x440000)
-                if isinstance(e, ResponseStatusCodeError):
+                if isinstance(e, ResponseStatusError):
                     print(e)
                     print("** saving message to try again later")
-                    message_backlog.append(msg)
+                    if len(message_backlog) < 10:
+                        message_backlog.append(msg)
+                    else:
+                        raise Exception("Too many failed tries to send message")
                 else:
                     sys.print_exception(e)
                 time.sleep(2)
