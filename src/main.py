@@ -10,7 +10,7 @@ import wifi
 from network import WLAN
 from pyboard import Pysense, Pytrack
 # ubirch data client
-from ubirch import UbirchDataClient
+from ubirch import UbirchDataClient, ResponseStatusCodeError
 
 wlan = WLAN(mode=WLAN.STA)
 
@@ -74,7 +74,7 @@ class Main:
 
         # try to connect via wifi, throws exception if no success
         self.network_cfg = cfg['networks']
-        wifi.connect(self.network_cfg, timeout=10, retries=5)
+        wifi.connect(self.network_cfg)
 
         # ubirch data client for setting up ubirch protocol, authentication and data service
         self.ubirch_data = UbirchDataClient(self.uuid, cfg)
@@ -137,6 +137,7 @@ class Main:
     def loop(self, interval: int = 60):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
+        message_backlog = []
         while True:
             start_time = time.time()
             pycom.rgbled(0x112200)
@@ -148,17 +149,25 @@ class Main:
             msg = self.ubirch_data.pack_message(data)
 
             # make sure device is still connected before sending data
-            if wlan.isconnected():
-                # send data to ubirch data service and certificate to ubirch auth service
-                try:
-                    self.ubirch_data.send(msg)
-                except Exception as e:
-                    pycom.rgbled(0x440000)
-                    sys.print_exception(e)
-                    time.sleep(2)
-            else:
+            if not wlan.isconnected():
                 print("!! lost wifi connection, trying to reconnect ...")
-                wifi.connect(self.network_cfg, timeout=10, retries=5)
+                wifi.connect(self.network_cfg)
+
+            # send data to ubirch data service and certificate to ubirch auth service
+            try:
+                self.ubirch_data.send(msg)
+                # if sending succeeded, check for messages in backlog
+                while message_backlog:
+                    self.ubirch_data.send(message_backlog.pop())
+            except Exception as e:
+                pycom.rgbled(0x440000)
+                if isinstance(e, ResponseStatusCodeError):
+                    print(e)
+                    print("** saving message to try again later")
+                    message_backlog.append(msg)
+                else:
+                    sys.print_exception(e)
+                time.sleep(2)
 
             pycom.rgbled(0x110022)
             print("** done.")
