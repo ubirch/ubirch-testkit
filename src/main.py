@@ -13,7 +13,7 @@ from ubirch import UbirchDataClient
 setup_help_text = """
     * Copy the UUID and register your device at the Ubirch Web UI: https://console.demo.ubirch.com\n
     * Create a file \"config.json\" in the src directory of this project\n
-    * Paste the apiConfig from the Ubirch Web UI into it and add hardware and WIFI configuration:\n
+    * Paste the apiConfig from the Ubirch Web UI into it and add pyboard and WIFI configuration:\n
         {\n
           "type": "<TYPE: 'pysense' or 'pytrack'>",\n
           "networks": {\n
@@ -138,9 +138,12 @@ class Main:
             data = self.prepare_data()
             self.print_data(data)
 
+            # pack data in a message with device UUID and current timestamp
+            msg = self.ubirch_data.pack_message(data)
+
             # send data to ubirch data service and certificate to ubirch auth service
             try:
-                self.ubirch_data.send(data)
+                self.ubirch_data.send(msg)
             except Exception as e:
                 pycom.rgbled(0x440000)
                 print(e)
