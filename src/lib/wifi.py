@@ -33,10 +33,11 @@ def connect(networks: dict, timeout: int = 10, retries: int = 5):
                     time.sleep(1)
                 print('-- current time: ' + str(rtc.now()) + "\n")
                 return
-        print("!! no usable networks found, trying again in 30s")
-        print("!! available networks:")
-        print("!! " + repr([net.ssid for net in nets]))
-        if --retries > 0:
+        if retries > 0:
+            print("!! no usable networks found, trying again in 30s")
+            print("!! available networks:")
+            print("!! " + repr([net.ssid for net in nets]))
+            retries -= 1
             time.sleep(30)
         else:
             raise Exception("network association failed with too many retries")
