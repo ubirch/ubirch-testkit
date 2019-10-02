@@ -1,4 +1,5 @@
 import json
+import sys
 import time
 from uuid import UUID
 
@@ -153,7 +154,7 @@ class Main:
                     self.ubirch_data.send(msg)
                 except Exception as e:
                     pycom.rgbled(0x440000)
-                    print(e)
+                    sys.print_exception(e)
                     time.sleep(2)
             else:
                 print("!! lost wifi connection, trying to reconnect ...")
@@ -161,7 +162,7 @@ class Main:
 
             pycom.rgbled(0x110022)
             print("** done.")
-            passed_time = (time.time() - start_time)
+            passed_time = time.time() - start_time
             if interval > passed_time:
                 time.sleep(interval - passed_time)
 
