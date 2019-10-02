@@ -31,7 +31,7 @@ def connect(networks: dict, timeout: int = 10, retries: int = 5):
                 rtc.ntp_sync('pool.ntp.org', 3600)
                 while not rtc.synced():
                     time.sleep(1)
-                print('-- current time: ' + str(rtc.now()))
+                print('-- current time: ' + str(rtc.now()) + "\n")
                 return
         print("!! no usable networks found, trying again in 30s")
         print("!! available networks:")

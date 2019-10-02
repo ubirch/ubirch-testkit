@@ -6,9 +6,12 @@ import machine
 # Pycom specifics
 import pycom
 import wifi
+from network import WLAN
 from pyboard import Pysense, Pytrack
 # ubirch data client
 from ubirch import UbirchDataClient
+
+wlan = WLAN(mode=WLAN.STA)
 
 setup_help_text = """
     * Copy the UUID and register your device at the Ubirch Web UI: https://console.demo.ubirch.com\n
@@ -69,7 +72,8 @@ class Main:
             raise e
 
         # try to connect via wifi, throws exception if no success
-        wifi.connect(cfg['networks'], timeout=10, retries=5)
+        self.network_cfg = cfg['networks']
+        wifi.connect(self.network_cfg, timeout=10, retries=5)
 
         # ubirch data client for setting up ubirch protocol, authentication and data service
         self.ubirch_data = UbirchDataClient(self.uuid, cfg)
@@ -141,13 +145,18 @@ class Main:
             # pack data in a message with device UUID and current timestamp
             msg = self.ubirch_data.pack_message(data)
 
-            # send data to ubirch data service and certificate to ubirch auth service
-            try:
-                self.ubirch_data.send(msg)
-            except Exception as e:
-                pycom.rgbled(0x440000)
-                print(e)
-                time.sleep(2)
+            # make sure device is still connected before sending data
+            if wlan.isconnected():
+                # send data to ubirch data service and certificate to ubirch auth service
+                try:
+                    self.ubirch_data.send(msg)
+                except Exception as e:
+                    pycom.rgbled(0x440000)
+                    print(e)
+                    time.sleep(2)
+            else:
+                print("!! lost wifi connection, trying to reconnect ...")
+                wifi.connect(self.network_cfg, timeout=10, retries=5)
 
             pycom.rgbled(0x110022)
             print("** done. going to sleep ...")
