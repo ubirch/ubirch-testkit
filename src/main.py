@@ -137,6 +137,7 @@ class Main:
         # disable blue heartbeat blink
         pycom.heartbeat(False)
         while True:
+            start_time = time.time()
             pycom.rgbled(0x112200)
             print("\n** getting measurements:")
             data = self.prepare_data()
@@ -159,8 +160,10 @@ class Main:
                 wifi.connect(self.network_cfg, timeout=10, retries=5)
 
             pycom.rgbled(0x110022)
-            print("** done. going to sleep ...")
-            time.sleep(interval)
+            print("** done.")
+            passed_time = (time.time() - start_time)
+            if interval > passed_time:
+                time.sleep(interval - passed_time)
 
 
 main = Main()
