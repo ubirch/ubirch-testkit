@@ -163,8 +163,8 @@ class Main:
                 pycom.rgbled(0x440000)
                 if isinstance(e, ResponseStatusError):
                     print(e)
-                    print("** saving message to try again later")
                     if len(message_backlog) < 10:
+                        print("** saving message to try again later")
                         message_backlog.append(msg)
                     else:
                         raise Exception("Too many failed tries to send message")
