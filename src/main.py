@@ -10,26 +10,26 @@ import wifi
 from network import WLAN
 from pyboard import Pysense, Pytrack
 # ubirch data client
-from ubirch import UbirchDataClient, DataNotSentError
+from ubirch import UbirchDataClient
 
 wlan = WLAN(mode=WLAN.STA)
 
 setup_help_text = """
-    * Copy the UUID and register your device at the Ubirch Web UI\n
-    * Create a file \"config.json\" in the src directory of this project\n
-        {\n
-          "type": "<TYPE: 'pysense' or 'pytrack'>",\n
-          "networks": {\n
-            "<SSID>": "<password>"\n
-          },\n
-          "password": "<password for ubirch auth and data service>",\n
-          "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",\n
-          "keyServiceJson": "<URL of key registration service (Json formatted messages)>",\n
-          "niomon": "<URL of authentication service>",\n
-          "dataMsgPack": "<URL of data service (MsgPack formatted messages)>",\n
-          "dataJson": "<URL of data service (Json formatted messages)>"\n
-        }\n
-    * Upload the file to your device and run again.\n\n
+    * Copy the UUID and register your device at the Ubirch Web UI
+    * Create a file \'config.json\' in the src directory of this project
+        {
+          "networks": {
+            "<WIFI SSID>": "<WIFI PASSWORD>"
+          },
+          "type": "<TYPE: 'pysense' or 'pytrack'>",
+          "password": "<password for ubirch auth and data service>",
+          "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",
+          "keyServiceJson": "<URL of key registration service (Json formatted messages)>",
+          "niomon": "<URL of authentication service>",
+          "dataMsgPack": "<URL of data service (MsgPack formatted messages)>",
+          "dataJson": "<URL of data service (Json formatted messages)>"
+        }
+    * Upload the file to your device and run again.\n
     For more information, take a look at the README or STEPBYSTEP.md of this project.
 """
 
@@ -71,9 +71,9 @@ class Main:
             with open('config.json', 'r') as c:
                 self.cfg = json.load(c)
         except OSError as e:
-            print("MISSING CONFIGURATION: config.json")
             print(setup_help_text)
-            raise e
+            while True:
+                machine.idle()
 
         # try to connect via wifi, throws exception if no success
         wifi.connect(self.cfg['networks'])
@@ -139,7 +139,6 @@ class Main:
     def loop(self, interval: int = 60):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
-        message_backlog = []
         while True:
             start_time = time.time()
             pycom.rgbled(0x112200)
@@ -158,26 +157,15 @@ class Main:
             # send data to ubirch data service and certificate to ubirch auth service
             try:
                 self.ubirch_data.send(msg)
-                # if sending succeeded, check for messages in backlog
-                while message_backlog:
-                    self.ubirch_data.send(message_backlog.pop())
             except Exception as e:
                 pycom.rgbled(0x440000)
-                if isinstance(e, DataNotSentError):
-                    print(e)
-                    if len(message_backlog) < 10:
-                        print("** saving message to try again later")
-                        message_backlog.append(msg)
-                    else:
-                        raise Exception("Too many unsent messages in backlog")
-                else:
-                    sys.print_exception(e)
+                sys.print_exception(e)
                 time.sleep(2)
 
             print("** done.")
             passed_time = time.time() - start_time
             if interval > passed_time:
-                pycom.rgbled(0x110022)
+                pycom.rgbled(0)
                 time.sleep(interval - passed_time)
 
 

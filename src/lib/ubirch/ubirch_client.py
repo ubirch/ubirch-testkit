@@ -93,9 +93,5 @@ class UbirchClient(Protocol):
             except Exception as e:
                 raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(r.content)))
         else:
-            raise CertificateNotSentError(
+            raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.__update_url, r.status_code, r.text))
-
-
-class CertificateNotSentError(Exception):
-    pass

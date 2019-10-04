@@ -49,10 +49,6 @@ class UbirchDataClient:
             print("** sending measurement certificate ...")
             self.__ubirch.send(message)
         else:
-            raise DataNotSentError(
+            raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.__data_service_url, r.status_code,
                                                                          r.text))
-
-
-class DataNotSentError(Exception):
-    pass
