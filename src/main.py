@@ -142,21 +142,20 @@ class Main:
         while True:
             start_time = time.time()
             pycom.rgbled(0x112200)
-            print("\n** getting measurements:")
-            data = self.prepare_data()
-            self.print_data(data)
 
-            # pack data in a message with device UUID and current timestamp
-            msg = self.ubirch_data.pack_message(data)
-
-            # make sure device is still connected before sending data
+            # make sure device is still connected
             if not wlan.isconnected():
                 print("!! lost wifi connection, trying to reconnect ...")
                 wifi.connect(self.cfg['networks'])
 
+            # get data
+            print("\n** getting measurements:")
+            data = self.prepare_data()
+            self.print_data(data)
+
             # send data to ubirch data service and certificate to ubirch auth service
             try:
-                self.ubirch_data.send(msg)
+                self.ubirch_data.send(data)
             except Exception as e:
                 pycom.rgbled(0x440000)
                 sys.print_exception(e)

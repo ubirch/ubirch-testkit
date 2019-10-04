@@ -25,7 +25,7 @@ class UbirchDataClient:
         self.__ubirch = UbirchClient(uuid, self.__headers, cfg['keyServiceMsgPack'], cfg['niomon'])
 
     def pack_message(self, data: dict) -> bytes:
-        # pack data map as message array with uuid, message type and timestamp
+        # pack data map as message array with device UUID, message type and timestamp
         msg = [
             self.__uuid.bytes,
             self.__msg_type,
@@ -38,7 +38,10 @@ class UbirchDataClient:
         # print(binascii.hexlify(serialized))
         return serialized
 
-    def send(self, message: bytes):
+    def send(self, data: dict):
+        # pack data in a msgpack formatted message
+        message = self.pack_message(data)
+
         # send message to ubirch data service (only send UPP if successful)
         print("** sending measurements ...")
         r = requests.post(self.__data_service_url, headers=self.__headers, data=binascii.hexlify(message))
