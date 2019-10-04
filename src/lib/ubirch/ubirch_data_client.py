@@ -24,8 +24,8 @@ class UbirchDataClient:
         # this client will generate a new key pair and register the public key at the key service
         self.__ubirch = UbirchClient(uuid, self.__headers, cfg['keyServiceMsgPack'], cfg['niomon'])
 
-    def send(self, data: dict):
-        # pack data map as message array with uuid, message type and timestamp
+    def pack_message(self, data: dict) -> bytes:
+        # pack data map as message array with device UUID, message type and timestamp
         msg = [
             self.__uuid.bytes,
             self.__msg_type,
@@ -36,16 +36,21 @@ class UbirchDataClient:
         # convert the message to msgpack format
         serialized = msgpack.packb(msg)
         # print(binascii.hexlify(serialized))
+        return serialized
+
+    def send(self, data: dict):
+        # pack data in a msgpack formatted message
+        message = self.pack_message(data)
 
         # send message to ubirch data service (only send UPP if successful)
         print("** sending measurements ...")
-        r = requests.post(self.__data_service_url, headers=self.__headers, data=binascii.hexlify(serialized))
+        r = requests.post(self.__data_service_url, headers=self.__headers, data=binascii.hexlify(message))
 
         if r.status_code == 200:
             r.close()
             # send UPP to niomon
             print("** sending measurement certificate ...")
-            self.__ubirch.send(serialized)
+            self.__ubirch.send(message)
         else:
             raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.__data_service_url, r.status_code,

@@ -81,7 +81,6 @@ class UbirchClient(Protocol):
         Seal the data and send to backend. This includes creating a SHA512 hash of the data
         and sending it to the ubirch backend.
         :param payload: the original data (which will be hashed)
-        :return: the parsed response and the REST response from the ubirch backend
         """
         upp = self.message_chained(self._uuid, 0x00, self._hash(payload))
         # print(binascii.hexlify(upp))
@@ -96,4 +95,3 @@ class UbirchClient(Protocol):
         else:
             raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.__update_url, r.status_code, r.text))
-

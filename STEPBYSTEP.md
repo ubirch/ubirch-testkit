@@ -39,18 +39,6 @@
     * Paste `https://github.com/ubirch/example-micropython` to the *Clone from* field and clone it
     * A new project with the project tree at the right of Atom should open automatically
 
-1. Create a file `boot.json` in the `src` directory of the project tree with the following content
-    ```json
-    {
-      "networks": {
-        "<WIFI SSID>": "<WIFI PASSWORD>"
-      },
-      "timeout": 5000,
-      "retries": 10
-    }
-    ```
-    * Replace `<WIFI SSID>` with the name of your wifi network
-    * Replace `<WIFI PASSWORD>` with the password to your wifi network
 1. Press the `UPLOAD` button just above the pymakr console window in Atom
 1. Wait for all files to upload. The code will start running on your device and you will see a `** UUID : XXXX` output
 1. copy the **UUID**
@@ -62,13 +50,15 @@
     * click **create**
 1. Next, click on your device and copy the apiConfig
 1. Create a file `config.json` in the `src` directory of the project tree and paste the apiConfig into it.
-1. add a key-value-pair that will configure the Pycom for the expansion board you are using with the key `"type"` 
-    and the value being the expansion board type `"pysense"` or `"pytrack"`
+1. Add configuration for WIFI connection and the expansion board you are using.
 
-   It should look like this:
+   It should then look like this:
     ```json
     {
-      "type": "<TYPE: 'pysense' or 'pytrack'>",
+      "networks": {
+        "<WIFI SSID>": "<WIFI PASSWORD>"
+      },
+      "type": "<BOARD TYPE>",
       "password": "<password for ubirch auth and data service>",
       "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",
       "keyServiceJson": "<URL of key registration service (Json formatted messages)>",
@@ -77,6 +67,9 @@
       "dataJson": "<URL of data service (Json formatted messages)>"
     }
     ```
+    * Replace `<WIFI SSID>` with the name of your wifi network
+    * Replace `<WIFI PASSWORD>` with the password to your wifi network
+    * Replace `<BOARD TYPE>` with the expansion board type you are using (`pysense` or `pytrack`)
 1. Press the `UPLOAD` button again and you're good to go. 
 
 On initial start, the Pycom will generate an ed25519 key pair for the device and register the public key at the Ubirch

@@ -1,67 +1,90 @@
 import json
+import sys
 import time
 from uuid import UUID
 
 import machine
 # Pycom specifics
 import pycom
+import wifi
+from network import WLAN
 from pyboard import Pysense, Pytrack
 # ubirch data client
 from ubirch import UbirchDataClient
 
+wlan = WLAN(mode=WLAN.STA)
+
 setup_help_text = """
-* Copy the UUID and register your device at the Ubirch Web UI: https://console.demo.ubirch.com\n
-* Then, create a file \"config.json\" next to main.py and paste the apiConfig into it.\n
-* Add the key-value-pair '"type": "<TYPE: 'pysense' or 'pytrack'>",' to the config-file.\n
-* Upload the file to your device and run again.\n\n
-For more information, take a look at the README.md of this repository.
+    * Copy the UUID and register your device at the Ubirch Web UI
+    * Create a file \'config.json\' in the src directory of this project
+        {
+          "networks": {
+            "<WIFI SSID>": "<WIFI PASSWORD>"
+          },
+          "type": "<TYPE: 'pysense' or 'pytrack'>",
+          "password": "<password for ubirch auth and data service>",
+          "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",
+          "keyServiceJson": "<URL of key registration service (Json formatted messages)>",
+          "niomon": "<URL of authentication service>",
+          "dataMsgPack": "<URL of data service (MsgPack formatted messages)>",
+          "dataJson": "<URL of data service (Json formatted messages)>"
+        }
+    * Upload the file to your device and run again.\n
+    For more information, take a look at the README or STEPBYSTEP.md of this project.
 """
+
 
 class Main:
     """
     |  UBIRCH example for pycom modules.
     |
-    |  The devices creates a unique UUID and sends data to the ubirch data and auth service.
+    |  The devices creates a unique UUID and sends data to the ubirch data and auth services.
     |  At the initial start these steps are required:
     |
     |  - start the pycom module with this code
     |  - take note of the UUID printed on the serial console
-    |  - go to 'https://console.demo.ubirch.com/' and register your device
+    |  - register your device at the Ubirch Web UI
     |
     """
 
     def __init__(self) -> None:
 
         # generate UUID
-        self.uuid = UUID(b'UBIR'+ 2*machine.unique_id())
+        self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
         print("\n** UUID   : " + str(self.uuid) + "\n")
 
         # load configuration from config.json file
         # the config.json should be placed next to this file
         # {
-        #   "type": "<TYPE: 'pysense' or 'pytrack'>",
-        #   "password": "<password for ubirch auth and data service>",
-        #   "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",
-        #   "keyServiceJson": "<URL of key registration service (Json formatted messages)>",
-        #   "niomon": "<URL of authentication service>",
-        #   "dataMsgPack": "<URL of data service (MsgPack formatted messages)>",
-        #   "dataJson": "<URL of data service (Json formatted messages)>"
+        #    "networks": {
+        #      "<WIFI SSID>": "<WIFI PASSWORD>"
+        #    },
+        #    "type": "<TYPE: 'pysense' or 'pytrack'>",
+        #    "password": "<password for ubirch auth and data service>",
+        #    "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",
+        #    "keyServiceJson": "<URL of key registration service (Json formatted messages)>",
+        #    "niomon": "<URL of authentication service>",
+        #    "dataMsgPack": "<URL of data service (MsgPack formatted messages)>",
+        #    "dataJson": "<URL of data service (Json formatted messages)>"
         # }
         try:
             with open('config.json', 'r') as c:
-                cfg = json.load(c)
-        except OSError:
+                self.cfg = json.load(c)
+        except OSError as e:
             print(setup_help_text)
             while True:
-                time.sleep(60)
+                machine.idle()
+
+        # try to connect via wifi, throws exception if no success
+        wifi.connect(self.cfg['networks'])
 
         # ubirch data client for setting up ubirch protocol, authentication and data service
-        self.ubirch_data = UbirchDataClient(self.uuid, cfg)
+        self.ubirch_data = UbirchDataClient(self.uuid, self.cfg)
 
         # initialize the sensor based on the type of the pycom add-on board
-        if cfg["type"] == "pysense":
+        if self.cfg["type"] == "pysense":
             self.sensor = Pysense()
-        elif cfg["type"] == "pytrack":
+        elif self.cfg["type"] == "pytrack":
             self.sensor = Pytrack()
         else:
             print("Expansion board type not supported.\nThis version supports the types \"pysense\" and \"pytrack\"")
@@ -117,7 +140,15 @@ class Main:
         # disable blue heartbeat blink
         pycom.heartbeat(False)
         while True:
+            start_time = time.time()
             pycom.rgbled(0x112200)
+
+            # make sure device is still connected
+            if not wlan.isconnected():
+                print("!! lost wifi connection, trying to reconnect ...")
+                wifi.connect(self.cfg['networks'])
+
+            # get data
             print("\n** getting measurements:")
             data = self.prepare_data()
             self.print_data(data)
@@ -127,12 +158,14 @@ class Main:
                 self.ubirch_data.send(data)
             except Exception as e:
                 pycom.rgbled(0x440000)
-                print(e)
+                sys.print_exception(e)
                 time.sleep(2)
 
-            pycom.rgbled(0x110022)
-            print("** done. going to sleep ...")
-            time.sleep(interval)
+            print("** done.")
+            passed_time = time.time() - start_time
+            if interval > passed_time:
+                pycom.rgbled(0)
+                time.sleep(interval - passed_time)
 
 
 main = Main()
