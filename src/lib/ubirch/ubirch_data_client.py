@@ -11,6 +11,9 @@ from .ubirch_client import UbirchClient
 class UbirchDataClient:
 
     def __init__(self, uuid: UUID, cfg: dict):
+        """
+        Initialize the ubirch client with the service URLs and header with device UUID and password for authentication.
+        """
         self.__uuid = uuid
         self.__auth = cfg['password']
         self.__data_service_url = cfg['dataMsgPack']
@@ -21,11 +24,15 @@ class UbirchDataClient:
         }
         self.__msg_type = 0
 
-        # this client will generate a new key pair and register the public key at the key service
+        # this client generates a new key pair and registers the public key at the key service
         self.__ubirch = UbirchClient(uuid, self.__headers, cfg['keyServiceMsgPack'], cfg['niomon'])
 
     def pack_message(self, data: dict) -> bytes:
-        # pack data map as message array with device UUID, message type and timestamp
+        """
+        Generate a message for sending to the ubirch data service.
+        :param data: a map containing the data to be sent
+        :return: a msgpack formatted array with the device UUID, message type, timestamp and data
+        """
         msg = [
             self.__uuid.bytes,
             self.__msg_type,
@@ -33,13 +40,18 @@ class UbirchDataClient:
             data
         ]
 
-        # convert the message to msgpack format
         serialized = msgpack.packb(msg)
         # print(binascii.hexlify(serialized))
         return serialized
 
     def send(self, data: dict):
-        # pack data in a msgpack formatted message
+        """
+        Pack the data with UUID and timestamp and send to ubirch data service. On success, send certificate
+        of the message to ubirch authentication service. Throws exception if message couldn't be sent or
+        response couldn't be verified.
+        :param data: a map containing the data to be sent
+        """
+        # pack data in a msgpack formatted message with device UUID, message type and timestamp
         message = self.pack_message(data)
 
         # send message to ubirch data service (only send UPP if successful)

@@ -76,7 +76,6 @@ class Protocol(object):
         """
         return hashlib.sha512(message).digest()
 
-
     def _sign(self, uuid: UUID, message: bytes) -> bytes:
         """
         Sign the request when finished.

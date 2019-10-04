@@ -79,7 +79,8 @@ class UbirchClient(Protocol):
     def send(self, payload: bytes):
         """
         Seal the data and send to backend. This includes creating a SHA512 hash of the data
-        and sending it to the ubirch backend.
+        and sending it to the ubirch backend. Throws exception if message couldn't be sent
+        or response couldn't be verified.
         :param payload: the original data (which will be hashed)
         """
         upp = self.message_chained(self._uuid, 0x00, self._hash(payload))
