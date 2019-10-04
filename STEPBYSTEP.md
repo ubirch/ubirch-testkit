@@ -69,7 +69,7 @@
     ```
     * Replace `<WIFI SSID>` with the name of your wifi network
     * Replace `<WIFI PASSWORD>` with the password to your wifi network
-    * Replace `<BOARD TYPE>` with the expansion board type you are using ('pysense' or 'pytrack')
+    * Replace `<BOARD TYPE>` with the expansion board type you are using (`pysense` or `pytrack`)
 1. Press the `UPLOAD` button again and you're good to go. 
 
 On initial start, the Pycom will generate an ed25519 key pair for the device and register the public key at the Ubirch

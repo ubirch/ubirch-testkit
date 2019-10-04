@@ -15,18 +15,19 @@ from ubirch import UbirchDataClient, DataNotSentError
 wlan = WLAN(mode=WLAN.STA)
 
 setup_help_text = """
-    * Copy the UUID and register your device at the Ubirch Web UI: https://console.demo.ubirch.com\n
+    * Copy the UUID and register your device at the Ubirch Web UI\n
     * Create a file \"config.json\" in the src directory of this project\n
-    * Paste the apiConfig from the Ubirch Web UI into it and add pyboard and WIFI configuration:\n
         {\n
           "type": "<TYPE: 'pysense' or 'pytrack'>",\n
           "networks": {\n
             "<SSID>": "<password>"\n
           },\n
           "password": "<password for ubirch auth and data service>",\n
-          "keyService": "<URL of key registration service>",\n
+          "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",\n
+          "keyServiceJson": "<URL of key registration service (Json formatted messages)>",\n
           "niomon": "<URL of authentication service>",\n
-          "data": "<URL of data service>"\n
+          "dataMsgPack": "<URL of data service (MsgPack formatted messages)>",\n
+          "dataJson": "<URL of data service (Json formatted messages)>"\n
         }\n
     * Upload the file to your device and run again.\n\n
     For more information, take a look at the README or STEPBYSTEP.md of this project.
@@ -49,7 +50,7 @@ class Main:
     def __init__(self) -> None:
 
         # generate UUID
-        self.uuid = UUID(b'MEOW' + 2 * machine.unique_id())
+        self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
         print("\n** UUID   : " + str(self.uuid) + "\n")
 
         # load configuration from config.json file
