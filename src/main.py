@@ -66,23 +66,22 @@ class Main:
         # }
         try:
             with open('config.json', 'r') as c:
-                cfg = json.load(c)
+                self.cfg = json.load(c)
         except OSError as e:
             print("MISSING CONFIGURATION: config.json")
             print(setup_help_text)
             raise e
 
         # try to connect via wifi, throws exception if no success
-        self.network_cfg = cfg['networks']
-        wifi.connect(self.network_cfg)
+        wifi.connect(self.cfg['networks'])
 
         # ubirch data client for setting up ubirch protocol, authentication and data service
-        self.ubirch_data = UbirchDataClient(self.uuid, cfg)
+        self.ubirch_data = UbirchDataClient(self.uuid, self.cfg)
 
         # initialize the sensor based on the type of the pycom add-on board
-        if cfg["type"] == "pysense":
+        if self.cfg["type"] == "pysense":
             self.sensor = Pysense()
-        elif cfg["type"] == "pytrack":
+        elif self.cfg["type"] == "pytrack":
             self.sensor = Pytrack()
         else:
             print("Expansion board type not supported.\nThis version supports the types \"pysense\" and \"pytrack\"")
@@ -151,7 +150,7 @@ class Main:
             # make sure device is still connected before sending data
             if not wlan.isconnected():
                 print("!! lost wifi connection, trying to reconnect ...")
-                wifi.connect(self.network_cfg)
+                wifi.connect(self.cfg['networks'])
 
             # send data to ubirch data service and certificate to ubirch auth service
             try:
