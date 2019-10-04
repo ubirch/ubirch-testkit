@@ -13,7 +13,7 @@ class UbirchDataClient:
     def __init__(self, uuid: UUID, cfg: dict):
         self.__uuid = uuid
         self.__auth = cfg['password']
-        self.__data_service_url = cfg['data']
+        self.__data_service_url = cfg['dataMsgPack']
         self.__headers = {
             'X-Ubirch-Hardware-Id': str(uuid),
             'X-Ubirch-Credential': str(binascii.b2a_base64(self.__auth).decode())[:-1],
@@ -22,7 +22,7 @@ class UbirchDataClient:
         self.__msg_type = 0
 
         # this client will generate a new key pair and register the public key at the key service
-        self.__ubirch = UbirchClient(uuid, self.__headers, cfg['keyService'], cfg['niomon'])
+        self.__ubirch = UbirchClient(uuid, self.__headers, cfg['keyServiceMsgPack'], cfg['niomon'])
 
     def pack_message(self, data: dict) -> bytes:
         # pack data map as message array with uuid, message type and timestamp
@@ -49,10 +49,10 @@ class UbirchDataClient:
             print("** sending measurement certificate ...")
             self.__ubirch.send(message)
         else:
-            raise ResponseStatusError(
+            raise DataNotSentError(
                 "!! request to {} failed with status code {}: {}".format(self.__data_service_url, r.status_code,
                                                                          r.text))
 
 
-class ResponseStatusError(Exception):
+class DataNotSentError(Exception):
     pass

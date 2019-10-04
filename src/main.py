@@ -10,7 +10,7 @@ import wifi
 from network import WLAN
 from pyboard import Pysense, Pytrack
 # ubirch data client
-from ubirch import UbirchDataClient, ResponseStatusError
+from ubirch import UbirchDataClient, DataNotSentError
 
 wlan = WLAN(mode=WLAN.STA)
 
@@ -60,9 +60,11 @@ class Main:
         #     "<SSID>": "<password>"
         #   },
         #   "password": "<password for ubirch auth and data service>",
-        #   "keyService": "<URL of key registration service>",
+        #   "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",
+        #   "keyServiceJson": "<URL of key registration service (Json formatted messages)>",
         #   "niomon": "<URL of authentication service>",
-        #   "data": "<URL of data service>"
+        #   "dataMsgPack": "<URL of data service (MsgPack formatted messages)>",
+        #   "dataJson": "<URL of data service (Json formatted messages)>"
         # }
         try:
             with open('config.json', 'r') as c:
@@ -160,21 +162,21 @@ class Main:
                     self.ubirch_data.send(message_backlog.pop())
             except Exception as e:
                 pycom.rgbled(0x440000)
-                if isinstance(e, ResponseStatusError):
+                if isinstance(e, DataNotSentError):
                     print(e)
                     if len(message_backlog) < 10:
                         print("** saving message to try again later")
                         message_backlog.append(msg)
                     else:
-                        raise Exception("Too many failed tries to send message")
+                        raise Exception("Too many unsent messages in backlog")
                 else:
                     sys.print_exception(e)
                 time.sleep(2)
 
-            pycom.rgbled(0x110022)
             print("** done.")
             passed_time = time.time() - start_time
             if interval > passed_time:
+                pycom.rgbled(0x110022)
                 time.sleep(interval - passed_time)
 
 
