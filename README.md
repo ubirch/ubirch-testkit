@@ -35,9 +35,9 @@ The example code is made for any Pycom module sitting on a Pysense or Pytrack.
       },
       "type": "<TYPE: 'pysense' or 'pytrack'>",
       "password": "<password for ubirch auth and data service>",
-      "keyService": "<URL of key registration service (MsgPack formatted messages)>",
+      "keyService": "<URL of key registration service>",
       "niomon": "<URL of authentication service>",
-      "data": "<URL of data service (MsgPack formatted messages)>"
+      "data": "<URL of data service>"
     }
     ```
 * Upload the file to the board again and you're good to go. 
