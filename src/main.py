@@ -23,11 +23,9 @@ setup_help_text = """
           },
           "type": "<TYPE: 'pysense' or 'pytrack'>",
           "password": "<password for ubirch auth and data service>",
-          "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",
-          "keyServiceJson": "<URL of key registration service (Json formatted messages)>",
+          "keyService": "<URL of key registration service>",
           "niomon": "<URL of authentication service>",
-          "dataMsgPack": "<URL of data service (MsgPack formatted messages)>",
-          "dataJson": "<URL of data service (Json formatted messages)>"
+          "data": "<URL of data service>"
         }
     * Upload the file to your device and run again.\n
     For more information, take a look at the README or STEPBYSTEP.md of this project.
@@ -61,11 +59,9 @@ class Main:
         #    },
         #    "type": "<TYPE: 'pysense' or 'pytrack'>",
         #    "password": "<password for ubirch auth and data service>",
-        #    "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",
-        #    "keyServiceJson": "<URL of key registration service (Json formatted messages)>",
+        #    "keyService": "<URL of key registration service>",
         #    "niomon": "<URL of authentication service>",
-        #    "dataMsgPack": "<URL of data service (MsgPack formatted messages)>",
-        #    "dataJson": "<URL of data service (Json formatted messages)>"
+        #    "data": "<URL of data service>"
         # }
         try:
             with open('config.json', 'r') as c:

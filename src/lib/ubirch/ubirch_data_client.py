@@ -16,7 +16,7 @@ class UbirchDataClient:
         """
         self.__uuid = uuid
         self.__auth = cfg['password']
-        self.__data_service_url = cfg['dataMsgPack']
+        self.__data_service_url = cfg['data']
         self.__headers = {
             'X-Ubirch-Hardware-Id': str(uuid),
             'X-Ubirch-Credential': str(binascii.b2a_base64(self.__auth).decode())[:-1],
@@ -25,7 +25,7 @@ class UbirchDataClient:
         self.__msg_type = 0
 
         # this client generates a new key pair and registers the public key at the key service
-        self.__ubirch = UbirchClient(uuid, self.__headers, cfg['keyServiceMsgPack'], cfg['niomon'])
+        self.__ubirch = UbirchClient(uuid, self.__headers, cfg['keyService'], cfg['niomon'])
 
     def pack_message(self, data: dict) -> bytes:
         """
