@@ -47,7 +47,8 @@ class UbirchClient(Protocol):
             print(str(self._uuid)+": identity registered")
         else:
             print(str(self._uuid)+": ERROR: device identity not registered")
-            print("!! request to {} failed with status code {}: {}".format(self.__register_url, r.status_code, r.text))
+            raise Exception(
+                "!! request to {} failed with status code {}: {}".format(self.__register_url, r.status_code, r.text))
 
     def _sign(self, uuid: str, message: bytes) -> bytes:
         return self.__sk.sign(message)
