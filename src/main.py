@@ -55,16 +55,16 @@ class Main:
         # load configuration from config.json file
         # the config.json should be placed next to this file
         # {
-        #   "type": "<TYPE: 'pysense' or 'pytrack'>",
-        #   "networks": {
-        #     "<SSID>": "<password>"
-        #   },
-        #   "password": "<password for ubirch auth and data service>",
-        #   "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",
-        #   "keyServiceJson": "<URL of key registration service (Json formatted messages)>",
-        #   "niomon": "<URL of authentication service>",
-        #   "dataMsgPack": "<URL of data service (MsgPack formatted messages)>",
-        #   "dataJson": "<URL of data service (Json formatted messages)>"
+        #    "networks": {
+        #      "<WIFI SSID>": "<WIFI PASSWORD>"
+        #    },
+        #    "type": "<TYPE: 'pysense' or 'pytrack'>",
+        #    "password": "<password for ubirch auth and data service>",
+        #    "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",
+        #    "keyServiceJson": "<URL of key registration service (Json formatted messages)>",
+        #    "niomon": "<URL of authentication service>",
+        #    "dataMsgPack": "<URL of data service (MsgPack formatted messages)>",
+        #    "dataJson": "<URL of data service (Json formatted messages)>"
         # }
         try:
             with open('config.json', 'r') as c:

@@ -16,17 +16,6 @@ The example code is made for any Pycom module sitting on a Pysense or Pytrack.
 * Add the directory to Atom using `File` -> `Add Project Folder`
 * Use the [Pycom Firmware Upgrader](https://pycom.io/downloads/#firmware) to
   flash the correct binary for your board.
-* Create src/boot.json and add your wifi SSID and password: 
-    ```json
-    {
-      "networks": {
-        "<ssid>": "<password>"
-      },
-      "timeout": 5000,
-      "retries": 10
-    }
-    ``` 
-
 * If the Pymakr plugin is loaded, you should have a terminal at the bottom
   with buttons to upload and run scripts. Simply upload the code to get going.
 * Take note of the UUID displayed in the console window
@@ -36,17 +25,21 @@ The example code is made for any Pycom module sitting on a Pysense or Pytrack.
     * click **create**
 * Next, click on your device, copy the apiConfig, create src/config.json in your project
   and paste the apiConfig into it.
-* Add a key-value-pair that will configure the pycom for the expansion board you are using with the key `"type"` 
-    and the value being the expansion board type `"pysense"` or `"pytrack"`
+* Add configuration for WIFI connection and the expansion board you are using.
 
-   It should look like this:
+   It should then look like this:
     ```json
     {
+      "networks": {
+        "<WIFI SSID>": "<WIFI PASSWORD>"
+      },
       "type": "<TYPE: 'pysense' or 'pytrack'>",
       "password": "<password for ubirch auth and data service>",
-      "keyService": "<URL of key registration service>",
+      "keyServiceMsgPack": "<URL of key registration service (MsgPack formatted messages)>",
+      "keyServiceJson": "<URL of key registration service (Json formatted messages)>",
       "niomon": "<URL of authentication service>",
-      "data": "<URL of data service>"
+      "dataMsgPack": "<URL of data service (MsgPack formatted messages)>",
+      "dataJson": "<URL of data service (Json formatted messages)>"
     }
     ```
 * Upload the file to the board again and you're good to go. 
