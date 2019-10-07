@@ -30,12 +30,12 @@ class UbirchClient(Protocol):
         self.__cfg_root = cfg_root
         self._key_file = str(uuid)+".bin"
         if self._key_file in os.listdir(self.__cfg_root):
-            logger.info("loading key pair for " + str(self._uuid))
+            print("loading key pair for " + str(self._uuid))
             with open(self.__cfg_root+self._key_file, "rb") as kf:
                 self.__sk = ed25519.SigningKey(kf.read())
                 self._vk = self.__sk.get_verifying_key()
         else:
-            logger.info("generating new key pair for " + str(uuid))
+            print("generating new key pair for " + str(uuid))
             (self._vk, self.__sk) = ed25519.create_keypair()
             with open(self.__cfg_root+self._key_file, "wb") as kf:
                 kf.write(self.__sk.to_bytes())
@@ -49,9 +49,9 @@ class UbirchClient(Protocol):
                           data=upp)
         if r.status_code == 200:
             r.close()
-            logger.info(str(self._uuid) + ": identity registered")
+            print(str(self._uuid) + ": identity registered\n")
         else:
-            logger.error(str(self._uuid) + ": ERROR: device identity not registered")
+            logger.critical(str(self._uuid) + ": ERROR: device identity not registered")
             raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.__register_url, r.status_code, r.text))
 
@@ -89,7 +89,7 @@ class UbirchClient(Protocol):
         or response couldn't be verified.
         :param payload: the original data (which will be hashed)
         """
-        logger.info("** sending measurement certificate ...")
+        print("** sending measurement certificate ...")
         upp = self.message_chained(self._uuid, 0x00, self._hash(payload))
         logger.debug(binascii.hexlify(upp))
         # self.message_verify(upp)
@@ -97,7 +97,7 @@ class UbirchClient(Protocol):
         if r.status_code == 200:
             try:
                 self.message_verify(r.content)
-                logger.info("hash: {}".format(binascii.b2a_base64(self._hash(payload).decode())[:-1]))
+                print("hash: {}".format(binascii.b2a_base64(self._hash(payload).decode())[:-1]))
             except Exception as e:
                 raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(r.content)))
         else:

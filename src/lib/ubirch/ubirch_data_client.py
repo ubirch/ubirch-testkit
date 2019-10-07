@@ -69,7 +69,7 @@ class UbirchDataClient:
         response couldn't be verified.
         :param data: a map containing the data to be sent
         """
-        logger.info("** sending measurements ...")
+        print("** sending measurements ...")
         # pack data in a msgpack formatted message with device UUID, message type and timestamp
         message = self.pack_message(data)
 

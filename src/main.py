@@ -52,8 +52,7 @@ class Main:
 
         # generate UUID
         self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
-        print()
-        logger.info("** UUID   : " + str(self.uuid) + "\n")
+        print("\n** UUID   : " + str(self.uuid) + "\n")
 
         # load configuration from config.json file
         # the config.json should be placed next to this file
@@ -142,7 +141,6 @@ class Main:
         while True:
             start_time = time.time()
             pycom.rgbled(0x112200)
-            print()
 
             # make sure device is still connected
             if not wlan.isconnected():
@@ -150,7 +148,7 @@ class Main:
                 wifi.connect(self.cfg['networks'])
 
             # get data
-            logger.info("** getting measurements:")
+            print("** getting measurements:")
             data = self.prepare_data()
             self.print_data(data)
 
@@ -162,7 +160,7 @@ class Main:
                 logger.exception(e)
                 time.sleep(2)
 
-            logger.info("** done.")
+            print("** done.\n")
             passed_time = time.time() - start_time
             if interval > passed_time:
                 pycom.rgbled(0)
