@@ -1,5 +1,5 @@
 import json
-import sys
+import logging
 import time
 from uuid import UUID
 
@@ -11,6 +11,9 @@ from network import WLAN
 from pyboard import Pysense, Pytrack
 # ubirch data client
 from ubirch import UbirchDataClient
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 wlan = WLAN(mode=WLAN.STA)
 
@@ -49,7 +52,8 @@ class Main:
 
         # generate UUID
         self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
-        print("\n** UUID   : " + str(self.uuid) + "\n")
+        print()
+        logger.info("** UUID   : " + str(self.uuid) + "\n")
 
         # load configuration from config.json file
         # the config.json should be placed next to this file
@@ -66,7 +70,7 @@ class Main:
         try:
             with open('config.json', 'r') as c:
                 self.cfg = json.load(c)
-        except OSError as e:
+        except OSError:
             print(setup_help_text)
             while True:
                 machine.idle()
@@ -83,7 +87,7 @@ class Main:
         elif self.cfg["type"] == "pytrack":
             self.sensor = Pytrack()
         else:
-            print("Expansion board type not supported.\nThis version supports the types \"pysense\" and \"pytrack\"")
+            logger.error("Expansion board type not supported. This version supports types \"pysense\" and \"pytrack\"")
 
     def prepare_data(self):
         """
@@ -138,14 +142,15 @@ class Main:
         while True:
             start_time = time.time()
             pycom.rgbled(0x112200)
+            print()
 
             # make sure device is still connected
             if not wlan.isconnected():
-                print("!! lost wifi connection, trying to reconnect ...")
+                logger.warning("!! lost wifi connection, trying to reconnect ...")
                 wifi.connect(self.cfg['networks'])
 
             # get data
-            print("\n** getting measurements:")
+            logger.info("** getting measurements:")
             data = self.prepare_data()
             self.print_data(data)
 
@@ -154,10 +159,10 @@ class Main:
                 self.ubirch_data.send(data)
             except Exception as e:
                 pycom.rgbled(0x440000)
-                sys.print_exception(e)
+                logger.exception(e)
                 time.sleep(2)
 
-            print("** done.")
+            logger.info("** done.")
             passed_time = time.time() - start_time
             if interval > passed_time:
                 pycom.rgbled(0)

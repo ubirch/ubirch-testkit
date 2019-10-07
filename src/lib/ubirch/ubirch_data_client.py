@@ -1,4 +1,5 @@
 import binascii
+import logging
 import time
 from uuid import UUID
 
@@ -6,6 +7,9 @@ import umsgpack as msgpack
 import urequests as requests
 
 from .ubirch_client import UbirchClient
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class UbirchDataClient:
@@ -41,7 +45,7 @@ class UbirchDataClient:
         ]
 
         serialized = msgpack.packb(msg)
-        # print(binascii.hexlify(serialized))
+        logger.debug(binascii.hexlify(serialized))
         return serialized
 
     def send(self, data: dict):
@@ -51,17 +55,16 @@ class UbirchDataClient:
         response couldn't be verified.
         :param data: a map containing the data to be sent
         """
+        logger.info("** sending measurements ...")
         # pack data in a msgpack formatted message with device UUID, message type and timestamp
         message = self.pack_message(data)
 
         # send message to ubirch data service (only send UPP if successful)
-        print("** sending measurements ...")
         r = requests.post(self.__data_service_url, headers=self.__headers, data=binascii.hexlify(message))
 
         if r.status_code == 200:
             r.close()
             # send UPP to niomon
-            print("** sending measurement certificate ...")
             self.__ubirch.send(message)
         else:
             raise Exception(

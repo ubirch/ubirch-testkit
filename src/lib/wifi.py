@@ -1,8 +1,11 @@
+import logging
 import time
 
 import machine
 from network import WLAN
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def connect(networks: dict, timeout: int = 10, retries: int = 5):
     """
@@ -16,27 +19,27 @@ def connect(networks: dict, timeout: int = 10, retries: int = 5):
     connected = False
     while not connected:
         nets = wlan.scan()
-        print("-- searching for wifi networks...")
+        logger.info("-- searching for wifi networks...")
         for net in nets:
             if net.ssid in networks:
                 ssid = net.ssid
                 password = networks[ssid]
-                print('-- wifi network ' + ssid + ' found, connecting ...')
+                logger.info('-- wifi network ' + ssid + ' found, connecting ...')
                 wlan.connect(ssid, auth=(net.sec, password), timeout=timeout * 1000)
                 while not wlan.isconnected():
                     machine.idle()  # save power while waiting
-                print('-- wifi network connected')
-                print('-- IP address: ' + str(wlan.ifconfig()))
+                logger.info('-- wifi network connected')
+                logger.info('-- IP address: ' + str(wlan.ifconfig()))
                 rtc = machine.RTC()
                 rtc.ntp_sync('pool.ntp.org', 3600)
                 while not rtc.synced():
                     time.sleep(1)
-                print('-- current time: ' + str(rtc.now()) + "\n")
+                logger.info('-- current time: ' + str(rtc.now()) + "\n")
                 return
         if retries > 0:
-            print("!! no usable networks found, trying again in 30s")
-            print("!! available networks:")
-            print("!! " + repr([net.ssid for net in nets]))
+            logger.warning("!! no usable networks found, trying again in 30s")
+            logger.info("!! available networks:")
+            logger.info("!! " + repr([net.ssid for net in nets]))
             retries -= 1
             time.sleep(30)
         else:
