@@ -75,7 +75,10 @@ class Main:
                 machine.idle()
 
         # try to connect via wifi, throws exception if no success
-        wifi.connect(self.cfg['networks'])
+        #wifi.connect(self.cfg['networks'])
+
+        self.nbiot = NbIotClient(self.uuid, self.cfg)
+
 
         # ubirch data client for setting up ubirch protocol, authentication and data service
         self.ubirch_data = UbirchDataClient(self.uuid, self.cfg)
@@ -143,9 +146,9 @@ class Main:
             pycom.rgbled(0x112200)
 
             # make sure device is still connected
-            if not wlan.isconnected():
-                logger.warning("!! lost wifi connection, trying to reconnect ...")
-                wifi.connect(self.cfg['networks'])
+            # if not wlan.isconnected():
+            #     logger.warning("!! lost wifi connection, trying to reconnect ...")
+            #     wifi.connect(self.cfg['networks'])
 
             # get data
             print("** getting measurements:")
