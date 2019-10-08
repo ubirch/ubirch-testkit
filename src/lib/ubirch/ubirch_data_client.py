@@ -22,7 +22,7 @@ class UbirchDataClient:
         self.__auth = cfg['password']
         self.__headers = {
             'X-Ubirch-Hardware-Id': str(uuid),
-            'X-Ubirch-Credential': str(binascii.b2a_base64(self.__auth).decode())[:-1],
+            'X-Ubirch-Credential': binascii.b2a_base64(self.__auth).decode('utf-8').rstrip('\n'),
             'X-Ubirch-Auth-Type': 'ubirch'
         }
         if 'data' in cfg:

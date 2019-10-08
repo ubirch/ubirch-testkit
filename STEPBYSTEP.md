@@ -116,10 +116,10 @@ which is the certificate of the data's authenticity, and sends it to the Ubirch 
 1. While the Pycom is connected and running, and Atom is open, check the pymakr console in Atom and wait for a hash of 
 a measurement certificate to appear, e.g.:
     ```
-    sending measurement certificate ...
-    hash: b’w4DhI6HSrDFsczEEdR1U5w2IPQrzAw9gEocYPpYGfJIdDpeQmEuY/aWY1dqqWUeAHmJGQyGKCD0ctVj6KUlTsA==’
+    ** sending measurement certificate ...
+    hash: nU3Q1JbJ/q/U0nxbremiIbHtKwaHSD9N9qPHeSr0sXTh3ZaVLyTioZZ3wfiQL0gFONIpGQGKgcr0RyLj4gGO1w==
     ```
-    > In this example the hash to copy is `w4DhI6HSrDFsczEEdR1U5w2IPQrzAw9gEocYPpYGfJIdDpeQmEuY/aWY1dqqWUeAHmJGQyGKCD0ctVj6KUlTsA==`
+    Copy the hash.
 
 1. Send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests):
     ```
@@ -130,7 +130,8 @@ a measurement certificate to appear, e.g.:
         * https://verify.dev.ubirch.com/api/verify or
         * https://verify.demo.ubirch.com/api/verify or
         * https://verify.prod.ubirch.com/api/verify
-        * depending on the environment you are using
+    
+      depending on the environment you are using
 
 1. The response will list all blockchain anchors containing this measurement certificate. The `txid` (Blockchain 
 Transaction ID) of each anchors entry can be used to lookup the entry in the according blockchain explorer (consider 
