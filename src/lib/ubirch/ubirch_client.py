@@ -8,7 +8,6 @@ import urequests as requests
 
 from .ubirch_protocol import Protocol, UBIRCH_PROTOCOL_TYPE_REG
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
