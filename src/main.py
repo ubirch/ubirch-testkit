@@ -11,6 +11,7 @@ from network import WLAN
 from pyboard import Pysense, Pytrack
 # ubirch data client
 from ubirch import UbirchDataClient
+from nb_iot_client import NbIotClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -5,6 +5,7 @@ from uuid import UUID
 
 import umsgpack as msgpack
 import urequests as requests
+import usocket as socket
 
 from .ubirch_client import UbirchClient
 

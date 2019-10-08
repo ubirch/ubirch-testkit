@@ -138,6 +138,8 @@ class Protocol(object):
         ]
 
         (signature, serialized) = self._prepare_and_sign(uuid, msg, legacy)
+        print(repr(signature))
+        print(repr(serialized))
         if save_signature:
             self._signatures[uuid] = signature
 
