@@ -15,6 +15,7 @@ from nb_iot_client import NbIotClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+from wifi import set_time
 
 wlan = WLAN(mode=WLAN.STA)
 
@@ -79,6 +80,9 @@ class Main:
         #wifi.connect(self.cfg['networks'])
 
         self.nbiot = NbIotClient(self.uuid, self.cfg)
+
+        # while(set_time() == False):
+        #     time.sleep(1)
 
 
         # ubirch data client for setting up ubirch protocol, authentication and data service

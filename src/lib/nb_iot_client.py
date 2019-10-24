@@ -39,7 +39,6 @@ class NbIotClient:
         print("NB IoT Client init")
         nb_iot_connect()
 
-        set_time()
         # r = requests.get("http://google.com",
         #                   headers={'Content-Type': 'application/octet-stream'},
         #                   data={"upp"})
