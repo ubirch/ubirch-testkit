@@ -86,18 +86,17 @@ class UbirchClient(Protocol):
         Seal the data and send to backend. This includes creating a SHA512 hash of the data
         and sending it to the ubirch backend. Throws exception if message couldn't be sent
         or response couldn't be verified.
-        :param payload: the original data (which will be hashed)
+        :param payload: the UPP payload
         """
         print("** sending measurement certificate ...")
-        hashed_payload = self._hash(payload)
-        upp = self.message_chained(self._uuid, 0x00, hashed_payload)
+        upp = self.message_chained(self._uuid, 0x00, payload)
         logger.debug(binascii.hexlify(upp))
 
         r = requests.post(self.__update_url, headers=self.__headers, data=upp)
         if r.status_code == 200:
             try:
                 self.message_verify(r.content)
-                print("hash: {}".format(binascii.b2a_base64(hashed_payload).decode('utf-8').rstrip('\n')))
+                print("hash: {}".format(binascii.b2a_base64(payload).decode('utf-8').rstrip('\n')))
             except Exception as e:
                 raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(r.content)))
         else:

@@ -44,7 +44,7 @@ class UbirchDataClient:
 
         self.__msg_type = 0
 
-    def pack_message(self, data: dict) -> bytes:
+    def pack_message(self, data: dict) -> (bytes, bytes):
         """
         Generate a message for sending to the ubirch data service.
         :param data: a map containing the data to be sent
@@ -54,12 +54,19 @@ class UbirchDataClient:
             self.__uuid.bytes,
             self.__msg_type,
             int(time.time()),
-            data
+            data,
+            0
         ]
 
+        # calculate hash of message (without last array element)
+        serialized = msgpack.packb(msg)[0:-1]
+        message_hash = self.__ubirch.hash(serialized)
+
+        # replace last element in array with the hash
+        msg[-1] = message_hash
         serialized = msgpack.packb(msg)
-        logger.debug(binascii.hexlify(serialized))
-        return serialized
+        print(binascii.hexlify(serialized))
+        return serialized, message_hash
 
     def send(self, data: dict):
         """
@@ -70,7 +77,7 @@ class UbirchDataClient:
         """
         print("** sending measurements ...")
         # pack data in a msgpack formatted message with device UUID, message type and timestamp
-        message = self.pack_message(data)
+        message, message_hash = self.pack_message(data)
 
         # send message to ubirch data service (only send UPP if successful)
         r = requests.post(self.__data_service_url, headers=self.__headers, data=binascii.hexlify(message))
@@ -78,7 +85,7 @@ class UbirchDataClient:
         if r.status_code == 200:
             r.close()
             # send UPP to niomon
-            self.__ubirch.send(message)
+            self.__ubirch.send(message_hash)
         else:
             raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.__data_service_url, r.status_code,

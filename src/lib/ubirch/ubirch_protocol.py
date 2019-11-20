@@ -67,7 +67,7 @@ class Protocol(object):
         if uuid in self._signatures:
             del self._signatures[uuid]
 
-    def _hash(self, message: bytes) -> bytes:
+    def hash(self, message: bytes) -> bytes:
         """
         Hash the message before signing. Override this method if
         a different hash algorithm is used. Default is SHA512.
@@ -113,7 +113,7 @@ class Protocol(object):
         """
         # sign the message and store the signature
         serialized = self.__serialize(msg, legacy)[0:-1]
-        signature = self._sign(uuid, self._hash(serialized))
+        signature = self._sign(uuid, self.hash(serialized))
         # replace last element in array with the signature
         msg[-1] = signature
         return signature, self.__serialize(msg, legacy)
@@ -182,7 +182,7 @@ class Protocol(object):
         :param signature: the signature to use for verification
         :return:
         """
-        return self._verify(uuid, self._hash(message), signature)
+        return self._verify(uuid, self.hash(message), signature)
 
     def message_verify(self, message: bytes) -> dict:
         """
