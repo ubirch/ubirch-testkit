@@ -1,4 +1,5 @@
 import binascii
+import json
 import logging
 import time
 from uuid import UUID
@@ -44,11 +45,12 @@ class UbirchDataClient:
 
         self.__msg_type = 0
 
-    def pack_message(self, data: dict) -> (bytes, bytes):
+    def pack_message_msgpack(self, data: dict) -> (bytes, bytes):
         """
         Generate a message for sending to the ubirch data service.
         :param data: a map containing the data to be sent
         :return: a msgpack formatted array with the device UUID, message type, timestamp and data
+        :return: the hash over the data message
         """
         msg = [
             self.__uuid.bytes,
@@ -66,7 +68,60 @@ class UbirchDataClient:
         msg[-1] = message_hash
         serialized = msgpack.packb(msg)
         print(binascii.hexlify(serialized))
+
         return serialized, message_hash
+
+    def pack_message_json(self, data: dict) -> (dict, bytes):
+        """
+        Generate a message for sending to the ubirch data service.
+        :param data:  a map containing the data to be sent
+        :return: a map with the device UUID, message type, timestamp and data
+        :return: the hash over the data message
+        """
+        msg_map = {
+            'uuid': str(self.__uuid),
+            'msg_type': self.__msg_type,
+            'timestamp': int(time.time()),
+            'data': data
+        }
+
+        # calculate hash of message
+        message_hash = self.__ubirch.hash(json.dumps(msg_map))
+
+        # append hash to data map
+        msg_map.update({
+            'hash': binascii.b2a_base64(message_hash).decode('utf-8').rstrip('\n')
+        })
+        print(msg_map)
+
+        return msg_map, message_hash
+
+    def send_msgpack(self, data: dict):
+        """
+        Send data message to msgpack endpoint
+        :param data: a map containing the data to be sent
+        :return: the http response, the hash over the data message
+        """
+        # pack data in a msgpack formatted message with device UUID, message type and timestamp
+        message, message_hash = self.pack_message_msgpack(data)
+
+        # send message to ubirch data service (only send UPP if successful)
+        r = requests.post(self.__data_service_url, headers=self.__headers, data=binascii.hexlify(message))
+        return r, message_hash
+
+    def send_json(self, data: dict):
+        """
+        Send data message to json endpoint
+        :param data: a map containing the data to be sent
+        :return: the http response, the hash over the data message
+        """
+        msg_map, message_hash = self.pack_message_json(data)
+
+        # request needs to be sent twice because of bug in backend
+        r = requests.post(self.__data_service_url, headers=self.__headers, json=msg_map)
+        r.close()
+        r = requests.post(self.__data_service_url, headers=self.__headers, json=msg_map)
+        return r, message_hash
 
     def send(self, data: dict):
         """
@@ -76,11 +131,10 @@ class UbirchDataClient:
         :param data: a map containing the data to be sent
         """
         print("** sending measurements ...")
-        # pack data in a msgpack formatted message with device UUID, message type and timestamp
-        message, message_hash = self.pack_message(data)
-
-        # send message to ubirch data service (only send UPP if successful)
-        r = requests.post(self.__data_service_url, headers=self.__headers, data=binascii.hexlify(message))
+        if self.__data_service_url.endswith("msgPack"):
+            r, message_hash = self.send_msgpack(data)
+        else:
+            r, message_hash = self.send_json(data)
 
         if r.status_code == 200:
             r.close()
