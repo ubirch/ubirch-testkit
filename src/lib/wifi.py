@@ -2,6 +2,7 @@ import time
 
 import machine
 from network import WLAN
+import sys
 
 
 def connect(networks: dict, timeout: int = 10, retries: int = 5):
@@ -41,3 +42,15 @@ def connect(networks: dict, timeout: int = 10, retries: int = 5):
             time.sleep(30)
         else:
             raise Exception("network association failed with too many retries")
+
+def set_time() -> bool:
+
+    rtc = machine.RTC()
+
+    rtc.ntp_sync('de.pool.ntp.org', 3600)
+    while not rtc.synced():
+        sys.stdout.write(".")
+        time.sleep(1)
+    print('-- current time: ' + str(rtc.now()) + "\n")
+    return True
+

@@ -11,9 +11,11 @@ from network import WLAN
 from pyboard import Pysense, Pytrack
 # ubirch data client
 from ubirch import UbirchDataClient
+from nb_iot_client import NbIotClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+from wifi import set_time
 
 wlan = WLAN(mode=WLAN.STA)
 
@@ -75,7 +77,13 @@ class Main:
                 machine.idle()
 
         # try to connect via wifi, throws exception if no success
-        wifi.connect(self.cfg['networks'])
+        #wifi.connect(self.cfg['networks'])
+
+        self.nbiot = NbIotClient(self.uuid, self.cfg)
+
+        # while(set_time() == False):
+        #     time.sleep(1)
+
 
         # ubirch data client for setting up ubirch protocol, authentication and data service
         self.ubirch_data = UbirchDataClient(self.uuid, self.cfg)
@@ -143,9 +151,9 @@ class Main:
             pycom.rgbled(0x112200)
 
             # make sure device is still connected
-            if not wlan.isconnected():
-                logger.warning("!! lost wifi connection, trying to reconnect ...")
-                wifi.connect(self.cfg['networks'])
+            # if not wlan.isconnected():
+            #     logger.warning("!! lost wifi connection, trying to reconnect ...")
+            #     wifi.connect(self.cfg['networks'])
 
             # get data
             print("** getting measurements:")

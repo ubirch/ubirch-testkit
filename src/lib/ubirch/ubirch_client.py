@@ -41,6 +41,7 @@ class UbirchClient(Protocol):
 
         # after boot or restart try to register certificate
         cert = self.get_certificate()
+        print(cert)
         upp = self.message_signed(self._uuid, UBIRCH_PROTOCOL_TYPE_REG, cert, legacy=True)
         logger.debug(binascii.hexlify(upp))
         r = requests.post(self.__register_url,
