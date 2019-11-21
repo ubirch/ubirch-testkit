@@ -6,7 +6,6 @@ from uuid import UUID
 
 import umsgpack as msgpack
 import urequests as requests
-import usocket as socket
 
 from .ubirch_client import UbirchClient
 
@@ -44,7 +43,7 @@ class UbirchDataClient:
         # this client generates a new key pair and registers the public key at the key service
         self.__ubirch = UbirchClient(uuid, self.__headers, key_service_url, auth_service_url)
 
-        self.__msg_type = 0
+        self.__msg_type = 1
 
     def pack_message_msgpack(self, data: dict) -> (bytes, bytes):
         """
