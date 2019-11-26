@@ -1,8 +1,8 @@
+import sys
 import time
 
 import machine
 from network import WLAN
-import sys
 
 
 def connect(networks: dict, timeout: int = 10, retries: int = 5):
@@ -28,11 +28,6 @@ def connect(networks: dict, timeout: int = 10, retries: int = 5):
                     machine.idle()  # save power while waiting
                 print('-- wifi network connected')
                 print('-- IP address: ' + str(wlan.ifconfig()))
-                rtc = machine.RTC()
-                rtc.ntp_sync('pool.ntp.org', 3600)
-                while not rtc.synced():
-                    time.sleep(1)
-                print('-- current time: ' + str(rtc.now()) + "\n")
                 return
         if retries > 0:
             print("!! no usable networks found, trying again in 30s")
@@ -43,14 +38,11 @@ def connect(networks: dict, timeout: int = 10, retries: int = 5):
         else:
             raise Exception("network association failed with too many retries")
 
-def set_time() -> bool:
 
+def set_time():
     rtc = machine.RTC()
-
-    rtc.ntp_sync('de.pool.ntp.org', 3600)
+    rtc.ntp_sync('pool.ntp.org', 3600)
     while not rtc.synced():
         sys.stdout.write(".")
         time.sleep(1)
     print('-- current time: ' + str(rtc.now()) + "\n")
-    return True
-

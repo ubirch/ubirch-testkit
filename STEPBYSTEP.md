@@ -55,9 +55,11 @@
    It should then look like this:
     ```json
     {
+      "connection": "<'wifi' or 'nbiot'>",
       "networks": {
         "<WIFI SSID>": "<WIFI PASSWORD>"
       },
+      "apn": "<APN for NB IoT connection",
       "type": "<BOARD TYPE>",
       "password": "<password for ubirch auth and data service>",
       "keyService": "<URL of key registration service>",

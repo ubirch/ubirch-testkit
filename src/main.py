@@ -7,17 +7,14 @@ import machine
 # Pycom specifics
 import pycom
 import wifi
-from network import WLAN
 from pyboard import Pysense, Pytrack
 # ubirch data client
 from ubirch import UbirchDataClient
-from nb_iot_client import NbIotClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 from wifi import set_time
 
-wlan = WLAN(mode=WLAN.STA)
 
 setup_help_text = """
     * Copy the UUID and register your device at the Ubirch Web UI
@@ -59,9 +56,11 @@ class Main:
         # load configuration from config.json file
         # the config.json should be placed next to this file
         # {
+        #    "connection": "<'wifi' or 'nbiot'>",
         #    "networks": {
         #      "<WIFI SSID>": "<WIFI PASSWORD>"
         #    },
+        #    "apn": "<APN for NB IoT connection",
         #    "type": "<TYPE: 'pysense' or 'pytrack'>",
         #    "password": "<password for ubirch auth and data service>",
         #    "keyService": "<URL of key registration service>",
@@ -76,14 +75,14 @@ class Main:
             while True:
                 machine.idle()
 
-        # try to connect via wifi, throws exception if no success
-        #wifi.connect(self.cfg['networks'])
-
-        self.nbiot = NbIotClient(self.uuid, self.cfg)
-
-        # while(set_time() == False):
-        #     time.sleep(1)
-
+        if self.cfg["connection"] == "wifi":
+            # try to connect via wifi, throws exception if no success
+            wifi.connect(self.cfg['networks'])
+            set_time()  # fixme doesnt set time with nbiot
+            # wlan = WLAN(mode=WLAN.STA)
+        elif self.cfg["connection"] == "nbiot":
+            from nb_iot_client import NbIotClient
+            self.nbiot = NbIotClient(self.uuid, self.cfg)
 
         # ubirch data client for setting up ubirch protocol, authentication and data service
         self.ubirch_data = UbirchDataClient(self.uuid, self.cfg)
