@@ -33,7 +33,7 @@ class Response:
 
 
 def request(method, url, data=None, json=None, headers={}, stream=None):
-    print("request POST" + url)
+    # print("request POST " + url)
     try:
         proto, dummy, host, path = url.split("/", 3)
     except ValueError:
@@ -53,11 +53,11 @@ def request(method, url, data=None, json=None, headers={}, stream=None):
 
     usocket.dnsserver(1, '8.8.4.4')
     usocket.dnsserver(0, '8.8.8.8')
-    print(usocket.dnsserver())
+    # print(usocket.dnsserver())
 
     ai = usocket.getaddrinfo(host, port)
     addr = ai[0][-1]
-    print(addr)
+    # print(addr)
 
     s = usocket.socket()
     try:
@@ -85,7 +85,7 @@ def request(method, url, data=None, json=None, headers={}, stream=None):
             s.write(data)
 
         l = s.readline()
-        print(l)
+        # print(l)
         l = l.split(None, 2)
         status = int(l[1])
         reason = ""
@@ -95,7 +95,7 @@ def request(method, url, data=None, json=None, headers={}, stream=None):
             l = s.readline()
             if not l or l == b"\r\n":
                 break
-            print(l)
+            #print(l)
             if l.startswith(b"Transfer-Encoding:"):
                 if b"chunked" in l:
                     raise ValueError("Unsupported " + l)
