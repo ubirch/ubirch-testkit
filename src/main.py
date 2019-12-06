@@ -6,14 +6,12 @@ from uuid import UUID
 import machine
 # Pycom specifics
 import pycom
-import wifi
 from pyboard import Pysense, Pytrack
 # ubirch data client
 from ubirch import UbirchDataClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-from wifi import set_time
 
 
 setup_help_text = """
@@ -76,13 +74,17 @@ class Main:
                 machine.idle()
 
         if self.cfg["connection"] == "wifi":
+            import wifi
+            from network import WLAN
             # try to connect via wifi, throws exception if no success
-            wifi.connect(self.cfg['networks'])
-            set_time()  # fixme doesnt set time with nbiot
-            # wlan = WLAN(mode=WLAN.STA)
+            self.wlan = WLAN(mode=WLAN.STA)
+            wifi.connect(self.wlan, self.cfg['networks'])
+            wifi.set_time()
         elif self.cfg["connection"] == "nbiot":
-            from nb_iot_client import NbIotClient
-            self.nbiot = NbIotClient(self.uuid, self.cfg)
+            import nb_iot
+            from network import LTE
+            self.lte = LTE()
+            nb_iot.connect(self.lte, self.cfg["apn"])
 
         # ubirch data client for setting up ubirch protocol, authentication and data service
         self.ubirch_data = UbirchDataClient(self.uuid, self.cfg)
@@ -150,9 +152,14 @@ class Main:
             pycom.rgbled(0x112200)
 
             # make sure device is still connected
-            # if not wlan.isconnected():
-            #     logger.warning("!! lost wifi connection, trying to reconnect ...")
-            #     wifi.connect(self.cfg['networks'])
+            if self.cfg["connection"] == "wifi":
+                if not self.wlan.isconnected():
+                    logger.warning("!! lost wifi connection, trying to reconnect ...")
+                    wifi.connect(self.wlan, self.cfg['networks'])
+            elif self.cfg["connection"] == "nbiot":
+                if not self.lte.isconnected():
+                    logger.warning("!! lost NB-IoT connection, trying to reconnect ...")
+                    nb_iot.connect(self.lte, self.cfg["apn"])
 
             # get data
             print("** getting measurements:")
