@@ -5,15 +5,13 @@ import machine
 from network import WLAN
 
 
-def connect(networks: dict, timeout: int = 10, retries: int = 5):
+def connect(wlan: WLAN, networks: dict, timeout: int = 10, retries: int = 5):
     """
     connect to wifi access point
     :param: networks: dict of "ssid": "password"
     :param: timeout: a timeout, how long to wait for association
     :return:
     """
-    # try to join wifi at startup
-    wlan = WLAN(mode=WLAN.STA)
     connected = False
     while not connected:
         nets = wlan.scan()
