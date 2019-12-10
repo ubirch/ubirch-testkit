@@ -1,18 +1,20 @@
 import json
-import logging
 import time
-from uuid import UUID
 
 import machine
 # Pycom specifics
 import pycom
+
+import logging
 from pyboard import Pysense, Pytrack
 # ubirch data client
 from ubirch import UbirchDataClient
+from uuid import UUID
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+rtc = machine.RTC()
 
 setup_help_text = """
     * Copy the UUID and register your device at the Ubirch Web UI
@@ -73,6 +75,11 @@ class Main:
             while True:
                 machine.idle()
 
+        # create a text file for error logging
+        with open('log.txt', 'a') as logfile:
+            logfile.write("{} init\n".format(self.uuid))
+
+        # connect device to network
         if self.cfg["connection"] == "wifi":
             import wifi
             from network import WLAN
@@ -84,7 +91,14 @@ class Main:
             import nb_iot
             from network import LTE
             self.lte = LTE()
-            nb_iot.connect(self.lte, self.cfg["apn"])
+            if not nb_iot.attach(self.lte, self.cfg["apn"]):
+                self.log_and_print("ERROR: unable to attach to network. Resetting device...")
+                time.sleep(5)
+                machine.reset()
+            if not nb_iot.connect(self.lte):
+                self.log_and_print("ERROR: unable to connect to network. Resetting device...")
+                time.sleep(5)
+                machine.reset()
 
         # ubirch data client for setting up ubirch protocol, authentication and data service
         self.ubirch_data = UbirchDataClient(self.uuid, self.cfg)
@@ -96,6 +110,11 @@ class Main:
             self.sensor = Pytrack()
         else:
             logger.error("Expansion board type not supported. This version supports types \"pysense\" and \"pytrack\"")
+
+    def log_and_print(self, message: str):
+        print(message)
+        with open('log.txt', 'a') as logfile:
+            logfile.write("{}: {}\n".format(str(rtc.now()), message))
 
     def prepare_data(self):
         """
@@ -149,22 +168,30 @@ class Main:
         pycom.heartbeat(False)
         while True:
             start_time = time.time()
-            pycom.rgbled(0x112200)
-
-            # make sure device is still connected
-            if self.cfg["connection"] == "wifi":
-                if not self.wlan.isconnected():
-                    logger.warning("!! lost wifi connection, trying to reconnect ...")
-                    wifi.connect(self.wlan, self.cfg['networks'])
-            elif self.cfg["connection"] == "nbiot":
-                if not self.lte.isconnected():
-                    logger.warning("!! lost NB-IoT connection, trying to reconnect ...")
-                    nb_iot.connect(self.lte, self.cfg["apn"])
+            pycom.rgbled(0x002200)
 
             # get data
             print("** getting measurements:")
             data = self.prepare_data()
             self.print_data(data)
+
+            # make sure device is still connected
+            if self.cfg["connection"] == "wifi" and not self.wlan.isconnected():
+                import wifi
+                pycom.rgbled(0x440044)
+                self.log_and_print("!! lost wifi connection, trying to reconnect ...")
+                wifi.connect(self.wlan, self.cfg['networks'])
+                pycom.rgbled(0x002200)
+            elif self.cfg["connection"] == "nbiot" and not self.lte.isconnected():
+                import nb_iot
+                pycom.rgbled(0x440044)
+                self.log_and_print("!! lost NB-IoT connection, trying to reconnect ...")
+                if not nb_iot.connect(self.lte):
+                    self.log_and_print("ERROR: unable to connect to network. Resetting device...")
+                    time.sleep(5)
+                    machine.reset()
+                else:
+                    pycom.rgbled(0x002200)
 
             # send data to ubirch data service and certificate to ubirch auth service
             try:
@@ -172,6 +199,8 @@ class Main:
             except Exception as e:
                 pycom.rgbled(0x440000)
                 logger.exception(e)
+                with open('log.txt', 'a') as logfile:
+                    logfile.write("{}: {}\n".format(str(rtc.now()), repr(e)))
                 time.sleep(2)
 
             print("** done.\n")
