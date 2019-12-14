@@ -30,9 +30,11 @@ The example code is made for any Pycom module sitting on a Pysense or Pytrack.
    It should then look like this:
     ```json
     {
+      "connection": "<'wifi' or 'nbiot'>",
       "networks": {
         "<WIFI SSID>": "<WIFI PASSWORD>"
       },
+      "apn": "<APN for NB IoT connection",
       "type": "<TYPE: 'pysense' or 'pytrack'>",
       "password": "<password for ubirch auth and data service>",
       "keyService": "<URL of key registration service>",

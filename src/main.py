@@ -1,40 +1,41 @@
 import json
-import logging
 import time
-from uuid import UUID
 
 import machine
 # Pycom specifics
 import pycom
-import wifi
-from network import WLAN
+
+import logging
 from pyboard import Pysense, Pytrack
-# ubirch data client
+# Ubirch client
 from ubirch import UbirchDataClient
-from nb_iot_client import NbIotClient
+from uuid import UUID
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-from wifi import set_time
 
-wlan = WLAN(mode=WLAN.STA)
+rtc = machine.RTC()
 
-setup_help_text = """
-    * Copy the UUID and register your device at the Ubirch Web UI
-    * Create a file \'config.json\' in the src directory of this project
-        {
-          "networks": {
-            "<WIFI SSID>": "<WIFI PASSWORD>"
-          },
-          "type": "<TYPE: 'pysense' or 'pytrack'>",
-          "password": "<password for ubirch auth and data service>",
-          "keyService": "<URL of key registration service>",
-          "niomon": "<URL of authentication service>",
-          "data": "<URL of data service>"
-        }
-    * Upload the file to your device and run again.\n
-    For more information, take a look at the README or STEPBYSTEP.md of this project.
-"""
+
+def print_data(data: dict):
+    print("{")
+    for key in sorted(data):
+        print("  \"{}\": {},".format(key, data[key]))
+    print("}")
+
+
+def log_and_print(message: str):
+    print(message)
+    with open('log.txt', 'a') as logfile:
+        logfile.write("{}: {}\n".format(str(rtc.now()), message))
+
+
+def report_and_reset(message: str):
+    pycom.heartbeat(False)
+    pycom.rgbled(0x440044)  # LED purple
+    log_and_print(message)
+    time.sleep(3)
+    machine.reset()
 
 
 class Main:
@@ -59,9 +60,11 @@ class Main:
         # load configuration from config.json file
         # the config.json should be placed next to this file
         # {
+        #    "connection": "<'wifi' or 'nbiot'>",
         #    "networks": {
         #      "<WIFI SSID>": "<WIFI PASSWORD>"
         #    },
+        #    "apn": "<APN for NB IoT connection",
         #    "type": "<TYPE: 'pysense' or 'pytrack'>",
         #    "password": "<password for ubirch auth and data service>",
         #    "keyService": "<URL of key registration service>",
@@ -72,29 +75,38 @@ class Main:
             with open('config.json', 'r') as c:
                 self.cfg = json.load(c)
         except OSError:
-            print(setup_help_text)
-            while True:
-                machine.idle()
+            raise Exception("missing configuration file 'config.json'")
 
-        # try to connect via wifi, throws exception if no success
-        #wifi.connect(self.cfg['networks'])
+        # connect to network
+        if self.cfg["connection"] == "wifi":
+            import wifi
+            from network import WLAN
+            self.wlan = WLAN(mode=WLAN.STA)
+            if not wifi.connect(self.wlan, self.cfg['networks']):
+                report_and_reset("ERROR: unable to connect to network. Resetting device...")
+            if not wifi.set_time():
+                report_and_reset("ERROR: unable to set time. Resetting device...")
+        elif self.cfg["connection"] == "nbiot":
+            import nb_iot
+            from network import LTE
+            self.lte = LTE()
+            if not nb_iot.attach(self.lte, self.cfg["apn"]):
+                report_and_reset("ERROR: unable to attach to network. Resetting device...")
+            if not nb_iot.connect(self.lte):
+                report_and_reset("ERROR: unable to connect to network. Resetting device...")
+            if not nb_iot.set_time():
+                report_and_reset("ERROR: unable to set time. Resetting device...")
 
-        self.nbiot = NbIotClient(self.uuid, self.cfg)
-
-        # while(set_time() == False):
-        #     time.sleep(1)
-
-
-        # ubirch data client for setting up ubirch protocol, authentication and data service
-        self.ubirch_data = UbirchDataClient(self.uuid, self.cfg)
-
-        # initialize the sensor based on the type of the pycom add-on board
+        # initialize the sensor based on the type of the Pycom expansion board
         if self.cfg["type"] == "pysense":
             self.sensor = Pysense()
         elif self.cfg["type"] == "pytrack":
             self.sensor = Pytrack()
         else:
-            logger.error("Expansion board type not supported. This version supports types \"pysense\" and \"pytrack\"")
+            raise Exception("Expansion board type not supported. This version supports types 'pysense' and 'pytrack'")
+
+        # ubirch data client for setting up ubirch protocol, authentication and data service
+        self.ubirch_data = UbirchDataClient(self.uuid, self.cfg)
 
     def prepare_data(self):
         """
@@ -137,41 +149,49 @@ class Main:
 
         return data
 
-    def print_data(self, data: dict):
-        print("{")
-        for key in sorted(data):
-            print("  \"{}\": {},".format(key, data[key]))
-        print("}")
-
     def loop(self, interval: int = 60):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
         while True:
             start_time = time.time()
-            pycom.rgbled(0x112200)
-
-            # make sure device is still connected
-            # if not wlan.isconnected():
-            #     logger.warning("!! lost wifi connection, trying to reconnect ...")
-            #     wifi.connect(self.cfg['networks'])
+            pycom.rgbled(0x002200)  # LED green
 
             # get data
             print("** getting measurements:")
             data = self.prepare_data()
-            self.print_data(data)
+            print_data(data)
+
+            # make sure device is still connected
+            if self.cfg["connection"] == "wifi" and not self.wlan.isconnected():
+                import wifi
+                pycom.rgbled(0x440044)  # LED purple
+                log_and_print("!! lost wifi connection, trying to reconnect ...")
+                if not wifi.connect(self.wlan, self.cfg['networks']):
+                    report_and_reset("ERROR: unable to connect to network. Resetting device...")
+                else:
+                    pycom.rgbled(0x002200)  # LED green
+            elif self.cfg["connection"] == "nbiot" and not self.lte.isconnected():
+                import nb_iot
+                pycom.rgbled(0x440044)  # LED purple
+                log_and_print("!! lost NB-IoT connection, trying to reconnect ...")
+                if not nb_iot.connect(self.lte):
+                    report_and_reset("ERROR: unable to connect to network. Resetting device...")
+                else:
+                    pycom.rgbled(0x002200)  # LED green
 
             # send data to ubirch data service and certificate to ubirch auth service
             try:
                 self.ubirch_data.send(data)
             except Exception as e:
-                pycom.rgbled(0x440000)
+                pycom.rgbled(0x440000)  # LED red
                 logger.exception(e)
-                time.sleep(2)
+                log_and_print(repr(e))
+                time.sleep(3)
 
             print("** done.\n")
             passed_time = time.time() - start_time
             if interval > passed_time:
-                pycom.rgbled(0)
+                pycom.rgbled(0)  # LED off
                 time.sleep(interval - passed_time)
 
 

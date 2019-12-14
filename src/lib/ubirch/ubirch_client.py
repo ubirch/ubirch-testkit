@@ -51,7 +51,7 @@ class UbirchClient(Protocol):
             r.close()
             print(str(self._uuid) + ": identity registered\n")
         else:
-            logger.critical(str(self._uuid) + ": ERROR: device identity not registered")
+            logger.error(str(self._uuid) + ": ERROR: device identity not registered")
             raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.__register_url, r.status_code, r.text))
 
