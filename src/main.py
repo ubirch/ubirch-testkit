@@ -188,7 +188,7 @@ class Main:
                 log_and_print(repr(e))
                 time.sleep(3)
 
-            print("** done.\n")
+            print("\n** done.\n")
             passed_time = time.time() - start_time
             if interval > passed_time:
                 pycom.rgbled(0)  # LED off

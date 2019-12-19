@@ -1,12 +1,11 @@
 import binascii
 import json
-import logging
 import time
-from uuid import UUID
 
+import logging
 import umsgpack as msgpack
 import urequests as requests
-
+from uuid import UUID
 from .ubirch_client import UbirchClient
 
 logger = logging.getLogger(__name__)
@@ -67,7 +66,7 @@ class UbirchDataClient:
         # replace last element in array with the hash
         msg[-1] = message_hash
         serialized = msgpack.packb(msg)
-        print(binascii.hexlify(serialized))
+        print(binascii.hexlify(serialized).decode())
 
         return serialized, message_hash
 
@@ -130,13 +129,14 @@ class UbirchDataClient:
         response couldn't be verified.
         :param data: a map containing the data to be sent
         """
-        print("** sending measurements ...")
+        print("\n** sending measurements to {} ...".format(self._data_service_url))
         if self._data_service_url.endswith("msgPack"):
             r, message_hash = self.send_msgpack(data)
         else:
             r, message_hash = self.send_json(data)
 
         if r.status_code == 200:
+            print("** data sent")
             r.close()
             # send UPP to niomon
             self._ubirch.send(message_hash)

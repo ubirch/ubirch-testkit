@@ -15,9 +15,9 @@
 # limitations under the License.
 
 import hashlib
-from uuid import UUID
 
 import umsgpack as msgpack
+from uuid import UUID
 
 logger = lambda msg: print(__name__+"{}".format(msg))
 
@@ -95,7 +95,7 @@ class Protocol(object):
         """
         raise NotImplementedError("verification not implemented")
 
-    def __serialize(self, msg: any, legacy: bool = False) -> bytearray:
+    def _serialize(self, msg: any, legacy: bool = False) -> bytearray:
         if not legacy:
             return bytearray(msgpack.packb(msg))
         else:
@@ -112,11 +112,11 @@ class Protocol(object):
         :return: the signature
         """
         # sign the message and store the signature
-        serialized = self.__serialize(msg, legacy)[0:-1]
+        serialized = self._serialize(msg, legacy)[0:-1]
         signature = self._sign(uuid, self.hash(serialized))
         # replace last element in array with the signature
         msg[-1] = signature
-        return signature, self.__serialize(msg, legacy)
+        return signature, self._serialize(msg, legacy)
 
     def message_signed(self, uuid: UUID, type: int, payload: any, legacy: bool = False,
                        save_signature: bool = False) -> bytes:
@@ -138,8 +138,6 @@ class Protocol(object):
         ]
 
         (signature, serialized) = self._prepare_and_sign(uuid, msg, legacy)
-        print(repr(signature))
-        print(repr(serialized))
         if save_signature:
             self._signatures[uuid] = signature
 

@@ -1,18 +1,20 @@
 import binascii
-import logging
+import json
 import os
-from uuid import UUID
 
 import ed25519
-import urequests as requests
 
+import logging
+import urequests as requests
+from uuid import UUID
 from .ubirch_protocol import Protocol, UBIRCH_PROTOCOL_TYPE_REG
 
 logger = logging.getLogger(__name__)
 
 
 class UbirchClient(Protocol):
-    PUB_DEV = ed25519.VerifyingKey(b'\xa2\x40\x3b\x92\xbc\x9a\xdd\x36\x5b\x3c\xd1\x2f\xf1\x20\xd0\x20\x64\x7f\x84\xea\x69\x83\xf9\x8b\xc4\xc8\x7e\x0f\x4b\xe8\xcd\x66')
+    PUB_DEV = ed25519.VerifyingKey(
+        b'\xa2\x40\x3b\x92\xbc\x9a\xdd\x36\x5b\x3c\xd1\x2f\xf1\x20\xd0\x20\x64\x7f\x84\xea\x69\x83\xf9\x8b\xc4\xc8\x7e\x0f\x4b\xe8\xcd\x66')
 
     def __init__(self, uuid: UUID, headers: dict, register_url: str, update_url: str, cfg_root: str = ""):
         """
@@ -23,28 +25,29 @@ class UbirchClient(Protocol):
         super().__init__()
 
         self._uuid = uuid
-        self.__headers = headers
-        self.__register_url = register_url
-        self.__update_url = update_url
-        self.__cfg_root = cfg_root
-        self._key_file = str(uuid)+".bin"
-        if self._key_file in os.listdir(self.__cfg_root):
+        self._headers = headers
+        self._register_url = register_url
+        self._update_url = update_url
+        self._cfg_root = cfg_root
+        self._key_file = str(uuid) + ".bin"
+        if self._key_file in os.listdir(self._cfg_root):
             print("loading key pair for " + str(self._uuid))
-            with open(self.__cfg_root+self._key_file, "rb") as kf:
-                self.__sk = ed25519.SigningKey(kf.read())
-                self._vk = self.__sk.get_verifying_key()
+            with open(self._cfg_root + self._key_file, "rb") as kf:
+                self._sk = ed25519.SigningKey(kf.read())
+                self._vk = self._sk.get_verifying_key()
         else:
             print("generating new key pair for " + str(uuid))
-            (self._vk, self.__sk) = ed25519.create_keypair()
-            with open(self.__cfg_root+self._key_file, "wb") as kf:
-                kf.write(self.__sk.to_bytes())
+            (self._vk, self._sk) = ed25519.create_keypair()
+            with open(self._cfg_root + self._key_file, "wb") as kf:
+                kf.write(self._sk.to_bytes())
 
         # after boot or restart try to register certificate
         cert = self.get_certificate()
-        print(cert)
-        upp = self.message_signed(self._uuid, UBIRCH_PROTOCOL_TYPE_REG, cert, legacy=True)
-        logger.debug(binascii.hexlify(upp))
-        r = requests.post(self.__register_url,
+        print("** key certificate : {}".format(json.dumps(cert)))
+        upp = self.message_signed(self._uuid, UBIRCH_PROTOCOL_TYPE_REG, cert)
+        print("** key registration message: {}".format(binascii.hexlify(upp).decode()))
+        print("** sending key registration message to {}".format(self._register_url))
+        r = requests.post(self._register_url,
                           headers={'Content-Type': 'application/octet-stream'},
                           data=upp)
         if r.status_code == 200:
@@ -53,10 +56,10 @@ class UbirchClient(Protocol):
         else:
             logger.error(str(self._uuid) + ": ERROR: device identity not registered")
             raise Exception(
-                "!! request to {} failed with status code {}: {}".format(self.__register_url, r.status_code, r.text))
+                "!! request to {} failed with status code {}: {}".format(self._register_url, r.status_code, r.text))
 
     def _sign(self, uuid: str, message: bytes) -> bytes:
-        return self.__sk.sign(message)
+        return self._sk.sign(message)
 
     def _verify(self, uuid: UUID, message: bytes, signature: bytes) -> bytes:
         if str(uuid) == str(self._uuid):
@@ -68,7 +71,7 @@ class UbirchClient(Protocol):
         """Get a self signed certificate for the public key"""
 
         pubkey = self._vk.to_bytes()
-        created = os.stat(self.__cfg_root+self._key_file)[7]
+        created = os.stat(self._cfg_root + self._key_file)[7]
         not_before = created
         # TODO fix handling of key validity
         not_after = created + 30758400
@@ -89,17 +92,18 @@ class UbirchClient(Protocol):
         or response couldn't be verified.
         :param payload: the UPP payload
         """
-        print("** sending measurement certificate ...")
+        print("\n** sending measurement certificate to {} ...".format(self._update_url))
         upp = self.message_chained(self._uuid, 0x00, payload)
-        logger.debug(binascii.hexlify(upp))
+        print(binascii.hexlify(upp).decode())
 
-        r = requests.post(self.__update_url, headers=self.__headers, data=upp)
+        r = requests.post(self._update_url, headers=self._headers, data=upp)
         if r.status_code == 200:
+            print("hash: {}".format(binascii.b2a_base64(payload).decode('utf-8').rstrip('\n')))
+            print("** UPP sent")
             try:
                 self.message_verify(r.content)
-                print("hash: {}".format(binascii.b2a_base64(payload).decode('utf-8').rstrip('\n')))
             except Exception as e:
                 raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(r.content)))
         else:
             raise Exception(
-                "!! request to {} failed with status code {}: {}".format(self.__update_url, r.status_code, r.text))
+                "!! request to {} failed with status code {}: {}".format(self._update_url, r.status_code, r.text))
