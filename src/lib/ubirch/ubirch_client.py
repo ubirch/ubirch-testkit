@@ -14,7 +14,9 @@ logger = logging.getLogger(__name__)
 
 class UbirchClient(Protocol):
     PUB_DEV = ed25519.VerifyingKey(
-        b'\xa2\x40\x3b\x92\xbc\x9a\xdd\x36\x5b\x3c\xd1\x2f\xf1\x20\xd0\x20\x64\x7f\x84\xea\x69\x83\xf9\x8b\xc4\xc8\x7e\x0f\x4b\xe8\xcd\x66')
+        b'\xa2\x40\x3b\x92\xbc\x9a\xdd\x36\x5b\x3c\xd1\x2f\xf1\x20\xd0\x20\x64\x7f\x84\xea\x69\x83\xf9\x8b\xc4\xc8\x7e\x0f\x4b\xe8\xcd\x66')  # public key for dev/demo
+    PUB_PROD = ed25519.VerifyingKey(
+        b'\xef\x80\x48\xad\x06\xc0\x28\x5a\xf0\x17\x70\x09\x38\x18\x30\xc4\x6c\xec\x02\x5d\x01\xd8\x60\x85\xe7\x5a\x4f\x00\x41\xc2\xe6\x90')  # public key for prod
 
     def __init__(self, uuid: UUID, headers: dict, register_url: str, update_url: str, cfg_root: str = ""):
         """
@@ -28,6 +30,7 @@ class UbirchClient(Protocol):
         self._headers = headers
         self._register_url = register_url
         self._update_url = update_url
+        self._env = update_url.split(".")[1]
         self._cfg_root = cfg_root
         self._key_file = str(uuid) + ".bin"
         if self._key_file in os.listdir(self._cfg_root):
@@ -65,7 +68,10 @@ class UbirchClient(Protocol):
         if str(uuid) == str(self._uuid):
             return self._vk.verify(signature, message)
         else:
-            return self.PUB_DEV.verify(signature, message)
+            if self._env == "prod":
+                return self.PUB_PROD.verify(signature, message)
+            else:
+                return self.PUB_DEV.verify(signature, message)
 
     def get_certificate(self) -> dict or None:
         """Get a self signed certificate for the public key"""
