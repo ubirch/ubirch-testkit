@@ -61,7 +61,7 @@ class UbirchDataClient:
 
         # calculate hash of message (without last array element)
         serialized = msgpack.packb(msg)[0:-1]
-        message_hash = self._ubirch.hash(serialized)
+        message_hash = self._ubirch._hash(serialized)
 
         # replace last element in array with the hash
         msg[-1] = message_hash
@@ -85,7 +85,7 @@ class UbirchDataClient:
         }
 
         # calculate hash of message
-        message_hash = self._ubirch.hash(json.dumps(msg_map))
+        message_hash = self._ubirch._hash(json.dumps(msg_map))
 
         # append hash to data map
         msg_map.update({

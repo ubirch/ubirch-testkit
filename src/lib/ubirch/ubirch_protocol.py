@@ -67,7 +67,7 @@ class Protocol(object):
         if uuid in self._signatures:
             del self._signatures[uuid]
 
-    def hash(self, message: bytes) -> bytes:
+    def _hash(self, message: bytes) -> bytes:
         """
         Hash the message before signing. Override this method if
         a different hash algorithm is used. Default is SHA512.
@@ -118,6 +118,7 @@ class Protocol(object):
         :param uuid: the uuid of the device that sends the message, part of the envelope
         :param type: a hint of the type of message sent (0-255)
         :param payload: the actual message payload
+        :param save_signature: save the signature of the created message so the next chained message contains it
         :return: the encoded and signed message
         """
         # we need to ensure we get a 16bit integer serialized (0xFF | version)
@@ -175,7 +176,7 @@ class Protocol(object):
         :param signature: the signature to use for verification
         :return:
         """
-        return self._verify(uuid, self.hash(message), signature)
+        return self._verify(uuid, self._hash(message), signature)
 
     def message_verify(self, message: bytes) -> dict:
         """
