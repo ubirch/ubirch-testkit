@@ -178,7 +178,7 @@ class Protocol(object):
         """
         return self._verify(uuid, self._hash(message), signature)
 
-    def message_verify(self, message: bytes) -> dict:
+    def message_verify(self, message: bytes) -> list:
         """
         Verify the integrity of the message and decode the contents.
         Throws an exception if the message is not verifiable.
