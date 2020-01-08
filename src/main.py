@@ -8,7 +8,7 @@ import pycom
 import logging
 from pyboard import Pysense, Pytrack
 # Ubirch client
-from ubirch import UbirchDataClient
+from ubirch import UbirchClient
 from uuid import UUID
 
 logging.basicConfig(level=logging.INFO)
@@ -21,7 +21,7 @@ def print_data(data: dict):
     print("{")
     for key in sorted(data):
         print("  \"{}\": {},".format(key, data[key]))
-    print("}")
+    print("}\n")
 
 
 def log_and_print(message: str):
@@ -105,8 +105,8 @@ class Main:
         else:
             raise Exception("Expansion board type not supported. This version supports types 'pysense' and 'pytrack'")
 
-        # ubirch data client for setting up ubirch protocol, authentication and data service
-        self.ubirch_data = UbirchDataClient(self.uuid, self.cfg)
+        # ubirch client for setting up ubirch protocol, authentication and data service
+        self.ubirch_client = UbirchClient(self.uuid, self.cfg)
 
     def prepare_data(self):
         """
@@ -181,14 +181,14 @@ class Main:
 
             # send data to ubirch data service and certificate to ubirch auth service
             try:
-                self.ubirch_data.send(data)
+                self.ubirch_client.send(data)
             except Exception as e:
                 pycom.rgbled(0x440000)  # LED red
                 logger.exception(e)
                 log_and_print(repr(e))
                 time.sleep(3)
 
-            print("\n** done.\n")
+            print("** done.\n")
             passed_time = time.time() - start_time
             if interval > passed_time:
                 pycom.rgbled(0)  # LED off

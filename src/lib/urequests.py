@@ -1,11 +1,12 @@
 import usocket
 
-class Response:
 
+class Response:
     def __init__(self, f):
         self.raw = f
         self.encoding = "utf-8"
         self._cached = None
+        self.status_code = None
 
     def close(self):
         if self.raw:
