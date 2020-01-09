@@ -1,9 +1,11 @@
 import binascii
 import json
+import time
 
 import ed25519
 
 import logging
+import umsgpack as msgpack
 from uuid import UUID
 from .ubirch_api import API
 from .ubirch_ks import KeyStore
@@ -38,7 +40,7 @@ class UbirchClient(Protocol):
         self.auth = cfg['password']
         self.api = API(self.uuid, self.env, self.auth)
 
-        # check for key pair and generate new if there is none
+        # load existing key pair or generate new if there is none
         self._keystore = KeyStore(self.uuid)
 
         # after boot or restart try to register certificate
@@ -54,8 +56,7 @@ class UbirchClient(Protocol):
             print(str(self.uuid) + ": identity registered\n")
         else:
             logger.error(str(self.uuid) + ": ERROR: device identity not registered")
-            raise Exception(
-                "!! request failed with status code {}: {}".format(r.status_code, r.text))
+            raise Exception("!! request to key service failed with status code {}: {}".format(r.status_code, r.text))
 
     def _sign(self, uuid: str, message: bytes) -> bytes:
         return self._keystore.get_signing_key().sign(message)
@@ -69,6 +70,33 @@ class UbirchClient(Protocol):
             else:
                 return self.PUB_DEV.verify(signature, message)
 
+    def pack_data_message(self, data: dict) -> (bytes, bytes):
+        """
+        Generate a message for the ubirch data service.
+        :param data: a map containing the data to be sent
+        :return: a msgpack formatted array with the device UUID, message type, timestamp, data and hash
+        :return: the hash of the data message
+        """
+        msg_type = 1
+
+        msg = [
+            self.uuid.bytes,
+            msg_type,
+            int(time.time()),
+            data,
+            0
+        ]
+
+        # calculate hash of message (without last array element)
+        serialized = msgpack.packb(msg)[0:-1]
+        message_hash = self._hash(serialized)
+
+        # replace last element in array with the hash
+        msg[-1] = message_hash
+        serialized = msgpack.packb(msg)
+
+        return serialized, message_hash
+
     def send(self, data: dict):
         """
         Send data message to ubirch data service. On success, send certificate of the message
@@ -77,7 +105,7 @@ class UbirchClient(Protocol):
         :param data: a map containing the data to be sent
         """
         # pack data message with measurements, device UUID, timestamp and hash of the message
-        message, message_hash = self.api.pack_data_message(data)
+        message, message_hash = self.pack_data_message(data)
         logger.debug("** data message [msgpack]: {}".format(binascii.hexlify(message).decode()))
         logger.debug("** hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
 
@@ -88,8 +116,7 @@ class UbirchClient(Protocol):
             print("** measurements successfully sent\n")
             r.close()
         else:
-            raise Exception(
-                "!! request failed with status code {}: {}".format(r.status_code, r.text))
+            raise Exception("!! request to data service failed with status code {}: {}".format(r.status_code, r.text))
 
         # create UPP with the data message hash
         upp = self.message_chained(self.uuid, 0x00, message_hash)
@@ -107,4 +134,4 @@ class UbirchClient(Protocol):
                 raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(r.content)))
         else:
             raise Exception(
-                "!! request failed with status code {}: {}".format(r.status_code, r.text))
+                "!! request to authentication service failed with status code {}: {}".format(r.status_code, r.text))

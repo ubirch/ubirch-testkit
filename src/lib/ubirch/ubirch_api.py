@@ -1,9 +1,6 @@
 import binascii
-import hashlib
-import time
 
 import logging
-import umsgpack as msgpack
 import urequests as requests
 from uuid import UUID
 
@@ -19,11 +16,9 @@ class API:
     """ubirch API accessor methods."""
 
     def __init__(self, uuid: UUID, env: str, auth: str):
-        self._uuid = uuid
-        self._auth = auth
         self._headers = {
             'X-Ubirch-Hardware-Id': str(uuid),
-            'X-Ubirch-Credential': binascii.b2a_base64(self._auth).decode().rstrip('\n'),
+            'X-Ubirch-Credential': binascii.b2a_base64(auth).decode().rstrip('\n'),
             'X-Ubirch-Auth-Type': 'ubirch'
         }
         self._services = {
@@ -57,33 +52,6 @@ class API:
         url = self.get_url(NIOMON_SERVICE)
         logger.debug("** sending UPP to {} ...".format(url))
         return requests.post(url, headers=self._headers, data=upp)
-
-    def pack_data_message(self, data: dict) -> (bytes, bytes):
-        """
-        Generate a message for the ubirch data service.
-        :param data: a map containing the data to be sent
-        :return: a msgpack formatted array with the device UUID, message type, timestamp, data and hash
-        :return: the hash of the data message
-        """
-        msg_type = 1
-
-        msg = [
-            self._uuid.bytes,
-            msg_type,
-            int(time.time()),
-            data,
-            0
-        ]
-
-        # calculate hash of message (without last array element)
-        serialized = msgpack.packb(msg)[0:-1]
-        message_hash = hashlib.sha512(serialized).digest()
-
-        # replace last element in array with the hash
-        msg[-1] = message_hash
-        serialized = msgpack.packb(msg)
-
-        return serialized, message_hash
 
     def send_data(self, data_message: bytes) -> requests.Response:
         """
