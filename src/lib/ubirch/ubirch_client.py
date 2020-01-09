@@ -1,12 +1,12 @@
 import binascii
 import json
-import os
 
 import ed25519
 
 import logging
 from uuid import UUID
 from .ubirch_api import API
+from .ubirch_ks import KeyStore
 from .ubirch_protocol import Protocol, UBIRCH_PROTOCOL_TYPE_REG
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ class UbirchClient(Protocol):
     PUB_PROD = ed25519.VerifyingKey(
         b'\xef\x80\x48\xad\x06\xc0\x28\x5a\xf0\x17\x70\x09\x38\x18\x30\xc4\x6c\xec\x02\x5d\x01\xd8\x60\x85\xe7\x5a\x4f\x00\x41\xc2\xe6\x90')  # public key for prod stage
 
-    def __init__(self, uuid: UUID, cfg: dict, cfg_root: str = ""):
+    def __init__(self, uuid: UUID, cfg: dict):
         """
         Initialize the ubirch-protocol implementation and read existing
         key or generate a new key pair. Generating a new key pair requires
@@ -39,22 +39,12 @@ class UbirchClient(Protocol):
         self.api = API(self.uuid, self.env, self.auth)
 
         # check for key pair and generate new if there is none
-        self._cfg_root = cfg_root
-        self._key_file = str(uuid) + ".bin"
-        if self._key_file in os.listdir(self._cfg_root):
-            print("loading key pair for " + str(self.uuid))
-            with open(self._cfg_root + self._key_file, "rb") as kf:
-                self._sk = ed25519.SigningKey(kf.read())
-                self._vk = self._sk.get_verifying_key()
-        else:
-            print("generating new key pair for " + str(uuid))
-            (self._vk, self._sk) = ed25519.create_keypair()
-            with open(self._cfg_root + self._key_file, "wb") as kf:
-                kf.write(self._sk.to_bytes())
+        self._keystore = KeyStore(self.uuid)
 
         # after boot or restart try to register certificate
-        cert = self.get_certificate()
+        cert = self._keystore.get_certificate()
         logger.debug("** key certificate : {}".format(json.dumps(cert)))
+
         key_registration = self.message_signed(self.uuid, UBIRCH_PROTOCOL_TYPE_REG, cert)
         logger.debug("** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
 
@@ -68,34 +58,16 @@ class UbirchClient(Protocol):
                 "!! request failed with status code {}: {}".format(r.status_code, r.text))
 
     def _sign(self, uuid: str, message: bytes) -> bytes:
-        return self._sk.sign(message)
+        return self._keystore.get_signing_key().sign(message)
 
     def _verify(self, uuid: UUID, message: bytes, signature: bytes) -> bytes:
         if str(uuid) == str(self.uuid):
-            return self._vk.verify(signature, message)
+            return self._keystore.get_verifying_key().verify(signature, message)
         else:
             if self.env == "prod":
                 return self.PUB_PROD.verify(signature, message)
             else:
                 return self.PUB_DEV.verify(signature, message)
-
-    def get_certificate(self) -> dict or None:
-        """Get a self signed certificate for the public key"""
-
-        pubkey = self._vk.to_bytes()
-        created = os.stat(self._cfg_root + self._key_file)[7]
-        not_before = created
-        # TODO fix handling of key validity
-        not_after = created + 30758400
-        return {
-            "algorithm": 'ECC_ED25519',
-            "created": created,
-            "hwDeviceId": self.uuid.bytes,
-            "pubKey": pubkey,
-            "pubKeyId": pubkey,
-            "validNotAfter": not_after,
-            "validNotBefore": not_before
-        }
 
     def send(self, data: dict):
         """
