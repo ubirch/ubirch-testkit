@@ -39,7 +39,9 @@ The example code is made for any Pycom module sitting on a Pysense or Pytrack.
       "password": "<password for ubirch auth and data service>",
       "keyService": "<URL of key registration service>",
       "niomon": "<URL of authentication service>",
-      "data": "<URL of data service>"
+      "data": "<URL of data service>",
+      "measure_interval": "<How many seconds to wait between taking measurements>",
+      "send_interval": "<How many seconds to wait between sending measurements>"
     }
     ```
 * Upload the file to the board again and you're good to go. 

@@ -1,5 +1,6 @@
 import json
 import time
+import _thread
 
 import machine
 # Pycom specifics
@@ -14,8 +15,11 @@ from uuid import UUID
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# initialise the clock
 rtc = machine.RTC()
 
+# set the stacksize to be used for new threads to 8192 bytes (default: 4096)
+_thread.stack_size(8192)
 
 def print_data(data: dict):
     print("{")
@@ -52,7 +56,6 @@ class Main:
     """
 
     def __init__(self) -> None:
-
         # generate UUID
         self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
         print("\n** UUID   : " + str(self.uuid) + "\n")
@@ -69,13 +72,20 @@ class Main:
         #    "password": "<password for ubirch auth and data service>",
         #    "keyService": "<URL of key registration service>",
         #    "niomon": "<URL of authentication service>",
-        #    "data": "<URL of data service>"
+        #    "data": "<URL of data service>",
+        #    "measure_interval": <measure interval in seconds>,
+        #    "send_interval": <send interval in seconds>
         # }
         try:
             with open('config.json', 'r') as c:
                 self.cfg = json.load(c)
         except OSError:
             raise Exception("missing configuration file 'config.json'")
+
+        self.data = None
+
+        # create a lock for the measurements
+        self.data_lock = _thread.allocate_lock()
 
         # connect to network
         if self.cfg["connection"] == "wifi":
@@ -103,10 +113,13 @@ class Main:
         elif self.cfg["type"] == "pytrack":
             self.sensor = Pytrack()
         else:
-            raise Exception("Expansion board type not supported. This version supports types 'pysense' and 'pytrack'")
+          raise Exception("Expansion board type not supported. This version supports types 'pysense' and 'pytrack'")
 
         # ubirch data client for setting up ubirch protocol, authentication and data service
         self.ubirch_data = UbirchDataClient(self.uuid, self.cfg)
+
+        # disable blue heartbeat blink
+        pycom.heartbeat(False)
 
     def prepare_data(self):
         """
@@ -149,17 +162,30 @@ class Main:
 
         return data
 
-    def loop(self, interval: int = 60):
-        # disable blue heartbeat blink
-        pycom.heartbeat(False)
+    def measure_loop(self, interval: int):
         while True:
-            start_time = time.time()
-            pycom.rgbled(0x002200)  # LED green
+            t1 = time.time()
+            
+            with self.data_lock:
+                pycom.rgbled(0xFFA500) # LED orange -> measuring
 
-            # get data
-            print("** getting measurements:")
-            data = self.prepare_data()
-            print_data(data)
+                print("\n** getting measurements\n")
+                self.data = self.prepare_data()
+                print_data(self.data)
+
+            t2 = time.time()
+            tdif = t2 - t1
+
+            pycom.rgbled(0x000000) # LED off -> doing nothing
+
+            if interval > tdif:
+                time.sleep(interval - tdif)
+
+        return
+
+    def send_loop(self, interval: int):
+        while True:
+            t1 = time.time()
 
             # make sure device is still connected
             if self.cfg["connection"] == "wifi" and not self.wlan.isconnected():
@@ -179,21 +205,36 @@ class Main:
                 else:
                     pycom.rgbled(0x002200)  # LED green
 
-            # send data to ubirch data service and certificate to ubirch auth service
-            try:
-                self.ubirch_data.send(data)
-            except Exception as e:
-                pycom.rgbled(0x440000)  # LED red
-                logger.exception(e)
-                log_and_print(repr(e))
-                time.sleep(3)
+            with self.data_lock:
+                pycom.rgbled(0x002200) # LED green -> sending
 
-            print("\n** done.\n")
-            passed_time = time.time() - start_time
-            if interval > passed_time:
-                pycom.rgbled(0)  # LED off
-                time.sleep(interval - passed_time)
+                # send data to ubirch data service and certificate to ubirch auth service
+                try:
+                    if self.data == None:
+                      log_and_print("!! no data measured yet, skipping send")
+                    else:
+                      self.ubirch_data.send(self.data)
+                except Exception as e:
+                    pycom.rgbled(0x440000) # LED red -> error while sending
+                    logger.exception(e)
+                    log_and_print(repr(e))
+                    time.sleep(3)
+                
+                print("\n** done\n")
+
+            t2 = time.time()
+            tdif = t2 - t1
+
+            pycom.rgbled(0x000000) # LED off -> doing nothing
+
+            if interval > tdif:
+                time.sleep(interval - tdif)
 
 
 main = Main()
-main.loop(60)
+
+# start the measure loop
+_thread.start_new_thread(main.measure_loop, [main.cfg["measure_interval"]])
+
+# start the send loop
+_thread.start_new_thread(main.send_loop, [main.cfg["send_interval"]])
