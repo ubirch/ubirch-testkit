@@ -1,42 +1,49 @@
 import json
+import logging
+import machine
+import os
 import sys
 import time
+from uuid import UUID
 
-import machine
 # Pycom specifics
 import pycom
-
-import logging
 from pyboard import Pysense, Pytrack
+
 # Ubirch client
 from ubirch import UbirchClient
-from uuid import UUID
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+MAX_FILE_SIZE = 10000
+
+logfile = 'log.txt'
+with open(logfile, 'a') as f:
+    file_position = f.tell()
+print("\nlog file size ({}): {} kB".format(logfile, repr(file_position/1000.0)))
+print("free flash memory: {} kB\n".format(repr(os.getfree('/flash'))))
+
 rtc = machine.RTC()
 
 
-def pretty_print_data(data: dict):
-    print("{")
-    for key in sorted(data):
-        print("  \"{}\": {},".format(key, data[key]))
-    print("}\n")
-
-
 def log_and_print(message: str, exc=False):
-    with open('log.txt', 'a') as logfile:
+    with open(logfile, 'a') as f:
+        global file_position
+        if file_position > MAX_FILE_SIZE:
+            file_position = 0
+        f.seek(file_position, 0)
+
         t = rtc.now()
-        logfile.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
+        f.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
         if not exc:
-            logfile.write(message)
-            sys.stderr.write(message)
+            f.write(message + "\n")
+            print(message)
         else:
-            sys.print_exception(message, logfile)
+            sys.print_exception(message, f)
             sys.print_exception(message, sys.stderr)
-        logfile.write("\n")
-        sys.stderr.write("\n")
+
+        file_position = f.tell()
 
 
 def report_and_reset(message: str):
@@ -45,6 +52,13 @@ def report_and_reset(message: str):
     log_and_print(message)
     time.sleep(3)
     machine.reset()
+
+
+def pretty_print_data(data: dict):
+    print("{")
+    for key in sorted(data):
+        print("  \"{}\": {},".format(key, data[key]))
+    print("}\n")
 
 
 class Main:
@@ -204,4 +218,4 @@ class Main:
 
 
 main = Main()
-main.loop(60)
+main.loop(30)
