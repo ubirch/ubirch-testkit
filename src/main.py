@@ -1,33 +1,38 @@
 import json
+import sys
 import time
 
 import machine
 # Pycom specifics
 import pycom
 
-import logging
 from pyboard import Pysense, Pytrack
 # Ubirch client
 from ubirch import UbirchClient
 from uuid import UUID
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 rtc = machine.RTC()
 
 
-def print_data(data: dict):
+def pretty_print_data(data: dict):
     print("{")
     for key in sorted(data):
         print("  \"{}\": {},".format(key, data[key]))
     print("}\n")
 
 
-def log_and_print(message: str):
-    print(message)
+def log_and_print(message: str, exc=False):
     with open('log.txt', 'a') as logfile:
-        logfile.write("{}: {}\n".format(str(rtc.now()), message))
+        t = rtc.now()
+        logfile.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
+        if not exc:
+            logfile.write(message)
+            sys.stderr.write(message)
+        else:
+            sys.print_exception(message, logfile)
+            sys.print_exception(message, sys.stderr)
+        logfile.write("\n")
+        sys.stderr.write("\n")
 
 
 def report_and_reset(message: str):
@@ -159,7 +164,7 @@ class Main:
             # get data
             print("** getting measurements:")
             data = self.prepare_data()
-            print_data(data)
+            pretty_print_data(data)
 
             # make sure device is still connected
             if self.cfg["connection"] == "wifi" and not self.wlan.isconnected():
@@ -184,8 +189,7 @@ class Main:
                 self.ubirch_client.send(data)
             except Exception as e:
                 pycom.rgbled(0x440000)  # LED red
-                logger.exception(e)
-                log_and_print(repr(e))
+                log_and_print(repr(e), exc=True)
                 time.sleep(3)
 
             print("** done.\n")
