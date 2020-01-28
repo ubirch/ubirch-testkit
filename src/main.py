@@ -6,10 +6,14 @@ import machine
 # Pycom specifics
 import pycom
 
+import logging
 from pyboard import Pysense, Pytrack
 # Ubirch client
 from ubirch import UbirchClient
 from uuid import UUID
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 rtc = machine.RTC()
 
