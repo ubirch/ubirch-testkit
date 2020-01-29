@@ -131,8 +131,6 @@ class Main:
         # ubirch client for setting up ubirch protocol, authentication and data service
         self.ubirch_client = UbirchClient(self.uuid, self.cfg)
 
-        log_and_print(" - - - - - - - ALL SET UP - - - - - - - ")
-
     def prepare_data(self):
         """
         Prepare the data from the sensor module and return it in the format we need.
