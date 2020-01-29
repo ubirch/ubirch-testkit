@@ -14,13 +14,6 @@ from .ubirch_protocol import Protocol, UBIRCH_PROTOCOL_TYPE_REG
 logger = logging.getLogger(__name__)
 
 
-def get_env(cfg: dict):
-    if 'env' in cfg.keys():
-        return cfg['env']
-    else:
-        return cfg['niomon'].split(".")[1]
-
-
 class UbirchClient(Protocol):
     PUB_DEV = ed25519.VerifyingKey(
         b'\xa2\x40\x3b\x92\xbc\x9a\xdd\x36\x5b\x3c\xd1\x2f\xf1\x20\xd0\x20\x64\x7f\x84\xea\x69\x83\xf9\x8b\xc4\xc8\x7e\x0f\x4b\xe8\xcd\x66')  # public key for dev/demo stage
@@ -36,9 +29,25 @@ class UbirchClient(Protocol):
         super().__init__()
 
         self.uuid = uuid
-        self.env = get_env(cfg)
         self.auth = cfg['password']
-        self.api = API(self.uuid, self.env, self.auth)
+
+        if 'data' in cfg:
+            self.data_service_url = cfg['data']
+        else:
+            self.data_service_url = "https://data.{}.ubirch.com/v1/msgPack".format(cfg['env'])
+
+        if 'keyService' in cfg:
+            key_service_url = cfg['keyService']
+        else:
+            key_service_url = "https://key.{}.ubirch.com/api/keyService/v1/pubkey/mpack".format(cfg['env'])
+
+        if 'niomon' in cfg:
+            self.auth_service_url = cfg['niomon']
+        else:
+            self.auth_service_url = "https://niomon.{}.ubirch.com".format(cfg['env'])
+
+        self.env = self.auth_service_url.split(".")[1]
+        self.api = API(self.uuid, self.auth)
 
         # load existing key pair or generate new if there is none
         self._keystore = KeyStore(self.uuid)
@@ -50,7 +59,7 @@ class UbirchClient(Protocol):
         key_registration = self.message_signed(self.uuid, UBIRCH_PROTOCOL_TYPE_REG, cert)
         logger.debug("** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
 
-        r = self.api.register_identity(key_registration)
+        r = self.api.register_identity(key_service_url, key_registration)
         if r.status_code == 200:
             r.close()
             print(str(self.uuid) + ": identity registered\n")
@@ -111,7 +120,7 @@ class UbirchClient(Protocol):
 
         # send data message to data service
         print("** sending measurements ...")
-        r = self.api.send_data(message)
+        r = self.api.send_data(self.data_service_url, message)
         if r.status_code == 200:
             print("** measurements successfully sent\n")
             r.close()
@@ -124,7 +133,7 @@ class UbirchClient(Protocol):
 
         #  send UPP to niomon
         print("** sending measurement certificate ...")
-        r = self.api.send_upp(upp)
+        r = self.api.send_upp(self.auth_service_url, upp)
         if r.status_code == 200:
             print("hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
             print("** measurement certificate successfully sent\n")
