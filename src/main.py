@@ -27,7 +27,7 @@ print("free flash memory: {} kB\n".format(repr(os.getfree('/flash'))))
 rtc = machine.RTC()
 
 
-def log_and_print(message: str, exc=False):
+def log_and_print(error: str or Exception):
     with open(logfile, 'a') as f:
         global file_position
         if file_position > MAX_FILE_SIZE:
@@ -36,12 +36,12 @@ def log_and_print(message: str, exc=False):
 
         t = rtc.now()
         f.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
-        if not exc:
-            f.write(message + "\n")
-            print(message)
+        if isinstance(error, Exception):
+            sys.print_exception(error, sys.stderr)
+            sys.print_exception(error, f)
         else:
-            sys.print_exception(message, f)
-            sys.print_exception(message, sys.stderr)
+            sys.stderr.write(error + "\n")
+            f.write(error + "\n")
 
         file_position = f.tell()
 
@@ -131,6 +131,8 @@ class Main:
         # ubirch client for setting up ubirch protocol, authentication and data service
         self.ubirch_client = UbirchClient(self.uuid, self.cfg)
 
+        log_and_print(" - - - - - - - ALL SET UP - - - - - - - ")
+
     def prepare_data(self):
         """
         Prepare the data from the sensor module and return it in the format we need.
@@ -207,7 +209,7 @@ class Main:
                 self.ubirch_client.send(data)
             except Exception as e:
                 pycom.rgbled(0x440000)  # LED red
-                log_and_print(repr(e), exc=True)
+                log_and_print(e)
                 time.sleep(3)
 
             print("** done.\n")
