@@ -128,3 +128,16 @@ class UbirchClient(Protocol):
         else:
             raise Exception(
                 "!! request to authentication service failed with status code {}: {}".format(r.status_code, r.text))
+
+        # verify that hash has been stored in backend
+        print("** verifying ...")
+        retries = 5
+        while True:
+            time.sleep(0.2)
+            r = self.api.verify(message_hash, quick=True)
+            if r.status_code == 200 or retries == 0:
+                print("** verification successful: {}".format(r.text))
+                break
+            r.close()
+            print("Hash could not be verified yet. Retry... ({} retires left)".format(retries))
+            retries -= 1
