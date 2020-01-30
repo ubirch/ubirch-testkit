@@ -10,16 +10,18 @@ class API:
     """ubirch API accessor methods."""
 
     def __init__(self, cfg: dict):
-        # TODO: handle if key does not exist in config
-        self.key_service_url = cfg['keyService']
-        self.data_service_url = cfg['data']
-        self.auth_service_url = cfg['niomon']
-        self.verification_service_url = cfg['verify']
-        self._ubirch_headers = {
-            'X-Ubirch-Hardware-Id': None,   # just a placeholder, UUID is inserted to header at method call
-            'X-Ubirch-Credential': binascii.b2a_base64(cfg['password']).decode().rstrip('\n'),
-            'X-Ubirch-Auth-Type': 'ubirch'
-        }
+        try:
+            self.key_service_url = cfg['keyService']
+            self.data_service_url = cfg['data']
+            self.auth_service_url = cfg['niomon']
+            self.verification_service_url = cfg['verify']
+            self._ubirch_headers = {
+                'X-Ubirch-Hardware-Id': None,   # just a placeholder, UUID is inserted to header at method call
+                'X-Ubirch-Credential': binascii.b2a_base64(cfg['password']).decode().rstrip('\n'),
+                'X-Ubirch-Auth-Type': 'ubirch'
+            }
+        except KeyError:
+            raise Exception("incomplete config")    # TODO better error message
 
     def register_identity(self, key_registration: bytes) -> requests.Response:
         """
