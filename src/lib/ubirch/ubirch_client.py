@@ -128,10 +128,11 @@ class UbirchClient(Protocol):
         if r.status_code == 200:
             print("hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
             print("** measurement certificate successfully sent\n")
+            response_content = r.content
             try:
-                self.message_verify(r.content)
+                self.message_verify(response_content)
             except Exception as e:
-                raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(r.content)))
+                raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(response_content)))
         else:
             raise Exception(
                 "!! request to authentication service failed with status code {}: {}".format(r.status_code, r.text))

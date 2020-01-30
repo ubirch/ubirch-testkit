@@ -1,41 +1,69 @@
 import json
-import time
-
+import logging
 import machine
+import os
+import sys
+import time
+from uuid import UUID
+
 # Pycom specifics
 import pycom
-
-import logging
 from pyboard import Pysense, Pytrack
+
 # Ubirch client
 from ubirch import UbirchClient
-from uuid import UUID
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 rtc = machine.RTC()
 
+# set up error logging to log file
+MAX_FILE_SIZE = 20000   # in bytes
 
-def print_data(data: dict):
-    print("{")
-    for key in sorted(data):
-        print("  \"{}\": {},".format(key, data[key]))
-    print("}\n")
+logfile = 'log.txt'
+with open(logfile, 'a') as f:
+    file_position = f.tell()
+print("\nlog file size ({}): {} kB".format(logfile, repr(file_position/1000.0)))
+print("free flash memory: {} kB\n".format(repr(os.getfree('/flash'))))
 
 
-def log_and_print(message: str):
-    print(message)
-    with open('log.txt', 'a') as logfile:
-        logfile.write("{}: {}\n".format(str(rtc.now()), message))
+def log_to_file(error: str or Exception):
+    global file_position
+    with open(logfile, 'a') as f:
+        # start overwriting oldest logs once file reached its max size
+        if file_position > MAX_FILE_SIZE:
+            file_position = 0
+        # set file to recent position
+        f.seek(file_position, 0)
+
+        # log error message and traceback if error is an exception
+        t = rtc.now()
+        f.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
+        if isinstance(error, Exception):
+            sys.print_exception(error, sys.stderr)
+            sys.print_exception(error, f)
+        else:
+            sys.stderr.write(error + "\n")
+            f.write(error + "\n")
+
+        # remember current file position
+        file_position = f.tell()
 
 
 def report_and_reset(message: str):
     pycom.heartbeat(False)
     pycom.rgbled(0x440044)  # LED purple
-    log_and_print(message)
+    log_to_file(message)
     time.sleep(3)
     machine.reset()
+
+
+def pretty_print_data(data: dict):
+    print("{")
+    for key in sorted(data):
+        print("  \"{}\": {},".format(key, data[key]))
+    print("}\n")
 
 
 class Main:
@@ -159,13 +187,13 @@ class Main:
             # get data
             print("** getting measurements:")
             data = self.prepare_data()
-            print_data(data)
+            pretty_print_data(data)
 
             # make sure device is still connected
             if self.cfg["connection"] == "wifi" and not self.wlan.isconnected():
                 import wifi
                 pycom.rgbled(0x440044)  # LED purple
-                log_and_print("!! lost wifi connection, trying to reconnect ...")
+                log_to_file("!! lost wifi connection, trying to reconnect ...")
                 if not wifi.connect(self.wlan, self.cfg['networks']):
                     report_and_reset("ERROR: unable to connect to network. Resetting device...")
                 else:
@@ -173,7 +201,7 @@ class Main:
             elif self.cfg["connection"] == "nbiot" and not self.lte.isconnected():
                 import nb_iot
                 pycom.rgbled(0x440044)  # LED purple
-                log_and_print("!! lost NB-IoT connection, trying to reconnect ...")
+                log_to_file("!! lost NB-IoT connection, trying to reconnect ...")
                 if not nb_iot.connect(self.lte):
                     report_and_reset("ERROR: unable to connect to network. Resetting device...")
                 else:
@@ -184,8 +212,7 @@ class Main:
                 self.ubirch_client.send(data)
             except Exception as e:
                 pycom.rgbled(0x440000)  # LED red
-                logger.exception(e)
-                log_and_print(repr(e))
+                log_to_file(e)
                 time.sleep(3)
 
             print("** done.\n")
