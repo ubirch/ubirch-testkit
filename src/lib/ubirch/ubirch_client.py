@@ -29,25 +29,9 @@ class UbirchClient(Protocol):
         super().__init__()
 
         self.uuid = uuid
-        self.auth = cfg['password']
+        self.api = API(cfg)
 
-        if 'data' in cfg:
-            self.data_service_url = cfg['data']
-        else:
-            self.data_service_url = "https://data.{}.ubirch.com/v1/msgPack".format(cfg['env'])
-
-        if 'keyService' in cfg:
-            key_service_url = cfg['keyService']
-        else:
-            key_service_url = "https://key.{}.ubirch.com/api/keyService/v1/pubkey/mpack".format(cfg['env'])
-
-        if 'niomon' in cfg:
-            self.auth_service_url = cfg['niomon']
-        else:
-            self.auth_service_url = "https://niomon.{}.ubirch.com".format(cfg['env'])
-
-        self.env = self.auth_service_url.split(".")[1]
-        self.api = API(self.uuid, self.auth)
+        self.env = cfg["env"]
 
         # load existing key pair or generate new if there is none
         self._keystore = KeyStore(self.uuid)
@@ -59,7 +43,7 @@ class UbirchClient(Protocol):
         key_registration = self.message_signed(self.uuid, UBIRCH_PROTOCOL_TYPE_REG, cert)
         logger.debug("** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
 
-        r = self.api.register_identity(key_service_url, key_registration)
+        r = self.api.register_identity(key_registration)
         if r.status_code == 200:
             r.close()
             print(str(self.uuid) + ": identity registered\n")
@@ -120,7 +104,7 @@ class UbirchClient(Protocol):
 
         # send data message to data service
         print("** sending measurements ...")
-        r = self.api.send_data(self.data_service_url, message)
+        r = self.api.send_data(self.uuid, message)
         if r.status_code == 200:
             print("** measurements successfully sent\n")
             r.close()
@@ -133,7 +117,7 @@ class UbirchClient(Protocol):
 
         #  send UPP to niomon
         print("** sending measurement certificate ...")
-        r = self.api.send_upp(self.auth_service_url, upp)
+        r = self.api.send_upp(self.uuid, upp)
         if r.status_code == 200:
             print("hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
             print("** measurement certificate successfully sent\n")
