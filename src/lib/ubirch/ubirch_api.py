@@ -10,9 +10,11 @@ class API:
     """ubirch API accessor methods."""
 
     def __init__(self, cfg: dict):
+        # TODO: handle if key does not exist in config
         self.key_service_url = cfg['keyService']
-        self.auth_service_url = cfg['niomon']
         self.data_service_url = cfg['data']
+        self.auth_service_url = cfg['niomon']
+        self.verification_service_url = cfg['verify']
         self._ubirch_headers = {
             'X-Ubirch-Hardware-Id': None,   # just a placeholder, UUID is inserted to header at method call
             'X-Ubirch-Credential': binascii.b2a_base64(cfg['password']).decode().rstrip('\n'),
@@ -56,16 +58,17 @@ class API:
                              headers=self._ubirch_headers,
                              data=binascii.hexlify(message))
 
-    # def verify(self, data: bytes, quick=False) -> requests.Response:
-    #     """
-    #     Verify a given hash at the verification service. Returns all available verification data.
-    #     :param data: the hash of the message to verify
-    #     :param quick: only run quick check to verify that the hash has been stored in backend
-    #     :return: the response from the server (if the verification was successful and the data related to it)
-    #     """
-    #     if not quick:
-    #         url = url + '/verify'
-    #     logger.debug("** verifying hash: {} ({})".format(binascii.b2a_base64(data).decode(), url))
-    #     return requests.post(url,
-    #                          headers={'Accept': 'application/json', 'Content-Type': 'text/plain'},
-    #                          data=binascii.b2a_base64(data).decode())
+    def verify(self, data: bytes, quick=False) -> requests.Response:
+        """
+        Verify a given hash at the verification service. Returns all available verification data.
+        :param data: the hash of the message to verify
+        :param quick: only run quick check to verify that the hash has been stored in backend
+        :return: the response from the server (if the verification was successful and the data related to it)
+        """
+        url = self.verification_service_url
+        if not quick:
+            url = url + '/verify'
+        logger.debug("** verifying hash: {} ({})".format(binascii.b2a_base64(data).decode(), url))
+        return requests.post(url,
+                             headers={'Accept': 'application/json', 'Content-Type': 'text/plain'},
+                             data=binascii.b2a_base64(data).decode().rstrip('\n'))
