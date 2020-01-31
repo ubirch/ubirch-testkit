@@ -14,6 +14,7 @@ class KeyStore:
         self.uuid = uuid
         self._ks_file = str(uuid) + ".bin"
         self._cfg_root = cfg_root
+        self._vks = {}
         self._load_keys()
 
     def _load_keys(self) -> None:
@@ -28,12 +29,19 @@ class KeyStore:
             (self._vk, self._sk) = ed25519.create_keypair()
             with open(self._cfg_root + self._ks_file, "wb") as kf:
                 kf.write(self._sk.to_bytes())
+        self.insert_verifying_key(self.uuid, self._vk)
+
+    def insert_verifying_key(self, uuid: UUID, verifying_key: ed25519.VerifyingKey):
+        self._vks[uuid.hex] = verifying_key
+
+    def get_verifying_key(self, uuid: UUID) -> ed25519.VerifyingKey:
+        try:
+            return self._vks[uuid.hex]
+        except KeyError as e:
+            raise Exception("No known verifying key for UUID {}".format(uuid))
 
     def get_signing_key(self) -> ed25519.SigningKey:
         return self._sk
-
-    def get_verifying_key(self) -> ed25519.VerifyingKey:
-        return self._vk
 
     def get_certificate(self) -> dict:
         """Get a self signed certificate for the public key"""
