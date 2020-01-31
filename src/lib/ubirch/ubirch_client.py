@@ -15,10 +15,12 @@ logger = logging.getLogger(__name__)
 
 
 class UbirchClient(Protocol):
-    PUB_DEV = ed25519.VerifyingKey(
-        b'\xa2\x40\x3b\x92\xbc\x9a\xdd\x36\x5b\x3c\xd1\x2f\xf1\x20\xd0\x20\x64\x7f\x84\xea\x69\x83\xf9\x8b\xc4\xc8\x7e\x0f\x4b\xe8\xcd\x66')  # public key for dev/demo stage
-    PUB_PROD = ed25519.VerifyingKey(
-        b'\xef\x80\x48\xad\x06\xc0\x28\x5a\xf0\x17\x70\x09\x38\x18\x30\xc4\x6c\xec\x02\x5d\x01\xd8\x60\x85\xe7\x5a\x4f\x00\x41\xc2\xe6\x90')  # public key for prod stage
+    UUID_DEV = UUID(binascii.unhexlify("9d3c78ff22f34441a5d185c636d486ff"))   # UUID of dev/demo stage
+    UUID_PROD = UUID(binascii.unhexlify("10b2e1a456b34fff9adacc8c20f93016"))  # UUID of prod stage
+    PUB_DEV = ed25519.VerifyingKey(binascii.unhexlify(
+        "a2403b92bc9add365b3cd12ff120d020647f84ea6983f98bc4c87e0f4be8cd66"))  # public key for dev/demo stage
+    PUB_PROD = ed25519.VerifyingKey(binascii.unhexlify(
+        "ef8048ad06c0285af0177009381830c46cec025d01d86085e75a4f0041c2e690"))  # public key for prod stage
 
     def __init__(self, uuid: UUID, cfg: dict):
         """
@@ -31,10 +33,12 @@ class UbirchClient(Protocol):
         self.uuid = uuid
         self.api = API(cfg)
 
-        self.env = cfg["niomon"].split(".")[1]
-
         # load existing key pair or generate new if there is none
         self._keystore = KeyStore(self.uuid)
+
+        # store backend public keys in keystore
+        self._keystore.insert_verifying_key(self.UUID_DEV, self.PUB_DEV)
+        self._keystore.insert_verifying_key(self.UUID_PROD, self.PUB_PROD)
 
         # after boot or restart try to register certificate
         cert = self._keystore.get_certificate()
@@ -55,13 +59,7 @@ class UbirchClient(Protocol):
         return self._keystore.get_signing_key().sign(message)
 
     def _verify(self, uuid: UUID, message: bytes, signature: bytes) -> bytes:
-        if str(uuid) == str(self.uuid):
-            return self._keystore.get_verifying_key().verify(signature, message)
-        else:
-            if self.env == "prod":
-                return self.PUB_PROD.verify(signature, message)
-            else:
-                return self.PUB_DEV.verify(signature, message)
+        return self._keystore.get_verifying_key(uuid).verify(signature, message)
 
     def pack_data_message(self, data: dict) -> (bytes, bytes):
         """
