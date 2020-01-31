@@ -10,7 +10,6 @@ class KeyStore:
     The ubirch key store handles the keys relevant for the ubirch protocol.
     """
 
-    # TODO keystore should be able to store keys for several UUIDs (also pub keys of backends??
     def __init__(self, uuid: UUID, cfg_root: str = "") -> None:
         self.uuid = uuid
         self._ks_file = str(uuid) + ".bin"
@@ -33,12 +32,8 @@ class KeyStore:
     def get_signing_key(self) -> ed25519.SigningKey:
         return self._sk
 
-    def get_verifying_key(self, uuid: UUID) -> ed25519.VerifyingKey:
+    def get_verifying_key(self) -> ed25519.VerifyingKey:
         return self._vk
-        # TODO
-        # if uuid.hex not in self._vk.keys():
-        #     return None
-        # return self._vk[uuid.hex]
 
     def get_certificate(self) -> dict:
         """Get a self signed certificate for the public key"""
