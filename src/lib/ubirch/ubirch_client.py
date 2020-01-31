@@ -1,10 +1,8 @@
 import binascii
-import json
-import time
-
 import ed25519
-
+import json
 import logging
+import time
 import umsgpack as msgpack
 from uuid import UUID
 from .ubirch_api import API
@@ -15,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class UbirchClient(Protocol):
-    UUID_DEV = UUID(binascii.unhexlify("9d3c78ff22f34441a5d185c636d486ff"))   # UUID of dev/demo stage
+    UUID_DEV = UUID(binascii.unhexlify("9d3c78ff22f34441a5d185c636d486ff"))  # UUID of dev/demo stage
     UUID_PROD = UUID(binascii.unhexlify("10b2e1a456b34fff9adacc8c20f93016"))  # UUID of prod stage
     PUB_DEV = ed25519.VerifyingKey(binascii.unhexlify(
         "a2403b92bc9add365b3cd12ff120d020647f84ea6983f98bc4c87e0f4be8cd66"))  # public key for dev/demo stage
@@ -53,7 +51,9 @@ class UbirchClient(Protocol):
             print(str(self.uuid) + ": identity registered\n")
         else:
             logger.error(str(self.uuid) + ": ERROR: device identity not registered")
-            raise Exception("!! request to key service failed with status code {}: {}".format(r.status_code, r.text))
+            raise Exception(
+                "!! request to {} failed with status code {}: {}".format(self.api.key_service_url, r.status_code,
+                                                                         r.text))
 
     def _sign(self, uuid: str, message: bytes) -> bytes:
         return self._keystore.get_signing_key().sign(message)
@@ -107,13 +107,15 @@ class UbirchClient(Protocol):
             print("** measurements successfully sent\n")
             r.close()
         else:
-            raise Exception("!! request to data service failed with status code {}: {}".format(r.status_code, r.text))
+            raise Exception(
+                "!! request to {} failed with status code {}: {}".format(self.api.data_service_url, r.status_code,
+                                                                         r.text))
 
         # create UPP with the data message hash
         upp = self.message_chained(self.uuid, 0x00, message_hash)
         logger.debug("** UPP [msgpack]: {}".format(binascii.hexlify(upp).decode()))
 
-        #  send UPP to niomon
+        #  send UPP to authentication service
         print("** sending measurement certificate ...")
         r = self.api.send_upp(self.uuid, upp)
         if r.status_code == 200:
@@ -125,10 +127,12 @@ class UbirchClient(Protocol):
                 self.message_verify(response_content)
                 logger.debug("** response verified")
             except Exception as e:
-                raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(response_content)))
+                raise Exception(
+                    "!! response verification failed: {}. {} ".format(e, binascii.hexlify(response_content)))
         else:
             raise Exception(
-                "!! request to authentication service failed with status code {}: {}".format(r.status_code, r.text))
+                "!! request to {} failed with status code {}: {}".format(self.api.auth_service_url, r.status_code,
+                                                                         r.text))
 
         # # verify that hash has been stored in backend
         # print("** verifying hash in backend ...")
@@ -140,7 +144,7 @@ class UbirchClient(Protocol):
         #         print("** backend verification successful: {}".format(r.text))
         #         break
         #     if retries == 0:
-        #         raise Exception("!! backend verification failed with status code {}: {}".format(r.status_code, r.text))
+        #         raise Exception("!! backend verification ({}) failed with status code {}: {}".format(self.api.verification_service_url, r.status_code, r.text))
         #     r.close()
         #     print("Hash could not be verified yet. Retry... ({} retires left)".format(retries))
         #     retries -= 1
