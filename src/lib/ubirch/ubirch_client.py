@@ -14,13 +14,6 @@ from .ubirch_protocol import Protocol, UBIRCH_PROTOCOL_TYPE_REG
 logger = logging.getLogger(__name__)
 
 
-def get_env(cfg: dict):
-    if 'env' in cfg.keys():
-        return cfg['env']
-    else:
-        return cfg['niomon'].split(".")[1]
-
-
 class UbirchClient(Protocol):
     PUB_DEV = ed25519.VerifyingKey(
         b'\xa2\x40\x3b\x92\xbc\x9a\xdd\x36\x5b\x3c\xd1\x2f\xf1\x20\xd0\x20\x64\x7f\x84\xea\x69\x83\xf9\x8b\xc4\xc8\x7e\x0f\x4b\xe8\xcd\x66')  # public key for dev/demo stage
@@ -36,9 +29,9 @@ class UbirchClient(Protocol):
         super().__init__()
 
         self.uuid = uuid
-        self.env = get_env(cfg)
-        self.auth = cfg['password']
-        self.api = API(self.uuid, self.env, self.auth)
+        self.api = API(cfg)
+
+        self.env = cfg["niomon"].split(".")[1]
 
         # load existing key pair or generate new if there is none
         self._keystore = KeyStore(self.uuid)
@@ -111,7 +104,7 @@ class UbirchClient(Protocol):
 
         # send data message to data service
         print("** sending measurements ...")
-        r = self.api.send_data(message)
+        r = self.api.send_data(self.uuid, message)
         if r.status_code == 200:
             print("** measurements successfully sent\n")
             r.close()
@@ -124,15 +117,32 @@ class UbirchClient(Protocol):
 
         #  send UPP to niomon
         print("** sending measurement certificate ...")
-        r = self.api.send_upp(upp)
+        r = self.api.send_upp(self.uuid, upp)
         if r.status_code == 200:
             print("hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
             print("** measurement certificate successfully sent\n")
             response_content = r.content
             try:
+                logger.debug("** verifying response from server: {}".format(binascii.hexlify(response_content)))
                 self.message_verify(response_content)
+                logger.debug("** response verified")
             except Exception as e:
                 raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(response_content)))
         else:
             raise Exception(
                 "!! request to authentication service failed with status code {}: {}".format(r.status_code, r.text))
+
+        # # verify that hash has been stored in backend
+        # print("** verifying hash in backend ...")
+        # retries = 5
+        # while True:
+        #     time.sleep(0.2)
+        #     r = self.api.verify(message_hash)
+        #     if r.status_code == 200:
+        #         print("** backend verification successful: {}".format(r.text))
+        #         break
+        #     if retries == 0:
+        #         raise Exception("!! backend verification failed with status code {}: {}".format(r.status_code, r.text))
+        #     r.close()
+        #     print("Hash could not be verified yet. Retry... ({} retires left)".format(retries))
+        #     retries -= 1
