@@ -123,7 +123,7 @@ class UbirchClient(Protocol):
             print("** measurement certificate successfully sent\n")
             response_content = r.content
             try:
-                logger.debug("** verifying response from server: {}".format(binascii.hexlify(response_content)))
+                logger.debug("** verifying response from {}: {}".format(self.api.auth_service_url, binascii.hexlify(response_content)))
                 self.message_verify(response_content)
                 logger.debug("** response verified")
             except Exception as e:
