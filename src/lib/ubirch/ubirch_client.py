@@ -31,8 +31,6 @@ class UbirchClient(Protocol):
         self.uuid = uuid
         self.api = API(cfg)
 
-        self.env = cfg["env"]
-
         # load existing key pair or generate new if there is none
         self._keystore = KeyStore(self.uuid)
 
@@ -55,13 +53,7 @@ class UbirchClient(Protocol):
         return self._keystore.get_signing_key().sign(message)
 
     def _verify(self, uuid: UUID, message: bytes, signature: bytes) -> bytes:
-        if str(uuid) == str(self.uuid):
-            return self._keystore.get_verifying_key().verify(signature, message)
-        else:
-            if self.env == "prod":
-                return self.PUB_PROD.verify(signature, message)
-            else:
-                return self.PUB_DEV.verify(signature, message)
+        return self._keystore.get_verifying_key(uuid).verify(signature, message)    # TODO see what exception is thrown if verifying_key = None and catch it
 
     def pack_data_message(self, data: dict) -> (bytes, bytes):
         """
@@ -121,23 +113,28 @@ class UbirchClient(Protocol):
         if r.status_code == 200:
             print("hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
             print("** measurement certificate successfully sent\n")
+            response_content = r.content
             try:
-                self.message_verify(r.content)
+                logger.debug("** verifying response from server: {}".format(binascii.hexlify(response_content)))
+                self.message_verify(response_content)
+                logger.debug("** response verified")
             except Exception as e:
-                raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(r.content)))
+                raise Exception("!! response verification failed: {}. {}".format(e, binascii.hexlify(response_content)))
         else:
             raise Exception(
                 "!! request to authentication service failed with status code {}: {}".format(r.status_code, r.text))
 
         # verify that hash has been stored in backend
-        print("** verifying ...")
+        print("** verifying hash in backend ...")
         retries = 5
         while True:
             time.sleep(0.2)
-            r = self.api.verify(message_hash, quick=True)
-            if r.status_code == 200 or retries == 0:
-                print("** verification successful: {}".format(r.text))
+            r = self.api.verify(message_hash)
+            if r.status_code == 200:
+                print("** backend verification successful: {}".format(r.text))
                 break
+            if retries == 0:
+                raise Exception("!! backend verification failed with status code {}: {}".format(r.status_code, r.text))
             r.close()
             print("Hash could not be verified yet. Retry... ({} retires left)".format(retries))
             retries -= 1
