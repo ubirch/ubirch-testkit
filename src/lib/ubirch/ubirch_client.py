@@ -55,7 +55,7 @@ class UbirchClient(Protocol):
                 "!! request to {} failed with status code {}: {}".format(self.api.key_service_url, r.status_code,
                                                                          r.text))
 
-    def _sign(self, uuid: str, message: bytes) -> bytes:
+    def _sign(self, uuid: UUID, message: bytes) -> bytes:
         return self._keystore.get_signing_key().sign(message)
 
     def _verify(self, uuid: UUID, message: bytes, signature: bytes) -> bytes:

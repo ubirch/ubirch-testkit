@@ -37,7 +37,7 @@ class KeyStore:
     def get_verifying_key(self, uuid: UUID) -> ed25519.VerifyingKey:
         try:
             return self._vks[uuid.hex]
-        except KeyError as e:
+        except KeyError:
             raise Exception("No known verifying key for UUID {}".format(uuid))
 
     def get_signing_key(self) -> ed25519.SigningKey:
