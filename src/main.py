@@ -4,6 +4,7 @@ import machine
 import os
 import sys
 import time
+import ubinascii
 from uuid import UUID
 
 # Pycom specifics
@@ -83,7 +84,8 @@ class Main:
 
         # generate UUID
         self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
-        print("\n** UUID   : " + str(self.uuid) + "\n")
+        print("** UUID   : " + str(self.uuid))
+        print("** MAC    : " + ubinascii.hexlify(machine.unique_id(), ':').decode() + "\n")
 
         # load configuration from config.json file
         # the config.json should be placed next to this file
