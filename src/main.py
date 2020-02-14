@@ -1,4 +1,3 @@
-import json
 import logging
 import machine
 import os
@@ -13,6 +12,7 @@ from pyboard import Pysense, Pytrack
 
 # Ubirch client
 from ubirch import UbirchClient
+from config import get_config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,13 +20,13 @@ logger = logging.getLogger(__name__)
 rtc = machine.RTC()
 
 # set up error logging to log file
-MAX_FILE_SIZE = 20000   # in bytes
+MAX_FILE_SIZE = 20000  # in bytes
 
 logfile = 'log.txt'
 with open(logfile, 'a') as f:
     file_position = f.tell()
-print("\nlog file size ({}): {} kB".format(logfile, repr(file_position/1000.0)))
-print("free flash memory: {} kB\n".format(repr(os.getfree('/flash'))))
+print("\nlog file size ({}): {:.1f}kb".format(logfile, file_position / 1000.0))
+print("free flash memory: {:d}kb\n".format(os.getfree('/flash')))
 
 
 def log_to_file(error: str or Exception):
@@ -87,25 +87,8 @@ class Main:
         print("** UUID   : " + str(self.uuid))
         print("** MAC    : " + ubinascii.hexlify(machine.unique_id(), ':').decode() + "\n")
 
-        # load configuration from config.json file
-        # the config.json should be placed next to this file
-        # {
-        #    "connection": "<'wifi' or 'nbiot'>",
-        #    "networks": {
-        #      "<WIFI SSID>": "<WIFI PASSWORD>"
-        #    },
-        #    "apn": "<APN for NB IoT connection",
-        #    "type": "<TYPE: 'pysense' or 'pytrack'>",
-        #    "password": "<password for ubirch auth and data service>",
-        #    "keyService": "<URL of key registration service>",
-        #    "niomon": "<URL of authentication service>",
-        #    "data": "<URL of data service>"
-        # }
-        try:
-            with open('config.json', 'r') as c:
-                self.cfg = json.load(c)
-        except OSError:
-            raise Exception("missing configuration file 'config.json'")
+        # load configuration from file (raises exception if file can't be found)
+        self.cfg = get_config()
 
         # connect to network
         if self.cfg["connection"] == "wifi":
@@ -138,7 +121,7 @@ class Main:
         # ubirch client for setting up ubirch protocol, authentication and data service
         self.ubirch_client = UbirchClient(self.uuid, self.cfg)
 
-    def prepare_data(self):
+    def prepare_data(self) -> dict:
         """
         Prepare the data from the sensor module and return it in the format we need.
         :return: a dictionary (json) with the data
@@ -225,4 +208,4 @@ class Main:
 
 
 main = Main()
-main.loop(60)
+main.loop()
