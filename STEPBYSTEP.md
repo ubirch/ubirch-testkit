@@ -26,6 +26,7 @@
 1. Download Pycom Upgrader ([download](https://pycom.io/downloads/))
 1. Download UBIRCH Pycom Firmware ([download](https://github.com/ubirch/example-micropython/releases/tag/pybytes-ed25519))
     * select the correct firmware for your Pycom device (WiPy, Lopy4, GPy, ...)
+1. Reset the device by pressing the button next to the LED
 1. Run Pycom Upgrader and Flash Firmware
     * On the third screen named `COMMUNICATION`select the right serial port / COM port and check the `flash from local file` checkbox
     * select file downloaded in step 2 and continue the process
@@ -129,9 +130,9 @@ a measurement certificate to appear, e.g.:
     ```
     * Replace `$HASH` with the hash copied in step 1
     * Replace `$URL` with
-        * https://verify.dev.ubirch.com/api/verify or
-        * https://verify.demo.ubirch.com/api/verify or
-        * https://verify.prod.ubirch.com/api/verify
+        * https://verify.dev.ubirch.com/api/upp/verify or
+        * https://verify.demo.ubirch.com/api/upp/verify or
+        * https://verify.prod.ubirch.com/api/upp/verify
     
       depending on the environment you are using
 
