@@ -45,7 +45,11 @@ class UbirchClient(Protocol):
         key_registration = self.message_signed(self.uuid, UBIRCH_PROTOCOL_TYPE_REG, cert)
         logger.debug("** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
 
-        r = self.api.register_identity(key_registration)
+        try:
+            r = self.api.register_identity(key_registration)
+        except OSError:
+            # the usocket module sporadically throws an OSerror. Just try again when it happens.
+            r = self.api.register_identity(key_registration)
         if r.status_code == 200:
             r.close()
             print(str(self.uuid) + ": identity registered\n")
