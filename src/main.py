@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 rtc = machine.RTC()
 
 logfile_name = 'log.txt'
-MAX_FILE_SIZE = 20000  # in bytes
+MAX_FILE_SIZE = 10000  # in bytes
 
 
 def log_to_file(error: str or Exception):
@@ -169,7 +169,7 @@ class Main:
     def loop(self):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
-        print("Starting loop. Measure interval: {} seconds".format(self.cfg["interval"]))
+        print("Starting loop... (interval = {} seconds)\n".format(self.cfg["interval"]))
         while True:
             start_time = time.time()
             pycom.rgbled(0x002200)  # LED green

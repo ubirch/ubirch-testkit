@@ -53,9 +53,9 @@ def get_config(filename: str = "config.json") -> dict:
 
     if 'interval' not in cfg:  # the measure interval in seconds
         cfg['interval'] = 60
-    if 'debug' not in cfg:  # enable extensive debug output
+    if 'debug' not in cfg:  # enable/disable extensive debug output
         cfg['debug'] = False
-    if 'logfile' not in cfg:  # enable logging to file
+    if 'logfile' not in cfg:  # enable/disable logging to file
         cfg['logfile'] = False
 
     return cfg
