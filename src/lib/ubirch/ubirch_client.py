@@ -102,7 +102,11 @@ class UbirchClient(Protocol):
 
         # send data message to data service
         print("** sending measurements ...")
-        r = self.api.send_data(self.uuid, message)
+        try:
+            r = self.api.send_data(self.uuid, message)
+        except OSError:
+            # the usocket module sporadically throws an OSerror. Just try again when it happens.
+            r = self.api.send_data(self.uuid, message)
         if r.status_code == 200:
             print("** measurements successfully sent\n")
             r.close()
@@ -117,13 +121,18 @@ class UbirchClient(Protocol):
 
         #  send UPP to authentication service
         print("** sending measurement certificate ...")
-        r = self.api.send_upp(self.uuid, upp)
+        try:
+            r = self.api.send_upp(self.uuid, upp)
+        except OSError:
+            # the usocket module sporadically throws an OSerror. Just try again when it happens.
+            r = self.api.send_upp(self.uuid, upp)
         if r.status_code == 200:
             print("hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
             print("** measurement certificate successfully sent\n")
             response_content = r.content
             try:
-                logger.debug("** verifying response from {}: {}".format(self.api.auth_service_url, binascii.hexlify(response_content)))
+                logger.debug("** verifying response from {}: {}".format(self.api.auth_service_url,
+                                                                        binascii.hexlify(response_content)))
                 self.message_verify(response_content)
                 logger.debug("** response verified")
             except Exception as e:
