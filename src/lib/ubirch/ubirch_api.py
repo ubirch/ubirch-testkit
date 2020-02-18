@@ -27,9 +27,15 @@ class API:
         :return: the response from the server
         """
         logger.debug("** sending key registration message to " + self.key_service_url)
-        return requests.post(self.key_service_url,
-                             headers={'Content-Type': 'application/octet-stream'},
-                             data=key_registration)
+        try:
+            return requests.post(self.key_service_url,
+                                 headers={'Content-Type': 'application/octet-stream'},
+                                 data=key_registration)
+        except OSError:
+            # the usocket module sporadically throws an OSerror. Just try again when it happens.
+            return requests.post(self.key_service_url,
+                                 headers={'Content-Type': 'application/octet-stream'},
+                                 data=key_registration)
 
     def send_upp(self, uuid: UUID, upp: bytes) -> requests.Response:
         """
@@ -40,9 +46,15 @@ class API:
         """
         logger.debug("** sending UPP to " + self.auth_service_url)
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
-        return requests.post(self.auth_service_url,
-                             headers=self._ubirch_headers,
-                             data=upp)
+        try:
+            return requests.post(self.auth_service_url,
+                                 headers=self._ubirch_headers,
+                                 data=upp)
+        except OSError:
+            # the usocket module sporadically throws an OSerror. Just try again when it happens.
+            return requests.post(self.auth_service_url,
+                                 headers=self._ubirch_headers,
+                                 data=upp)
 
     def send_data(self, uuid: UUID, message: bytes) -> requests.Response:
         """
@@ -53,9 +65,15 @@ class API:
         """
         logger.debug("** sending data message to " + self.data_service_url)
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
-        return requests.post(self.data_service_url,
-                             headers=self._ubirch_headers,
-                             data=binascii.hexlify(message))
+        try:
+            return requests.post(self.data_service_url,
+                                 headers=self._ubirch_headers,
+                                 data=binascii.hexlify(message))
+        except OSError:
+            # the usocket module sporadically throws an OSerror. Just try again when it happens.
+            return requests.post(self.data_service_url,
+                                 headers=self._ubirch_headers,
+                                 data=binascii.hexlify(message))
 
     def verify(self, data: bytes, quick=False) -> requests.Response:
         """
@@ -68,6 +86,12 @@ class API:
         if not quick:
             url = url + '/verify'
         logger.debug("** verifying hash: {} ({})".format(binascii.b2a_base64(data).decode(), url))
-        return requests.post(url,
-                             headers={'Accept': 'application/json', 'Content-Type': 'text/plain'},
-                             data=binascii.b2a_base64(data).decode().rstrip('\n'))
+        try:
+            return requests.post(url,
+                                 headers={'Accept': 'application/json', 'Content-Type': 'text/plain'},
+                                 data=binascii.b2a_base64(data).decode().rstrip('\n'))
+        except OSError:
+            # the usocket module sporadically throws an OSerror. Just try again when it happens.
+            return requests.post(url,
+                                 headers={'Accept': 'application/json', 'Content-Type': 'text/plain'},
+                                 data=binascii.b2a_base64(data).decode().rstrip('\n'))
