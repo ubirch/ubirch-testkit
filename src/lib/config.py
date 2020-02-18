@@ -13,7 +13,7 @@ def get_config(filename: str = "config.json") -> dict:
     #      "<WIFI SSID>": "<WIFI PASSWORD>"
     #    },
     #    "apn": "<APN for NB IoT connection",
-    #    "type": "<TYPE: 'pysense' or 'pytrack'>",
+    #    "type": "<'pysense' or 'pytrack'>",
     #    "password": "<password for the ubirch backend>",
     #    "keyService": "<URL of key registration service>",
     #    "niomon": "<URL of authentication service>",
@@ -26,8 +26,7 @@ def get_config(filename: str = "config.json") -> dict:
     except OSError:
         raise Exception("missing configuration file: " + filename)
 
-    # the only mandatory field in the configuration is the password for the ubirch backend.
-    # throw exception if it is missing
+    # throw exception if password for ubirch backend is missing
     if 'password' not in cfg:
         raise Exception("password missing in configuration file: " + filename)
 
