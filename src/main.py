@@ -1,4 +1,3 @@
-import json
 import logging
 import machine
 import os
@@ -13,26 +12,22 @@ from pyboard import Pysense, Pytrack
 
 # Ubirch client
 from ubirch import UbirchClient
+from config import get_config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 rtc = machine.RTC()
 
-# set up error logging to log file
-MAX_FILE_SIZE = 20000   # in bytes
-
-logfile = 'log.txt'
-with open(logfile, 'a') as f:
-    file_position = f.tell()
-print("\nlog file size ({}): {} kB".format(logfile, repr(file_position/1000.0)))
-print("free flash memory: {} kB\n".format(repr(os.getfree('/flash'))))
+logfile_name = 'log.txt'
+MAX_FILE_SIZE = 10000  # in bytes
 
 
 def log_to_file(error: str or Exception):
     global file_position
-    with open(logfile, 'a') as f:
+    with open(logfile_name, 'a') as f:
         # start overwriting oldest logs once file reached its max size
+        # issue: once file reached its max size, file position will always be set to beginning after device reset
         if file_position > MAX_FILE_SIZE:
             file_position = 0
         # set file to recent position
@@ -42,20 +37,19 @@ def log_to_file(error: str or Exception):
         t = rtc.now()
         f.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
         if isinstance(error, Exception):
-            sys.print_exception(error, sys.stderr)
             sys.print_exception(error, f)
         else:
-            sys.stderr.write(error + "\n")
             f.write(error + "\n")
 
         # remember current file position
         file_position = f.tell()
 
 
-def report_and_reset(message: str):
+def report_and_reset(message: str, logfile: bool):
     pycom.heartbeat(False)
     pycom.rgbled(0x440044)  # LED purple
-    log_to_file(message)
+    print(message)
+    if logfile: log_to_file(message)
     time.sleep(3)
     machine.reset()
 
@@ -84,28 +78,21 @@ class Main:
 
         # generate UUID
         self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
-        print("** UUID   : " + str(self.uuid))
+        print("\n** UUID   : " + str(self.uuid))
         print("** MAC    : " + ubinascii.hexlify(machine.unique_id(), ':').decode() + "\n")
 
-        # load configuration from config.json file
-        # the config.json should be placed next to this file
-        # {
-        #    "connection": "<'wifi' or 'nbiot'>",
-        #    "networks": {
-        #      "<WIFI SSID>": "<WIFI PASSWORD>"
-        #    },
-        #    "apn": "<APN for NB IoT connection",
-        #    "type": "<TYPE: 'pysense' or 'pytrack'>",
-        #    "password": "<password for ubirch auth and data service>",
-        #    "keyService": "<URL of key registration service>",
-        #    "niomon": "<URL of authentication service>",
-        #    "data": "<URL of data service>"
-        # }
-        try:
-            with open('config.json', 'r') as c:
-                self.cfg = json.load(c)
-        except OSError:
-            raise Exception("missing configuration file 'config.json'")
+        # load configuration from file (raises exception if file can't be found)
+        self.cfg = get_config()
+
+        if self.cfg['debug']:
+            logging.basicConfig(level=logging.DEBUG)
+
+        if self.cfg['logfile']:
+            # set up error logging to log file
+            with open(logfile_name, 'a') as f:
+                file_position = f.tell()
+            print("log file size ({}): {:.1f}kb".format(logfile_name, file_position / 1000.0))
+            print("free flash memory: {:d}kb\n".format(os.getfree('/flash')))
 
         # connect to network
         if self.cfg["connection"] == "wifi":
@@ -113,19 +100,19 @@ class Main:
             from network import WLAN
             self.wlan = WLAN(mode=WLAN.STA)
             if not wifi.connect(self.wlan, self.cfg['networks']):
-                report_and_reset("ERROR: unable to connect to network. Resetting device...")
+                report_and_reset("ERROR: unable to connect to network. Resetting device...", self.cfg['logfile'])
             if not wifi.set_time():
-                report_and_reset("ERROR: unable to set time. Resetting device...")
+                report_and_reset("ERROR: unable to set time. Resetting device...", self.cfg['logfile'])
         elif self.cfg["connection"] == "nbiot":
             import nb_iot
             from network import LTE
             self.lte = LTE()
             if not nb_iot.attach(self.lte, self.cfg["apn"]):
-                report_and_reset("ERROR: unable to attach to network. Resetting device...")
+                report_and_reset("ERROR: unable to attach to network. Resetting device...", self.cfg['logfile'])
             if not nb_iot.connect(self.lte):
-                report_and_reset("ERROR: unable to connect to network. Resetting device...")
+                report_and_reset("ERROR: unable to connect to network. Resetting device...", self.cfg['logfile'])
             if not nb_iot.set_time():
-                report_and_reset("ERROR: unable to set time. Resetting device...")
+                report_and_reset("ERROR: unable to set time. Resetting device...", self.cfg['logfile'])
 
         # initialize the sensor based on the type of the Pycom expansion board
         if self.cfg["type"] == "pysense":
@@ -138,7 +125,7 @@ class Main:
         # ubirch client for setting up ubirch protocol, authentication and data service
         self.ubirch_client = UbirchClient(self.uuid, self.cfg)
 
-    def prepare_data(self):
+    def prepare_data(self) -> dict:
         """
         Prepare the data from the sensor module and return it in the format we need.
         :return: a dictionary (json) with the data
@@ -179,9 +166,10 @@ class Main:
 
         return data
 
-    def loop(self, interval: int = 60):
+    def loop(self):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
+        print("Starting loop... (interval = {} seconds)\n".format(self.cfg["interval"]))
         while True:
             start_time = time.time()
             pycom.rgbled(0x002200)  # LED green
@@ -195,17 +183,19 @@ class Main:
             if self.cfg["connection"] == "wifi" and not self.wlan.isconnected():
                 import wifi
                 pycom.rgbled(0x440044)  # LED purple
-                log_to_file("!! lost wifi connection, trying to reconnect ...")
+                print("!! lost wifi connection, trying to reconnect ...")
+                if self.cfg['logfile']: log_to_file("!! lost wifi connection, trying to reconnect ...")
                 if not wifi.connect(self.wlan, self.cfg['networks']):
-                    report_and_reset("ERROR: unable to connect to network. Resetting device...")
+                    report_and_reset("ERROR: unable to connect to network. Resetting device...", self.cfg['logfile'])
                 else:
                     pycom.rgbled(0x002200)  # LED green
             elif self.cfg["connection"] == "nbiot" and not self.lte.isconnected():
                 import nb_iot
                 pycom.rgbled(0x440044)  # LED purple
-                log_to_file("!! lost NB-IoT connection, trying to reconnect ...")
+                print("!! lost NB-IoT connection, trying to reconnect ...")
+                if self.cfg['logfile']: log_to_file("!! lost NB-IoT connection, trying to reconnect ...")
                 if not nb_iot.connect(self.lte):
-                    report_and_reset("ERROR: unable to connect to network. Resetting device...")
+                    report_and_reset("ERROR: unable to connect to network. Resetting device...", self.cfg['logfile'])
                 else:
                     pycom.rgbled(0x002200)  # LED green
 
@@ -214,15 +204,16 @@ class Main:
                 self.ubirch_client.send(data)
             except Exception as e:
                 pycom.rgbled(0x440000)  # LED red
-                log_to_file(e)
+                sys.print_exception(e)
+                if self.cfg['logfile']: log_to_file(e)
                 time.sleep(3)
 
             print("** done.\n")
             passed_time = time.time() - start_time
-            if interval > passed_time:
+            if self.cfg['interval'] > passed_time:
                 pycom.rgbled(0)  # LED off
-                time.sleep(interval - passed_time)
+                time.sleep(self.cfg['interval'] - passed_time)
 
 
 main = Main()
-main.loop(60)
+main.loop()

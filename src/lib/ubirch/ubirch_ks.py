@@ -20,12 +20,12 @@ class KeyStore:
     def _load_keys(self) -> None:
         """Load or create new crypto-keys. The keys are stored in a local key store."""
         if self._ks_file in os.listdir(self._cfg_root):
-            print("loading existing key pair for " + str(self.uuid))
+            print("** loading existing key pair for " + str(self.uuid))
             with open(self._cfg_root + self._ks_file, "rb") as kf:
                 self._sk = ed25519.SigningKey(kf.read())
                 self._vk = self._sk.get_verifying_key()
         else:
-            print("generating new key pair for " + str(self.uuid))
+            print("** generating new key pair for " + str(self.uuid))
             (self._vk, self._sk) = ed25519.create_keypair()
             with open(self._cfg_root + self._ks_file, "wb") as kf:
                 kf.write(self._sk.to_bytes())

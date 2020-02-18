@@ -25,17 +25,17 @@ The example code is made for any Pycom module sitting on a Pysense or Pytrack.
     * click **create**
 * Next, click on your device, copy the apiConfig, create src/config.json in your project
   and paste the apiConfig into it.
-* Add configuration for WIFI connection and the expansion board you are using.
+* Add configuration for the kind of connection and expansion board you are using.
 
    It should then look like this:
     ```json
     {
+      "type": "<'pysense' or 'pytrack'>",
       "connection": "<'wifi' or 'nbiot'>",
       "networks": {
         "<WIFI SSID>": "<WIFI PASSWORD>"
       },
-      "apn": "<APN for NB IoT connection",
-      "type": "<TYPE: 'pysense' or 'pytrack'>",
+      "apn": "<APN for NB-IoT connection>",
       "password": "<password for ubirch auth and data service>",
       "keyService": "<URL of key registration service>",
       "niomon": "<URL of authentication service>",
