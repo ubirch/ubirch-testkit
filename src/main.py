@@ -5,6 +5,7 @@ import sys
 import time
 import ubinascii
 from uuid import UUID
+from connection import WIFI, NBIOT
 
 # Pycom specifics
 import pycom
@@ -19,39 +20,11 @@ logger = logging.getLogger(__name__)
 
 rtc = machine.RTC()
 
-logfile_name = 'log.txt'
+LED_GREEN = 0x001100
+LED_RED = 0x110000
+LED_PURPLE = 0x110011
+
 MAX_FILE_SIZE = 10000  # in bytes
-
-
-def log_to_file(error: str or Exception):
-    global file_position
-    with open(logfile_name, 'a') as f:
-        # start overwriting oldest logs once file reached its max size
-        # issue: once file reached its max size, file position will always be set to beginning after device reset
-        if file_position > MAX_FILE_SIZE:
-            file_position = 0
-        # set file to recent position
-        f.seek(file_position, 0)
-
-        # log error message and traceback if error is an exception
-        t = rtc.now()
-        f.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
-        if isinstance(error, Exception):
-            sys.print_exception(error, f)
-        else:
-            f.write(error + "\n")
-
-        # remember current file position
-        file_position = f.tell()
-
-
-def report_and_reset(message: str, logfile: bool):
-    pycom.heartbeat(False)
-    pycom.rgbled(0x440044)  # LED purple
-    print(message)
-    if logfile: log_to_file(message)
-    time.sleep(3)
-    machine.reset()
 
 
 def pretty_print_data(data: dict):
@@ -89,30 +62,22 @@ class Main:
 
         if self.cfg['logfile']:
             # set up error logging to log file
-            with open(logfile_name, 'a') as f:
-                file_position = f.tell()
-            print("log file size ({}): {:.1f}kb".format(logfile_name, file_position / 1000.0))
-            print("free flash memory: {:d}kb\n".format(os.getfree('/flash')))
+            self.logfile_name = 'log.txt'
+            with open(self.logfile_name, 'a') as f:
+                self.file_position = f.tell()
+            print(
+                "** logging to file ({}) is enabled. current log file size: {:.1f}kb, free flash memory: {:d}kb\n".format(
+                    (self.logfile_name), self.file_position / 1000.0, os.getfree('/flash')))
 
         # connect to network
-        if self.cfg["connection"] == "wifi":
-            import wifi
-            from network import WLAN
-            self.wlan = WLAN(mode=WLAN.STA)
-            if not wifi.connect(self.wlan, self.cfg['networks']):
-                report_and_reset("ERROR: unable to connect to network. Resetting device...", self.cfg['logfile'])
-            if not wifi.set_time():
-                report_and_reset("ERROR: unable to set time. Resetting device...", self.cfg['logfile'])
-        elif self.cfg["connection"] == "nbiot":
-            import nb_iot
-            from network import LTE
-            self.lte = LTE()
-            if not nb_iot.attach(self.lte, self.cfg["apn"]):
-                report_and_reset("ERROR: unable to attach to network. Resetting device...", self.cfg['logfile'])
-            if not nb_iot.connect(self.lte):
-                report_and_reset("ERROR: unable to connect to network. Resetting device...", self.cfg['logfile'])
-            if not nb_iot.set_time():
-                report_and_reset("ERROR: unable to set time. Resetting device...", self.cfg['logfile'])
+        try:
+            if self.cfg['connection'] == "wifi":
+                self.connection = WIFI(self.cfg['networks'])
+            elif self.cfg['connection'] == "nbiot":
+                self.connection = NBIOT(self.cfg['apn'])
+        except Exception as e:
+            self.report(repr(e) + " Resetting device...", LED_PURPLE)
+            machine.reset()
 
         # initialize the sensor based on the type of the Pycom expansion board
         if self.cfg["type"] == "pysense":
@@ -124,6 +89,36 @@ class Main:
 
         # ubirch client for setting up ubirch protocol, authentication and data service
         self.ubirch_client = UbirchClient(self.uuid, self.cfg)
+
+    def log_to_file(self, error: str or Exception):
+        with open(self.logfile_name, 'a') as f:
+            # start overwriting oldest logs once file reached its max size
+            # issue: once file reached its max size, file position will always be set to beginning after device reset
+            if self.file_position > MAX_FILE_SIZE:
+                self.file_position = 0
+            # set file to recent position
+            f.seek(self.file_position, 0)
+
+            # log error message and traceback if error is an exception
+            t = rtc.now()
+            f.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
+            if isinstance(error, Exception):
+                sys.print_exception(error, f)
+            else:
+                f.write(error + "\n")
+
+            # remember current file position
+            self.file_position = f.tell()
+
+    def report(self, error: str or Exception, led_color: int):
+        pycom.heartbeat(False)
+        pycom.rgbled(led_color)
+        if isinstance(error, Exception):
+            sys.print_exception(error)
+        else:
+            print(error)
+        if self.cfg['logfile']: self.log_to_file(error)
+        time.sleep(3)
 
     def prepare_data(self) -> dict:
         """
@@ -169,10 +164,10 @@ class Main:
     def loop(self):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
-        print("Starting loop... (interval = {} seconds)\n".format(self.cfg["interval"]))
+        print("** starting loop... (interval = {} seconds)\n".format(self.cfg["interval"]))
         while True:
             start_time = time.time()
-            pycom.rgbled(0x002200)  # LED green
+            pycom.rgbled(LED_GREEN)
 
             # get data
             print("** getting measurements:")
@@ -180,33 +175,19 @@ class Main:
             pretty_print_data(data)
 
             # make sure device is still connected
-            if self.cfg["connection"] == "wifi" and not self.wlan.isconnected():
-                import wifi
-                pycom.rgbled(0x440044)  # LED purple
-                print("!! lost wifi connection, trying to reconnect ...")
-                if self.cfg['logfile']: log_to_file("!! lost wifi connection, trying to reconnect ...")
-                if not wifi.connect(self.wlan, self.cfg['networks']):
-                    report_and_reset("ERROR: unable to connect to network. Resetting device...", self.cfg['logfile'])
+            if not self.connection.is_connected():
+                self.report("!! lost connection to network, trying to reconnect ...", LED_PURPLE)
+                if not self.connection.connect():
+                    self.report("!! unable to connect to network. Resetting device...", LED_RED)
+                    machine.reset()
                 else:
-                    pycom.rgbled(0x002200)  # LED green
-            elif self.cfg["connection"] == "nbiot" and not self.lte.isconnected():
-                import nb_iot
-                pycom.rgbled(0x440044)  # LED purple
-                print("!! lost NB-IoT connection, trying to reconnect ...")
-                if self.cfg['logfile']: log_to_file("!! lost NB-IoT connection, trying to reconnect ...")
-                if not nb_iot.connect(self.lte):
-                    report_and_reset("ERROR: unable to connect to network. Resetting device...", self.cfg['logfile'])
-                else:
-                    pycom.rgbled(0x002200)  # LED green
+                    pycom.rgbled(LED_GREEN)
 
             # send data to ubirch data service and certificate to ubirch auth service
             try:
                 self.ubirch_client.send(data)
             except Exception as e:
-                pycom.rgbled(0x440000)  # LED red
-                sys.print_exception(e)
-                if self.cfg['logfile']: log_to_file(e)
-                time.sleep(3)
+                self.report(e, LED_RED)
 
             print("** done.\n")
             passed_time = time.time() - start_time
