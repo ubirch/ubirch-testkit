@@ -38,7 +38,7 @@ def get_config(filename: str = "config.json") -> dict:
         cfg['keyService'] = "https://key.{}.ubirch.com/api/keyService/v1/pubkey/mpack".format(cfg['env'])
         logger.debug("key service URL not set in config file. Setting it to default: " + cfg['keyService'])
 
-    # now make sure the env key has the actual environment value that is used in the URL FIXME: not sure about this
+    # now make sure the env key has the actual environment value that is used in the URL
     cfg['env'] = cfg['keyService'].split(".")[1]
 
     if 'niomon' not in cfg:
@@ -51,6 +51,7 @@ def get_config(filename: str = "config.json") -> dict:
         cfg['verify'] = "https://verify.{}.ubirch.com/api/upp".format(cfg['env'])
         logger.debug("verification service URL not set in config file. Setting it to default: " + cfg['verify'])
 
+    # set default values for various configurations
     if 'interval' not in cfg:  # the measure interval in seconds
         cfg['interval'] = 60
     if 'debug' not in cfg:  # enable/disable extensive debug output
