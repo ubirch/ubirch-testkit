@@ -45,19 +45,27 @@ class UbirchClient(Protocol):
         key_registration = self.message_signed(self.uuid, UBIRCH_PROTOCOL_TYPE_REG, cert)
         logger.debug("** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
 
-        try:
+        # send key registration message to key service
+        print("** registering identity at key service ...")
+        tries = 2
+        while True:
             r = self.api.register_identity(key_registration)
-        except OSError:
-            # the usocket module sporadically throws an OSerror. Just try again when it happens.
-            r = self.api.register_identity(key_registration)
-        if r.status_code == 200:
-            r.close()
-            print(str(self.uuid) + ": identity registered\n")
-        else:
-            logger.error(str(self.uuid) + ": ERROR: device identity not registered")
-            raise Exception(
-                "!! request to {} failed with status code {}: {}".format(self.api.key_service_url, r.status_code,
-                                                                         r.text))
+
+            if r.status_code == 200:
+                print("** identity successfully registered\n")
+                r.close()
+                break
+
+            tries -= 1
+            if tries > 0:
+                print(
+                    "!! request to {} failed with status code {}: {}\nTrying again... {} attempt(s) left".format(
+                        self.api.key_service_url, r.status_code, r.text, tries))
+            else:
+                print("!! device identity not registered")
+                raise Exception(
+                    "!! request to {} failed with status code {}: {}".format(self.api.key_service_url, r.status_code,
+                                                                             r.text))
 
     def _sign(self, uuid: UUID, message: bytes) -> bytes:
         return self._keystore.get_signing_key().sign(message)
@@ -94,30 +102,35 @@ class UbirchClient(Protocol):
 
     def send(self, data: dict):
         """
-        Send data message to ubirch data service. On success, send certificate of the message
-        to ubirch authentication service.
-        Throws exception if message couldn't be sent or response couldn't be verified.
-        :param data: a map containing the data to be sent
+        Send data message to ubirch data service and certificate of the message to ubirch authentication service.
+        Throws exception if sending message failed  or response from backend couldn't be verified.
+        :param data: data map to to be sent
         """
-        # pack data message with measurements, device UUID, timestamp and hash of the message
+        # pack data message containing measurements, device UUID and timestamp to ensure unique hash
         message, message_hash = self.pack_data_message(data)
         logger.debug("** data message [msgpack]: {}".format(binascii.hexlify(message).decode()))
         logger.debug("** hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
 
-        # send data message to data service
+        # send message to data service
         print("** sending measurements ...")
-        try:
+        tries = 2
+        while True:
             r = self.api.send_data(self.uuid, message)
-        except OSError:
-            # the usocket module sporadically throws an OSerror. Just try again when it happens.
-            r = self.api.send_data(self.uuid, message)
-        if r.status_code == 200:
-            print("** measurements successfully sent\n")
-            r.close()
-        else:
-            raise Exception(
-                "!! request to {} failed with status code {}: {}".format(self.api.data_service_url, r.status_code,
-                                                                         r.text))
+
+            if r.status_code == 200:
+                print("** measurements successfully sent\n")
+                r.close()
+                break
+
+            tries -= 1
+            if tries > 0:
+                print(
+                    "!! request to {} failed with status code {}: {}\nTrying again... {} attempt(s) left".format(
+                        self.api.data_service_url, r.status_code, r.text, tries))
+            else:
+                raise Exception(
+                    "!! request to {} failed with status code {}: {}".format(self.api.data_service_url, r.status_code,
+                                                                             r.text))
 
         # create UPP with the data message hash
         upp = self.message_chained(self.uuid, 0x00, message_hash)
@@ -125,27 +138,33 @@ class UbirchClient(Protocol):
 
         #  send UPP to authentication service
         print("** sending measurement certificate ...")
-        try:
+        tries = 2
+        while True:
             r = self.api.send_upp(self.uuid, upp)
-        except OSError:
-            # the usocket module sporadically throws an OSerror. Just try again when it happens.
-            r = self.api.send_upp(self.uuid, upp)
-        if r.status_code == 200:
-            print("hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
-            print("** measurement certificate successfully sent\n")
-            response_content = r.content
-            try:
-                logger.debug("** verifying response from {}: {}".format(self.api.auth_service_url,
-                                                                        binascii.hexlify(response_content)))
-                self.message_verify(response_content)
-                logger.debug("** response verified")
-            except Exception as e:
+
+            if r.status_code == 200:
+                print("** hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
+                print("** measurement certificate successfully sent\n")
+                response_content = r.content
+                try:
+                    logger.debug("** verifying response from {}: {}".format(self.api.auth_service_url,
+                                                                            binascii.hexlify(response_content)))
+                    self.message_verify(response_content)
+                    logger.debug("** response verified")
+                except Exception as e:
+                    raise Exception(
+                        "!! response verification failed: {}. {} ".format(e, binascii.hexlify(response_content)))
+                break
+
+            tries -= 1
+            if tries > 0:
+                print(
+                    "!! request to {} failed with status code {}: {}\nTrying again... {} attempt(s) left".format(
+                        self.api.auth_service_url, r.status_code, r.text, tries))
+            else:
                 raise Exception(
-                    "!! response verification failed: {}. {} ".format(e, binascii.hexlify(response_content)))
-        else:
-            raise Exception(
-                "!! request to {} failed with status code {}: {}".format(self.api.auth_service_url, r.status_code,
-                                                                         r.text))
+                    "!! request to {} failed with status code {}: {}".format(self.api.auth_service_url, r.status_code,
+                                                                             r.text))
 
         # # verify that hash has been stored in backend
         # print("** verifying hash in backend ...")
@@ -159,5 +178,5 @@ class UbirchClient(Protocol):
         #     if retries == 0:
         #         raise Exception("!! backend verification ({}) failed with status code {}: {}".format(self.api.verification_service_url, r.status_code, r.text))
         #     r.close()
-        #     print("Hash could not be verified yet. Retry... ({} retires left)".format(retries))
+        #     print("Hash could not be verified yet. Retry... ({} attempt(s) left)".format(retries))
         #     retries -= 1
