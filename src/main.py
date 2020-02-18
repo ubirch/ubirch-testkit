@@ -176,9 +176,8 @@ class Main:
 
             # make sure device is still connected
             if not self.connection.is_connected():
-                self.report("!! lost connection to network, trying to reconnect ...", LED_PURPLE)
                 if not self.connection.connect():
-                    self.report("!! unable to connect to network. Resetting device...", LED_RED)
+                    self.report("!! unable to connect to network. Resetting device...", LED_PURPLE)
                     machine.reset()
                 else:
                     pycom.rgbled(LED_GREEN)
@@ -188,6 +187,10 @@ class Main:
                 self.ubirch_client.send(data)
             except Exception as e:
                 self.report(e, LED_RED)
+
+            # LTE stops working after a while, so we disconnect after sending and reconnect to make sure it works
+            # if connection is a WIFI instance, this method call does nothing (WIFI stays connected all the time)
+            self.connection.disconnect()
 
             print("** done.\n")
             passed_time = time.time() - start_time

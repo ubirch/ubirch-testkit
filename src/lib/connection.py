@@ -10,6 +10,9 @@ class Connection():
     def is_connected(self) -> bool:
         raise NotImplementedError()
 
+    def disconnect(self):
+        raise NotImplementedError()
+
     def set_time(self, ntp: str) -> bool:
         rtc = machine.RTC()
         i = 0
@@ -65,6 +68,9 @@ class NBIOT(Connection):
     def is_connected(self):
         return self.lte.isconnected()
 
+    def disconnect(self):
+        self.lte.disconnect()
+
 
 class WIFI(Connection):
     def __init__(self, networks: dict):
@@ -103,3 +109,11 @@ class WIFI(Connection):
 
     def is_connected(self):
         return self.wlan.isconnected()
+
+    def disconnect(self):
+        """
+        this is a dummy method!! It does not actually disconnect the WIFI connection!
+        This method is only necessary, because LTE connections need to be dis- and re-connected regularly,
+        but we don't want to actually disconnect WIFI
+        """
+        pass
