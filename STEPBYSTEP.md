@@ -22,16 +22,17 @@
     * watch pymakr console window in Atom to see if it worked (should show up automatically on the bottom of the Atom window)
 1. CLOSE Atom Editor or DISCONNECT the Pycom Device
 
-## Flash Pycom Devices
+## Flash Pycom Device
 1. Download Pycom Upgrader ([download](https://pycom.io/downloads/))
 1. Download UBIRCH Pycom Firmware ([download](https://github.com/ubirch/example-micropython/releases/tag/pybytes-ed25519))
     * select the correct firmware for your Pycom device (WiPy, Lopy4, GPy, ...)
+1. Reset the device by pressing the button next to the LED
 1. Run Pycom Upgrader and Flash Firmware
     * On the third screen named `COMMUNICATION`select the right serial port / COM port and check the `flash from local file` checkbox
     * select file downloaded in step 2 and continue the process
     * wait until flash process finished successfully
 
-## Configure Pycom Device
+## Upload the program
 1. Re-start Atom Editor or re-connect device
 1. Download example firmware code
     * Click menu `View >> Toggle Command Palette`
@@ -49,30 +50,40 @@
     * paste the the **UUID** copied in the last step of the previous chapter to the **hwDeviceId** field
     * click **create**
 1. Next, click on your device and copy the apiConfig
+
+## Configure Pycom Device
 1. Create a file `config.json` in the `src` directory of the project tree and paste the apiConfig into it.
-1. Add configuration for WIFI connection and the expansion board you are using.
+1. Add configuration for the kind of connection and expansion board you are using.
 
    It should then look like this:
     ```json
     {
-      "connection": "<'wifi' or 'nbiot'>",
+      "type": "<BOARD TYPE>",
+      "connection": "<CONNECTION TYPE>",
       "networks": {
         "<WIFI SSID>": "<WIFI PASSWORD>"
       },
-      "apn": "<APN for NB IoT connection",
-      "type": "<BOARD TYPE>",
+      "apn": "<APN for NB-IoT connection>",
       "password": "<password for ubirch auth and data service>",
       "keyService": "<URL of key registration service>",
       "niomon": "<URL of authentication service>",
       "data": "<URL of data service>"
     }
     ```
-    * Replace `<WIFI SSID>` with the name of your wifi network
-    * Replace `<WIFI PASSWORD>` with the password to your wifi network
     * Replace `<BOARD TYPE>` with the expansion board type you are using (`pysense` or `pytrack`)
+    
+   If you want to connect to a WIFI network:
+    * Replace `<CONNECTION TYPE>` with `wifi`
+    * Replace `<WIFI SSID>` with the name of your wifi network and `<WIFI PASSWORD>` with the password to your wifi network
+   
+   If you want to connect to a NB-IoT or LTE network
+    * Replace `<CONNECTION TYPE>` with `nbiot`
+    * Replace `<APN for NB-IoT connection>` with the APN for your SIM card
+    
 1. Press the `UPLOAD` button again and you're good to go. 
 
-On initial start, the Pycom will generate an ed25519 key pair for the device and register the public key at the Ubirch
+## Run the program
+After upload, the program starts running on the device. On initial start, the Pycom will generate an ed25519 key pair for the device and register the public key at the Ubirch
 key service. After that, it will frequently measure the following data...
 * pysense:
     ```json
@@ -129,9 +140,9 @@ a measurement certificate to appear, e.g.:
     ```
     * Replace `$HASH` with the hash copied in step 1
     * Replace `$URL` with
-        * https://verify.dev.ubirch.com/api/verify or
-        * https://verify.demo.ubirch.com/api/verify or
-        * https://verify.prod.ubirch.com/api/verify
+        * `https://verify.dev.ubirch.com/api/upp/verify` or
+        * `https://verify.demo.ubirch.com/api/upp/verify` or
+        * `https://verify.prod.ubirch.com/api/upp/verify`
     
       depending on the environment you are using
 
