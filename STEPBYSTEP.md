@@ -118,7 +118,7 @@ key service. After that, it will frequently measure the following data...
 which is the certificate of the data's authenticity, and sends it to the Ubirch public blockchain based authentication and timestamping service.
 
 ## Visualize the data
-1. Go to https://grafana.dev.ubirch.com/?orgId=1
+1. Go to http://dashboard.demo.ubirch.com/ 
 1. Login with your Ubirch Web UI account
 1. Create a new dashboard and go to `Add Query`
 1. Select `Elasticsearch` in the drop-down menu 
