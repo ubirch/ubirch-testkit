@@ -143,7 +143,7 @@ class UbirchClient(Protocol):
             r = self.api.send_upp(self.uuid, upp)
 
             if r.status_code == 200:
-                print("** hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
+                print("hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
                 print("** measurement certificate successfully sent\n")
                 response_content = r.content
                 try:

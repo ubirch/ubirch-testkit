@@ -5,7 +5,7 @@ import sys
 import time
 import ubinascii
 from uuid import UUID
-from connection import WIFI, NBIOT
+from connection import WIFI, NB_IoT
 
 # Pycom specifics
 import pycom
@@ -66,16 +66,19 @@ class Main:
             with open(self.logfile_name, 'a') as f:
                 self.file_position = f.tell()
             print(
-                "** logging to file ({}) is enabled. current log file size: {:.1f}kb, free flash memory: {:d}kb\n".format(
-                    (self.logfile_name), self.file_position / 1000.0, os.getfree('/flash')))
+                "** file logging enabled. log file: {}, size: {:.1f}kb, free flash memory: {:d}kb\n".format(
+                    self.logfile_name, self.file_position / 1000.0, os.getfree('/flash')))
 
         # connect to network
         try:
             if self.cfg['connection'] == "wifi":
                 self.connection = WIFI(self.cfg['networks'])
             elif self.cfg['connection'] == "nbiot":
-                self.connection = NBIOT(self.cfg['apn'])
-        except Exception as e:
+                self.connection = NB_IoT(self.cfg['apn'])
+            else:
+                raise Exception("Connection type {} not supported. Supported types: 'wifi' and 'nbiot'".format(
+                    self.cfg["connection"]))
+        except ConnectionError as e:
             self.report(repr(e) + " Resetting device...", LED_PURPLE)
             machine.reset()
 
@@ -85,7 +88,8 @@ class Main:
         elif self.cfg["type"] == "pytrack":
             self.sensor = Pytrack()
         else:
-            raise Exception("Expansion board type not supported. This version supports types 'pysense' and 'pytrack'")
+            raise Exception("Expansion board type {} not supported. Supported types: 'pysense' and 'pytrack'".format(
+                self.cfg["type"]))
 
         # ubirch client for setting up ubirch protocol, authentication and data service
         self.ubirch_client = UbirchClient(self.uuid, self.cfg)
@@ -187,6 +191,8 @@ class Main:
                 self.ubirch_client.send(data)
             except Exception as e:
                 self.report(e, LED_RED)
+                if isinstance(e, OSError):
+                    machine.reset()
 
             # LTE stops working after a while, so we disconnect after sending and reconnect to make sure it works
             # if connection is a WIFI instance, this method call does nothing (WIFI stays connected all the time)
