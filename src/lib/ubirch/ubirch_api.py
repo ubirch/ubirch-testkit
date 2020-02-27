@@ -20,6 +20,22 @@ class API:
             'X-Ubirch-Auth-Type': 'ubirch'
         }
 
+    def send_request(self, url: str, data: bytes, headers=None) -> requests.Response:
+        if headers is None:
+            headers = self._ubirch_headers
+
+        tries_left = 2
+        while True:
+            try:
+                return requests.post(url=url, data=data, headers=headers)
+            except OSError:
+                # the usocket module sporadically throws an OSerror. Just try again when it happens.
+                tries_left -= 1
+                if tries_left > 0:
+                    continue
+                else:
+                    raise
+
     def register_identity(self, key_registration: bytes) -> requests.Response:
         """
         Register an identity at the key service.
@@ -27,15 +43,9 @@ class API:
         :return: the response from the server
         """
         logger.debug("** sending key registration message to " + self.key_service_url)
-        try:
-            return requests.post(self.key_service_url,
-                                 headers={'Content-Type': 'application/octet-stream'},
-                                 data=key_registration)
-        except OSError:
-            # the usocket module sporadically throws an OSerror. Just try again when it happens.
-            return requests.post(self.key_service_url,
-                                 headers={'Content-Type': 'application/octet-stream'},
-                                 data=key_registration)
+        return self.send_request(self.key_service_url,
+                                 key_registration,
+                                 headers={'Content-Type': 'application/octet-stream'})
 
     def send_upp(self, uuid: UUID, upp: bytes) -> requests.Response:
         """
@@ -46,15 +56,7 @@ class API:
         """
         logger.debug("** sending UPP to " + self.auth_service_url)
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
-        try:
-            return requests.post(self.auth_service_url,
-                                 headers=self._ubirch_headers,
-                                 data=upp)
-        except OSError:
-            # the usocket module sporadically throws an OSerror. Just try again when it happens.
-            return requests.post(self.auth_service_url,
-                                 headers=self._ubirch_headers,
-                                 data=upp)
+        return self.send_request(self.auth_service_url, upp)
 
     def send_data(self, uuid: UUID, message: bytes) -> requests.Response:
         """
@@ -65,15 +67,7 @@ class API:
         """
         logger.debug("** sending data message to " + self.data_service_url)
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
-        try:
-            return requests.post(self.data_service_url,
-                                 headers=self._ubirch_headers,
-                                 data=binascii.hexlify(message))
-        except OSError:
-            # the usocket module sporadically throws an OSerror. Just try again when it happens.
-            return requests.post(self.data_service_url,
-                                 headers=self._ubirch_headers,
-                                 data=binascii.hexlify(message))
+        return self.send_request(self.data_service_url, binascii.hexlify(message))
 
     def verify(self, data: bytes, quick=False) -> requests.Response:
         """
@@ -86,12 +80,6 @@ class API:
         if not quick:
             url = url + '/verify'
         logger.debug("** verifying hash: {} ({})".format(binascii.b2a_base64(data).decode(), url))
-        try:
-            return requests.post(url,
-                                 headers={'Accept': 'application/json', 'Content-Type': 'text/plain'},
-                                 data=binascii.b2a_base64(data).decode().rstrip('\n'))
-        except OSError:
-            # the usocket module sporadically throws an OSerror. Just try again when it happens.
-            return requests.post(url,
-                                 headers={'Accept': 'application/json', 'Content-Type': 'text/plain'},
-                                 data=binascii.b2a_base64(data).decode().rstrip('\n'))
+        return self.send_request(url,
+                                 binascii.b2a_base64(data).decode().rstrip('\n'),
+                                 headers={'Accept': 'application/json', 'Content-Type': 'text/plain'})

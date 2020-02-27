@@ -66,7 +66,7 @@ class Main:
             with open(self.logfile_name, 'a') as f:
                 self.file_position = f.tell()
             print(
-                "** file logging enabled. log file: {}, size: {:.1f}kb, free flash memory: {:d}kb\n".format(
+                "** file logging enabled. log file: {}, size: {:.1f} kb, free flash memory: {:d} kb\n".format(
                     self.logfile_name, self.file_position / 1000.0, os.getfree('/flash')))
 
         # connect to network
