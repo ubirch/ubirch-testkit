@@ -20,9 +20,10 @@ logger = logging.getLogger(__name__)
 
 rtc = machine.RTC()
 
-LED_GREEN = 0x001100
-LED_RED = 0x110000
-LED_PURPLE = 0x110011
+LED_GREEN = 0x002200
+LED_YELLOW = 0x7f7f00
+LED_RED = 0x7f0000
+LED_PURPLE = 0x7f007f
 
 MAX_FILE_SIZE = 10000  # in bytes
 
@@ -53,6 +54,22 @@ class Main:
         self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
         print("\n** UUID   : " + str(self.uuid))
         print("** MAC    : " + ubinascii.hexlify(machine.unique_id(), ':').decode() + "\n")
+
+        try:
+            # mount SD card (operation throws exception if no SD card present)
+            sd = machine.SD()
+            os.mount(sd, '/sd')
+            # write UUID to file on SD card if file doesn't already exist
+            uuid_file = "uuid.txt"
+            if uuid_file not in os.listdir('/sd'):
+                with open('/sd/' + uuid_file, 'w') as f:
+                    f.write(str(self.uuid))
+        except OSError:
+            print("!! writing UUID to SD card failed")
+            pycom.heartbeat(False)
+            pycom.rgbled(LED_YELLOW)
+            time.sleep(3)
+            pycom.heartbeat(True)
 
         # load configuration from file (raises exception if file can't be found)
         self.cfg = get_config()
@@ -92,7 +109,21 @@ class Main:
                 self.cfg["type"]))
 
         # ubirch client for setting up ubirch protocol, authentication and data service
-        self.ubirch_client = UbirchClient(self.uuid, self.cfg)
+        try:
+            self.ubirch_client = UbirchClient(self.uuid, self.cfg)
+        except Exception as e:
+            self.report("Initialisation failed. " + repr(e) + " Resetting device...", LED_RED)
+            machine.reset()
+
+    def report(self, error: str or Exception, led_color: int):
+        pycom.heartbeat(False)
+        pycom.rgbled(led_color)
+        if isinstance(error, Exception):
+            sys.print_exception(error)
+        else:
+            print(error)
+        if self.cfg['logfile']: self.log_to_file(error)
+        time.sleep(3)
 
     def log_to_file(self, error: str or Exception):
         with open(self.logfile_name, 'a') as f:
@@ -113,16 +144,6 @@ class Main:
 
             # remember current file position
             self.file_position = f.tell()
-
-    def report(self, error: str or Exception, led_color: int):
-        pycom.heartbeat(False)
-        pycom.rgbled(led_color)
-        if isinstance(error, Exception):
-            sys.print_exception(error)
-        else:
-            print(error)
-        if self.cfg['logfile']: self.log_to_file(error)
-        time.sleep(3)
 
     def prepare_data(self) -> dict:
         """
