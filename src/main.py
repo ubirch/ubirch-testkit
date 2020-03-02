@@ -73,6 +73,8 @@ class Main:
 
         # load configuration from file (raises exception if file can't be found)
         self.cfg = get_config()
+        if self.cfg['debug']:
+            print("** loaded configuration:\n{}\n".format(self.cfg))
 
         if self.cfg['debug']:
             logging.basicConfig(level=logging.DEBUG)

@@ -1,5 +1,7 @@
 import json
 import logging
+from machine import SD
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +28,19 @@ def get_config(filename: str = "config.json") -> dict:
     except OSError:
         raise Exception("missing configuration file: " + filename)
 
-    # throw exception if password for ubirch backend is missing
+    # look for ubirch backend password
     if 'password' not in cfg:
-        raise Exception("password missing in configuration file: " + filename)
+        api_config_file = '/sd/config.txt'
+        print("** looking for API config on SD card ({})".format(api_config_file))
+        try:
+            # get password from file on SD card
+            with open(api_config_file, 'r') as f:
+                api_config = json.load(f)
+                print("** found API config on SD card: {}".format(api_config))
+            # add API config to existing config
+            cfg.update(api_config)
+        except OSError:
+            raise Exception("!! missing config. no password found in {} or {}. ".format(filename, api_config_file))
 
     # set default URLs for services that are not set in config file
     if 'env' not in cfg:
@@ -57,5 +69,12 @@ def get_config(filename: str = "config.json") -> dict:
         cfg['debug'] = False
     if 'logfile' not in cfg:  # enable/disable logging to file
         cfg['logfile'] = False
+
+    # todo not sure about this.
+    #  pro: user can take sd card out after first init;
+    #  con: user can't change config by writing new config to sd card
+    # write everything to config file (ujson does not support json.dump())
+    with open(filename, 'w') as f:
+        f.write(json.dumps(cfg))
 
     return cfg
