@@ -21,6 +21,7 @@ def get_config(filename: str = "config.json") -> dict:
     #    "niomon": "<URL of authentication service>",
     #    "data": "<URL of data service>"
     #    "verify": "<URL of verification service>"
+    #    "boot": "<URL of bootstrap service>"
     # }
     try:
         with open(filename, 'r') as c:
@@ -28,12 +29,27 @@ def get_config(filename: str = "config.json") -> dict:
     except OSError:
         raise Exception("missing configuration file: " + filename)
 
-    # look for ubirch backend password
+    # set default values for miscellaneous configurations
+    if 'interval' not in cfg:  # the measure interval in seconds
+        cfg['interval'] = 60
+    if 'debug' not in cfg:  # enable/disable extensive debug output
+        cfg['debug'] = False
+    if 'logfile' not in cfg:  # enable/disable logging to file
+        cfg['logfile'] = False
+
+    # set debug level
+    if cfg['debug']:
+        logging.basicConfig(level=logging.DEBUG)
+
+    # look for ubirch backend password. If it is not in standard config file, look for it on SD card
     if 'password' not in cfg:
+        # mount SD card (operation throws exception if no SD card present)
+        sd = SD()
+        os.mount(sd, '/sd')
+        # get config from SD card
         api_config_file = '/sd/config.txt'
         print("** looking for API config on SD card ({})".format(api_config_file))
         try:
-            # get password from file on SD card
             with open(api_config_file, 'r') as f:
                 api_config = json.load(f)
                 print("** found API config on SD card: {}".format(api_config))
@@ -61,14 +77,9 @@ def get_config(filename: str = "config.json") -> dict:
     if 'verify' not in cfg:
         cfg['verify'] = "https://verify.{}.ubirch.com/api/upp".format(cfg['env'])
         logger.debug("verification service URL not set in config file. Setting it to default: " + cfg['verify'])
-
-    # set default values for various configurations
-    if 'interval' not in cfg:  # the measure interval in seconds
-        cfg['interval'] = 60
-    if 'debug' not in cfg:  # enable/disable extensive debug output
-        cfg['debug'] = False
-    if 'logfile' not in cfg:  # enable/disable logging to file
-        cfg['logfile'] = False
+    if 'boot' not in cfg:
+        cfg['boot'] = "https://api.console.{}.ubirch.com/ubirch-web-ui/api/v1/devices/bootstrap".format(cfg['env'])
+        logger.debug("bootstrap service URL not set in config file. Setting it to default: " + cfg['boot'])
 
     # todo not sure about this.
     #  pro: user can take sd card out after first init;

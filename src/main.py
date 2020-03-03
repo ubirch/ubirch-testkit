@@ -15,7 +15,6 @@ from pyboard import Pysense, Pytrack
 from ubirch import UbirchClient
 from config import get_config
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 rtc = machine.RTC()
@@ -76,9 +75,7 @@ class Main:
         if self.cfg['debug']:
             print("** loaded configuration:\n{}\n".format(self.cfg))
 
-        if self.cfg['debug']:
-            logging.basicConfig(level=logging.DEBUG)
-
+        # set up logging to file
         if self.cfg['logfile']:
             # set up error logging to log file
             self.logfile_name = 'log.txt'
@@ -110,11 +107,11 @@ class Main:
             raise Exception("Expansion board type {} not supported. Supported types: 'pysense' and 'pytrack'".format(
                 self.cfg["type"]))
 
-        # ubirch client for setting up ubirch protocol, authentication and data service
+        # initialise ubirch client for setting up ubirch protocol, authentication and data service
         try:
             self.ubirch_client = UbirchClient(self.uuid, self.cfg)
         except Exception as e:
-            self.report("Initialisation failed. " + repr(e) + " Resetting device...", LED_RED)
+            self.report("!! initialisation failed. " + repr(e) + " Resetting device...", LED_RED)
             machine.reset()
 
     def report(self, error: str or Exception, led_color: int):
