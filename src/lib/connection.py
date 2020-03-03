@@ -27,9 +27,10 @@ class Connection():
 
 
 class NB_IoT(Connection):
-    def __init__(self, apn: str):
-        from network import LTE
-        self.lte = LTE()
+    from network import LTE
+
+    def __init__(self, lte: LTE, apn: str):
+        self.lte = lte
         if not self.attach(apn):
             raise ConnectionError("!! unable to attach to NB-IoT network.")
         if not self.connect():
@@ -74,9 +75,10 @@ class NB_IoT(Connection):
 
 
 class WIFI(Connection):
-    def __init__(self, networks: dict):
-        from network import WLAN
-        self.wlan = WLAN(mode=WLAN.STA)
+    from network import WLAN
+
+    def __init__(self, wlan: WLAN, networks: dict):
+        self.wlan = wlan
         self.networks = networks
         if not self.connect():
             raise ConnectionError("!! unable to connect to WIFI network.")
