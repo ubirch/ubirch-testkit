@@ -22,7 +22,7 @@ class Connection():
             sys.stdout.write(".")
             time.sleep(1.0)
             i += 1
-        print("\n-- current time: " + str(rtc.now()) + "\n")
+        print("\n-- current time: {}\n".format(rtc.now()))
         return rtc.synced()
 
 
@@ -32,11 +32,11 @@ class NB_IoT(Connection):
     def __init__(self, lte: LTE, apn: str):
         self.lte = lte
         if not self.attach(apn):
-            raise ConnectionError("!! unable to attach to NB-IoT network.")
+            raise OSError("!! unable to attach to NB-IoT network.")
         if not self.connect():
-            raise ConnectionError("!! unable to connect to NB-IoT network.")
+            raise OSError("!! unable to connect to NB-IoT network.")
         if not self.set_time('185.15.72.251'):
-            raise ConnectionError("!! unable to set time.")
+            raise OSError("!! unable to set time.")
 
     def attach(self, apn: str) -> bool:
         self.lte.attach(band=8, apn=apn)
@@ -48,7 +48,7 @@ class NB_IoT(Connection):
             i += 1
         print("")
         if self.lte.isattached():
-            print("-- attached: " + str(i) + "s")
+            print("-- attached: {} s".format(i))
             return True
         return False
 
@@ -62,7 +62,7 @@ class NB_IoT(Connection):
             i += 1
         print("")
         if self.lte.isconnected():
-            print("-- connected: " + str(i) + "s")
+            print("-- connected: {} s\n".format(i))
             # print('-- IP address: ' + str(lte.ifconfig()))
             return True
         return False
@@ -81,9 +81,9 @@ class WIFI(Connection):
         self.wlan = wlan
         self.networks = networks
         if not self.connect():
-            raise ConnectionError("!! unable to connect to WIFI network.")
+            raise OSError("!! unable to connect to WIFI network.")
         if not self.set_time('pool.ntp.org'):
-            raise ConnectionError("!! unable to set time.")
+            raise OSError("!! unable to set time.")
 
     def connect(self) -> bool:
         retries = 5
@@ -99,7 +99,7 @@ class WIFI(Connection):
                     while not self.wlan.isconnected():
                         machine.idle()  # save power while waiting
                     print('-- wifi network connected')
-                    print('-- IP address: ' + str(self.wlan.ifconfig()))
+                    print('-- IP address: {}\n'.format(self.wlan.ifconfig()))
                     return True
             if retries > 0:
                 print("!! no usable networks found, trying again in 30s")
@@ -116,7 +116,8 @@ class WIFI(Connection):
     def disconnect(self):
         """
         this is a dummy method!! It does not actually disconnect the WIFI connection!
-        This method is only necessary, because LTE connections need to be dis- and re-connected regularly,
+        This method is only necessary, because LTE connections need to be dis- and
+        re-connected frequently (or it might lose connection)
         but we don't want to actually disconnect WIFI
         """
         pass
