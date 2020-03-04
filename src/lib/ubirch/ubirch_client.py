@@ -3,8 +3,8 @@ import ed25519
 import json
 import logging
 import time
-import umsgpack as msgpack
 from uuid import UUID
+from ubirch_data_packer import pack_data_msgpack
 from .ubirch_api import API
 from .ubirch_ks import KeyStore
 from .ubirch_protocol import Protocol, UBIRCH_PROTOCOL_TYPE_REG
@@ -57,33 +57,6 @@ class UbirchClient(Protocol):
     def _verify(self, uuid: UUID, message: bytes, signature: bytes) -> bytes:
         return self._keystore.get_verifying_key(uuid).verify(signature, message)
 
-    def pack_data_message(self, data: dict) -> (bytes, bytes):
-        """
-        Generate a message for the ubirch data service.
-        :param data: a map containing the data to be sent
-        :return: a msgpack formatted array with the device UUID, message type, timestamp, data and hash
-        :return: the hash of the data message
-        """
-        msg_type = 1
-
-        msg = [
-            self.uuid.bytes,
-            msg_type,
-            int(time.time()),
-            data,
-            0
-        ]
-
-        # calculate hash of message (without last array element)
-        serialized = msgpack.packb(msg)[0:-1]
-        message_hash = self._hash(serialized)
-
-        # replace last element in array with the hash
-        msg[-1] = message_hash
-        serialized = msgpack.packb(msg)
-
-        return serialized, message_hash
-
     def send(self, data: dict):
         """
         Send data message to ubirch data service and certificate of the message to ubirch authentication service.
@@ -91,7 +64,7 @@ class UbirchClient(Protocol):
         :param data: data map to to be sent
         """
         # pack data message containing measurements, device UUID and timestamp to ensure unique hash
-        message, message_hash = self.pack_data_message(data)
+        message, message_hash = pack_data_msgpack(self.uuid, data)
         logger.debug("** data message [msgpack]: {}".format(binascii.hexlify(message).decode()))
         logger.debug("** message hash [base64] : {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
 
