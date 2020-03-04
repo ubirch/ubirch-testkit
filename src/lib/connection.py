@@ -27,9 +27,8 @@ class Connection():
 
 
 class NB_IoT(Connection):
-    from network import LTE
 
-    def __init__(self, lte: LTE, apn: str):
+    def __init__(self, lte, apn: str):
         self.lte = lte
         if not self.attach(apn):
             raise OSError("!! unable to attach to NB-IoT network.")
@@ -75,9 +74,7 @@ class NB_IoT(Connection):
 
 
 class WIFI(Connection):
-    from network import WLAN
-
-    def __init__(self, wlan: WLAN, networks: dict):
+    def __init__(self, wlan, networks: dict):
         self.wlan = wlan
         self.networks = networks
         if not self.connect():
@@ -114,10 +111,4 @@ class WIFI(Connection):
         return self.wlan.isconnected()
 
     def disconnect(self):
-        """
-        this is a dummy method!! It does not actually disconnect the WIFI connection!
-        This method is only necessary, because LTE connections need to be dis- and
-        re-connected frequently (or it might lose connection)
-        but we don't want to actually disconnect WIFI
-        """
-        pass
+        self.wlan.disconnect()
