@@ -4,10 +4,11 @@ import os
 import sys
 import time
 import ubinascii
-
+import ujson as json
+from config import get_config
+from connection import NB_IoT, WIFI
 from file_logging import Logfile
 from uuid import UUID
-from config import get_config
 
 # Pycom specifics
 import pycom
@@ -16,9 +17,17 @@ from pyboard import Pysense, Pytrack
 logger = logging.getLogger(__name__)
 
 LED_GREEN = 0x002200
-LED_YELLOW = 0x7f7f00
+LED_YELLOW = 0x444400
 LED_RED = 0x7f0000
 LED_PURPLE = 0x220022
+
+# mount SD card if there is one
+try:
+    sd = machine.SD()
+    os.mount(sd, '/sd')
+    SD_CARD_MOUNTED = True
+except OSError:
+    SD_CARD_MOUNTED = False
 
 
 def pretty_print_data(data: dict):
@@ -43,29 +52,48 @@ class Main:
 
     def __init__(self) -> None:
 
-        # load configuration from file (raises exception if configuration is missing)
+        # load configuration from file todo (throws exception if configuration file is missing)
         self.cfg = get_config()
-        if self.cfg['debug']:
-            print("** loaded configuration:\n{}\n".format(self.cfg))
 
-        print("** MAC    : " + ubinascii.hexlify(machine.unique_id(), ':').decode() + "\n")
+        print("\n** MAC    : " + ubinascii.hexlify(machine.unique_id(), ':').decode() + "\n")
 
-        # generate UUID if no SIM is used (otherwise UUID shall ne retrieved from SIM)   todo rearrange
+        # generate UUID if no SIM is used (otherwise UUID shall ne retrieved from SIM)
         if not self.cfg['sim']:
             self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
             print("** UUID   : " + str(self.uuid) + "\n")
 
-            # write UUID to file on SD card if file doesn't already exist
-            try:
-                sd = machine.SD()  # sd is already mounted in get_config() todo make sure it really is!
+            if SD_CARD_MOUNTED:
+                # write UUID to file on SD card if file doesn't already exist
                 uuid_file = "uuid.txt"
                 if uuid_file not in os.listdir('/sd'):
                     with open('/sd/' + uuid_file, 'w') as f:
                         f.write(str(self.uuid))
-                sd.deinit()
-            except OSError as e:
-                self.report("writing UUID to SD card failed. " + repr(e), LED_YELLOW)
-                pycom.heartbeat(True)
+
+        # check if ubirch backend password is already known. If unknown, look for it on SD card.
+        if 'password' not in self.cfg:
+            api_config_file = 'config.txt'
+            # get config from SD card
+            if SD_CARD_MOUNTED and api_config_file in os.listdir('/sd'):
+                with open('/sd/' + api_config_file, 'r') as f:
+                    api_config = json.load(f)  # todo what if password still not in config?
+            else:
+                self.report("!! missing password", LED_YELLOW)  # todo document what yellow LED means for user
+                while True:
+                    machine.idle()
+
+            # add API config from SD card to existing config
+            # fixme bootstrap and verification service url are not in default config
+            #  -> defaults to 'prod' stage! what if config.txt contains demo config?
+            # todo change in web UI or change here?
+            self.cfg.update(api_config)
+            print("** configuration:\n{}\n".format(self.cfg))
+
+            # # todo not sure about this.
+            # #  pro: user can take sd card out after first init;
+            # #  con: user can't change config by writing new config to sd card
+            # # write everything to config file (ujson does not support json.dump())
+            # with open(self.cfg["filename"], 'w') as f:
+            #     f.write(json.dumps(self.cfg))
 
         # set debug level
         if self.cfg['debug']:
@@ -78,12 +106,10 @@ class Main:
         # connect to network
         try:
             if self.cfg['connection'] == "wifi":
-                from connection import WIFI
                 from network import WLAN
                 wlan = WLAN(mode=WLAN.STA)
                 self.connection = WIFI(wlan, self.cfg['networks'])
             elif self.cfg['connection'] == "nbiot":
-                from connection import NB_IoT
                 if not hasattr(self, 'lte'):
                     from network import LTE
                     self.lte = LTE()
@@ -92,8 +118,7 @@ class Main:
                 raise Exception("Connection type {} not supported. Supported types: 'wifi' and 'nbiot'".format(
                     self.cfg['connection']))
         except OSError as e:
-            self.report(repr(e) + " Resetting device...", LED_PURPLE)
-            machine.reset()
+            self.report(repr(e) + " Resetting device...", LED_PURPLE, reset=True)
 
         # initialize the sensor based on the type of the Pycom expansion board
         if self.cfg['type'] == "pysense":
@@ -118,10 +143,9 @@ class Main:
                 self.ubirch_client = UbirchClient(self.uuid, self.cfg)
         except Exception as e:
             self.report(e, LED_RED)
-            self.report(" Resetting device...", LED_PURPLE)
-            machine.reset()
+            self.report("!! Initialisation failed. Resetting device...", LED_RED, reset=True)
 
-    def report(self, error: str or Exception, led_color: int):
+    def report(self, error: str or Exception, led_color: int, reset: bool = False):
         pycom.heartbeat(False)
         pycom.rgbled(led_color)
         if isinstance(error, Exception):
@@ -129,7 +153,9 @@ class Main:
         else:
             print(error)
         if self.cfg['logfile']: self.logfile.log(error)
-        time.sleep(3)
+        if reset:
+            time.sleep(5)
+            machine.reset()
 
     def prepare_data(self) -> dict:
         """
@@ -186,12 +212,8 @@ class Main:
             pretty_print_data(data)
 
             # make sure device is still connected
-            if not self.connection.is_connected():
-                if not self.connection.connect():
-                    self.report("!! unable to connect to network. Resetting device...", LED_PURPLE)
-                    machine.reset()
-                else:
-                    pycom.rgbled(LED_GREEN)
+            if not self.connection.is_connected() and not self.connection.connect():  # todo check if its safe to do this in one line
+                self.report("!! unable to connect to network. Resetting device...", LED_PURPLE, reset=True)
 
             # send data to ubirch data service and certificate to ubirch auth service
             try:
@@ -201,9 +223,10 @@ class Main:
                 if isinstance(e, OSError):
                     machine.reset()
 
-            # LTE stops working after a while, so we disconnect after sending and reconnect to make sure it works
-            # if connection is a WIFI instance, this method call does nothing (WIFI stays connected all the time)
-            self.connection.disconnect()
+            # LTE stops working after a while, so we disconnect after sending
+            # and reconnect again in the next interval to make sure it still works
+            if isinstance(self.connection, NB_IoT):
+                self.connection.disconnect()
 
             print("** done.\n")
             passed_time = time.time() - start_time
