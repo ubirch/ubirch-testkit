@@ -1,4 +1,5 @@
 import binascii
+import json
 
 import asn1
 import machine
@@ -61,10 +62,16 @@ class UbirchSimClient:
             with open(pin_file, "rb") as f:
                 pin = f.readline().decode()
         else:
-            print("bootstrapping SIM identity" + imsi)
-            pin = self.api.bootstrap_service_url(imsi)
-            with open(pin_file, "wb") as f:
-                f.write(pin.encode())
+            print("bootstrapping SIM identity " + imsi)
+            r = self.api.bootstrap_sim_identity(imsi)
+            if r.status_code == 200:
+                info = json.loads(r.content)
+                print("bootstrapping successful: " + info)
+                pin = info['pin']
+                with open(pin_file, "wb") as f:
+                    f.write(pin.encode())
+            else:
+                raise Exception("bootstrapping failed with status code {}: {}".format(r.status_code, r.text))
 
         # use PIN to authenticate against the SIM application
         if not self.ubirch.sim_auth(pin):

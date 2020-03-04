@@ -16,7 +16,6 @@ class API:
         self.verification_service_url = cfg['verify']
         self.bootstrap_service_url = cfg['boot']
         self._ubirch_headers = {
-            'X-Ubirch-Hardware-Id': None,  # just a placeholder, UUID is inserted to header at method call
             'X-Ubirch-Credential': binascii.b2a_base64(cfg['password']).decode().rstrip('\n'),
             'X-Ubirch-Auth-Type': 'ubirch'
         }
@@ -58,6 +57,19 @@ class API:
                 else:
                     raise
 
+    def bootstrap_sim_identity(self, imsi: str) -> requests.Response:
+        """
+        Claim SIM identity at the ubirch backend.
+        The response contains the SIM applet PIN to unlock crypto functionality.
+        :param imsi: the SIM international mobile subscriber identity (IMSI)
+        :return: the response from the server
+        """
+        logger.debug("** bootstrapping identity {} at {}".format(imsi, self.bootstrap_service_url))
+        self._ubirch_headers['X-Ubirch-IMSI'] = imsi
+        r = requests.get(self.bootstrap_service_url, headers=self._ubirch_headers)
+        del self._ubirch_headers['X-Ubirch-IMSI']
+        return r
+
     def register_identity(self, key_registration: bytes) -> requests.Response:
         """
         Register an identity at the key service.
@@ -74,19 +86,6 @@ class API:
             return self._send_request(self.key_service_url,
                                       key_registration,
                                       headers={'Content-Type': 'application/json'})
-
-    def bootstrap_sim_identity(self, imsi: str) -> requests.Response:
-        """
-        Claim SIM identity at the ubirch backend.
-        The response contains the SIM applet PIN to unlock crypto functionality.
-        :param imsi: the SIM international mobile subscriber identity (IMSI)
-        :return: the response from the server
-        """
-        logger.debug("** bootstrapping identity {} at {}".format(imsi, self.bootstrap_service_url))
-        self._ubirch_headers['X-Ubirch-IMSI'] = imsi
-        r = requests.get(self.bootstrap_service_url, headers=self._ubirch_headers)
-        del self._ubirch_headers['X-Ubirch-IMSI']
-        return r
 
     def send_upp(self, uuid: UUID, upp: bytes) -> requests.Response:
         """
