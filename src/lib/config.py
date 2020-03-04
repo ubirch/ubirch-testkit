@@ -48,21 +48,21 @@ def get_config(filename: str = "config.json") -> dict:
         # mount SD card (operation throws exception if no SD card present)
         # fixme can't mount twice, so writing UUID in main will fail if not mounted here
         #  os.unmount('/sd') causes AttributeError: 'module' object has no attribute 'unmount'
-        sd = SD()
-        os.mount(sd, '/sd')
-        # get config from SD card
         api_config_file = '/sd/config.txt'
-        print("** looking for API config on SD card ({})".format(api_config_file))
         try:
+            sd = SD()
+            os.mount(sd, '/sd')
+            # get config from SD card
+            print("** looking for API config on SD card ({})".format(api_config_file))
             with open(api_config_file, 'r') as f:
                 api_config = json.load(f)
                 print("** found API config on SD card: {}".format(api_config))
-            # add API config to existing config
-            cfg.update(api_config)
+            sd.deinit()
         except OSError:
             raise Exception("!! missing config. no password found in {} or {}. ".format(filename, api_config_file))
-        finally:
-            sd.deinit()
+
+        # add API config to existing config
+        cfg.update(api_config)
 
     # set default URLs for services that are not set in config file
     if 'env' not in cfg:
