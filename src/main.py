@@ -8,7 +8,6 @@ import ubinascii
 from file_logging import Logfile
 from uuid import UUID
 from config import get_config
-from connection import WIFI, NB_IoT
 
 # Pycom specifics
 import pycom
@@ -65,7 +64,7 @@ class Main:
                         f.write(str(self.uuid))
                 sd.deinit()
             except OSError as e:
-                self.report(e, LED_YELLOW)
+                self.report("writing UUID to SD card failed. " + repr(e), LED_YELLOW)
                 pycom.heartbeat(True)
 
         # set debug level
@@ -79,10 +78,12 @@ class Main:
         # connect to network
         try:
             if self.cfg['connection'] == "wifi":
+                from connection import WIFI
                 from network import WLAN
                 wlan = WLAN(mode=WLAN.STA)
                 self.connection = WIFI(wlan, self.cfg['networks'])
             elif self.cfg['connection'] == "nbiot":
+                from connection import NB_IoT
                 if not hasattr(self, 'lte'):
                     from network import LTE
                     self.lte = LTE()
@@ -96,7 +97,7 @@ class Main:
 
         # initialize the sensor based on the type of the Pycom expansion board
         if self.cfg['type'] == "pysense":
-            self.sensor = Pysense()
+            self.sensor = Pysense()  # todo throws OSError: I2C bus error when trying to initialise wrong board
         elif self.cfg['type'] == "pytrack":
             self.sensor = Pytrack()
         else:
@@ -172,44 +173,43 @@ class Main:
         return data
 
     def loop(self):
-        pass
-        # # disable blue heartbeat blink
-        # pycom.heartbeat(False)
-        # print("** starting loop... (interval = {} seconds)\n".format(self.cfg["interval"]))
-        # while True:
-        #     start_time = time.time()
-        #     pycom.rgbled(LED_GREEN)
-        #
-        #     # get data
-        #     print("** getting measurements:")
-        #     data = self.prepare_data()
-        #     pretty_print_data(data)
-        #
-        #     # make sure device is still connected
-        #     if not self.connection.is_connected():
-        #         if not self.connection.connect():
-        #             self.report("!! unable to connect to network. Resetting device...", LED_PURPLE)
-        #             machine.reset()
-        #         else:
-        #             pycom.rgbled(LED_GREEN)
-        #
-        #     # send data to ubirch data service and certificate to ubirch auth service
-        #     try:
-        #         self.ubirch_client.send(data)
-        #     except Exception as e:
-        #         self.report(e, LED_RED)
-        #         if isinstance(e, OSError):
-        #             machine.reset()
-        #
-        #     # LTE stops working after a while, so we disconnect after sending and reconnect to make sure it works
-        #     # if connection is a WIFI instance, this method call does nothing (WIFI stays connected all the time)
-        #     self.connection.disconnect()
-        #
-        #     print("** done.\n")
-        #     passed_time = time.time() - start_time
-        #     if self.cfg['interval'] > passed_time:
-        #         pycom.rgbled(0)  # LED off
-        #         time.sleep(self.cfg['interval'] - passed_time)
+        # disable blue heartbeat blink
+        pycom.heartbeat(False)
+        print("** starting loop... (interval = {} seconds)\n".format(self.cfg["interval"]))
+        while True:
+            start_time = time.time()
+            pycom.rgbled(LED_GREEN)
+
+            # get data
+            print("** getting measurements:")
+            data = self.prepare_data()
+            pretty_print_data(data)
+
+            # make sure device is still connected
+            if not self.connection.is_connected():
+                if not self.connection.connect():
+                    self.report("!! unable to connect to network. Resetting device...", LED_PURPLE)
+                    machine.reset()
+                else:
+                    pycom.rgbled(LED_GREEN)
+
+            # send data to ubirch data service and certificate to ubirch auth service
+            try:
+                self.ubirch_client.send(data)
+            except Exception as e:
+                self.report(e, LED_RED)
+                if isinstance(e, OSError):
+                    machine.reset()
+
+            # LTE stops working after a while, so we disconnect after sending and reconnect to make sure it works
+            # if connection is a WIFI instance, this method call does nothing (WIFI stays connected all the time)
+            self.connection.disconnect()
+
+            print("** done.\n")
+            passed_time = time.time() - start_time
+            if self.cfg['interval'] > passed_time:
+                pycom.rgbled(0)  # LED off
+                time.sleep(self.cfg['interval'] - passed_time)
 
 
 main = Main()
