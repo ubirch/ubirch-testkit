@@ -4,7 +4,7 @@ import json
 import logging
 import time
 from uuid import UUID
-from ubirch_data_packer import pack_data_msgpack
+from .ubirch_data_packer import pack_data_msgpack
 from .ubirch_api import API
 from .ubirch_ks import KeyStore
 from .ubirch_protocol import Protocol, UBIRCH_PROTOCOL_TYPE_REG
