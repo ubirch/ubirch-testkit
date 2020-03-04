@@ -4,6 +4,8 @@ import os
 import sys
 import time
 import ubinascii
+
+from file_logging import Logfile
 from uuid import UUID
 from config import get_config
 from connection import WIFI, NB_IoT
@@ -12,17 +14,12 @@ from connection import WIFI, NB_IoT
 import pycom
 from pyboard import Pysense, Pytrack
 
-
 logger = logging.getLogger(__name__)
-
-rtc = machine.RTC()
 
 LED_GREEN = 0x002200
 LED_YELLOW = 0x7f7f00
 LED_RED = 0x7f0000
 LED_PURPLE = 0x220022
-
-MAX_FILE_SIZE = 10000  # in bytes
 
 
 def pretty_print_data(data: dict):
@@ -52,15 +49,16 @@ class Main:
         if self.cfg['debug']:
             print("** loaded configuration:\n{}\n".format(self.cfg))
 
-        if not self.cfg['sim']:
-            # generate UUID     todo rearrange
-            self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
-            print("\n** UUID   : " + str(self.uuid))
-            print("** MAC    : " + ubinascii.hexlify(machine.unique_id(), ':').decode() + "\n")
+        print("** MAC    : " + ubinascii.hexlify(machine.unique_id(), ':').decode() + "\n")
 
+        # generate UUID if no SIM is used (otherwise UUID shall ne retrieved from SIM)   todo rearrange
+        if not self.cfg['sim']:
+            self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
+            print("** UUID   : " + str(self.uuid) + "\n")
+
+            # write UUID to file on SD card if file doesn't already exist
             try:
-                sd = machine.SD()  # sd is already mounted in get_config()
-                # write UUID to file on SD card if file doesn't already exist
+                sd = machine.SD()  # sd is already mounted in get_config() todo make sure it really is!
                 uuid_file = "uuid.txt"
                 if uuid_file not in os.listdir('/sd'):
                     with open('/sd/' + uuid_file, 'w') as f:
@@ -74,15 +72,9 @@ class Main:
         if self.cfg['debug']:
             logging.basicConfig(level=logging.DEBUG)
 
-        # set up logging to file todo extract file logging to module
+        # set up logging to file
         if self.cfg['logfile']:
-            # set up error logging to log file
-            self.logfile_name = 'log.txt'
-            with open(self.logfile_name, 'a') as f:
-                self.file_position = f.tell()
-            print(
-                "** file logging enabled. log file: {}, size: {:.1f} kb, free flash memory: {:d} kb\n".format(
-                    self.logfile_name, self.file_position / 1000.0, os.getfree('/flash')))
+            self.logfile = Logfile()
 
         # connect to network
         try:
@@ -135,28 +127,8 @@ class Main:
             sys.print_exception(error)
         else:
             print(error)
-        if self.cfg['logfile']: self.log_to_file(error)
+        if self.cfg['logfile']: self.logfile.log(error)
         time.sleep(3)
-
-    def log_to_file(self, error: str or Exception):
-        with open(self.logfile_name, 'a') as f:
-            # start overwriting oldest logs once file reached its max size
-            # issue: once file reached its max size, file position will always be set to beginning after device reset
-            if self.file_position > MAX_FILE_SIZE:
-                self.file_position = 0
-            # set file to recent position
-            f.seek(self.file_position, 0)
-
-            # log error message and traceback if error is an exception
-            t = rtc.now()
-            f.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
-            if isinstance(error, Exception):
-                sys.print_exception(error, f)
-            else:
-                f.write(error + "\n")
-
-            # remember current file position
-            self.file_position = f.tell()
 
     def prepare_data(self) -> dict:
         """
