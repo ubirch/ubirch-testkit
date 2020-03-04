@@ -90,7 +90,7 @@ class Main:
             else:
                 raise Exception("Connection type {} not supported. Supported types: 'wifi' and 'nbiot'".format(
                     self.cfg['connection']))
-        except ConnectionError as e:
+        except OSError as e:
             self.report(repr(e) + " Resetting device...", LED_PURPLE)
             machine.reset()
 
