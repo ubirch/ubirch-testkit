@@ -48,8 +48,14 @@ class UbirchClient(Protocol):
         # send key registration message to key service
         print("** registering identity at key service ...")
         r = self.api.register_identity(key_registration)
-        r.close()
-        print("** identity registered\n")
+        if r.status_code == 200:
+            r.close()
+            print("** identity registered\n")
+        else:
+            logger.error(str(self.uuid) + ": ERROR: device identity not registered")
+            raise Exception(
+                "!! request to {} failed with status code {}: {}".format(self.api.key_service_url, r.status_code,
+                                                                         r.text))
 
     def _sign(self, uuid: UUID, message: bytes) -> bytes:
         return self._keystore.get_signing_key().sign(message)
@@ -71,42 +77,55 @@ class UbirchClient(Protocol):
         # send message to data service
         print("** sending measurements ...")
         r = self.api.send_data(self.uuid, message)
-        r.close()
-        print("** measurements successfully sent\n")
+        if r.status_code == 200:
+            print("** measurements successfully sent\n")
+            r.close()
+        else:
+            raise Exception(
+                "!! request to {} failed with status code {}: {}".format(self.api.data_service_url, r.status_code,
+                                                                         r.text))
 
         # create UPP with the data message hash
         upp = self.message_chained(self.uuid, 0x00, message_hash)
         logger.debug("** UPP [msgpack]: {}".format(binascii.hexlify(upp).decode()))
 
-        #  send UPP to authentication service
+        # send UPP to authentication service
         print("** sending measurement certificate ...")
         r = self.api.send_upp(self.uuid, upp)
-        print("hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
-        print("** measurement certificate successfully sent\n")
+        if r.status_code == 200:
+            print("hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
+            print("** measurement certificate successfully sent\n")
 
-        # verify response from server
-        response_content = r.content
-        try:
-            logger.debug("** verifying response from {}: {}".format(self.api.auth_service_url,
-                                                                    binascii.hexlify(response_content)))
-            self.message_verify(response_content)
-            logger.debug("** response verified\n")
-        except Exception as e:
-            raise Exception(
-                "!! response verification failed: {}. {} ".format(e, binascii.hexlify(response_content)))
-
-        # verify that hash has been stored and chained in backend
-        print("** verifying hash in backend ...")
-        tries_left = 4
-        while True:
-            tries_left -= 1
-            time.sleep(0.5)
+            # verify response from server
+            response_content = r.content
             try:
-                r = self.api.verify(message_hash)
-                print("** backend verification successful: {}".format(r.text))
-                break
+                logger.debug("** verifying response from {}: {}".format(self.api.auth_service_url,
+                                                                        binascii.hexlify(response_content)))
+                self.message_verify(response_content)
+                logger.debug("** response verified\n")
             except Exception as e:
-                if tries_left > 0:
-                    print("Hash could not be verified yet. Retry... ({} attempt(s) left)".format(tries_left))
-                else:
-                    raise Exception("!! backend verification failed. {}".format(e))
+                raise Exception(
+                    "!! response verification failed: {}. {} ".format(e, binascii.hexlify(response_content)))
+        else:
+            raise Exception(
+                "!! request to {} failed with status code {}: {}".format(self.api.auth_service_url, r.status_code,
+                                                                         r.text))
+
+        if not self.verify_hash_in_backend(message_hash):
+            raise Exception("!! backend verification of hash {} failed.".format(message_hash))
+
+    def verify_hash_in_backend(self, message_hash) -> bool:
+        """verify that hash has been stored and chained in backend"""
+        print("** verifying hash in backend ...")
+        retries = 4
+        while retries > 0:
+            time.sleep(0.5)
+            r = self.api.verify(message_hash)
+            if r.status_code == 200:
+                print("** backend verification successful: {}".format(r.text))
+                return True
+            else:
+                r.close()
+                print("Hash could not be verified yet. Retry... ({} attempt(s) left)".format(retries))
+                retries -= 1
+        return False

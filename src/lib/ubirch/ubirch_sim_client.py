@@ -1,14 +1,17 @@
 import binascii
 import json
-
+import logging
 import asn1
 import machine
 import os
 import time
 from network import LTE
 from uuid import UUID
+from .ubirch_data_packer import pack_data_msgpack
 from .ubirch_sim import SimProtocol
 from .ubirch_api import API
+
+logger = logging.getLogger(__name__)
 
 
 def asn1tosig(data: bytes):
@@ -46,9 +49,10 @@ class UbirchSimClient:
     def __init__(self, name: str, cfg: dict, lte: LTE):
 
         # initialize the ubirch protocol interface and backend API
-        self.ubirch = SimProtocol(lte=lte, at_debug=cfg['debug'])
+        self.device_name = name
         cfg['keyService'] = str(cfg['keyService']).rstrip("/mpack")
         self.api = API(cfg)
+        self.ubirch = SimProtocol(lte=lte, at_debug=cfg['debug'])
 
         # get IMSI from SIM
         imsi = self.ubirch.get_imsi()
@@ -77,15 +81,36 @@ class UbirchSimClient:
         if not self.ubirch.sim_auth(pin):
             raise Exception("PIN not accepted")
 
-        # get UUID from SIM
-        device_uuid = self.ubirch.get_uuid(name)
+        # after boot or restart try to register certificate
+        self.uuid = self.ubirch.get_uuid(name)
 
         # create a certificate for the device and register public key at ubirch key service
         # todo this will be replaced by the X.509 certificate from the SIM card
-        cert = get_certificate(name, device_uuid, self.ubirch)
+        cert = get_certificate(name, self.uuid, self.ubirch)
 
         # send certificate to key service
         print("** registering identity at key service ...")
         r = self.api.register_identity(cert.encode())
         r.close()
         print("** identity registered\n")
+
+    def send(self, data: dict):
+        """
+        Send data message to ubirch data service and certificate of the message to ubirch authentication service.
+        Throws exception if sending message failed  or response from backend couldn't be verified.
+        :param data: data map to to be sent
+        """
+        # pack data message containing measurements, device UUID and timestamp to ensure unique hash
+        message, message_hash = pack_data_msgpack(self.uuid, data)
+        logger.debug("** data message [msgpack]: {}".format(binascii.hexlify(message).decode()))
+        logger.debug("** message hash [base64] : {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
+
+        # send message to data service
+
+        # create UPP with the data message hash
+        upp = self.ubirch.message_chained(self.device_name, message_hash)
+        logger.debug("** UPP [msgpack]: {}".format(binascii.hexlify(upp).decode()))
+
+        # send UPP to authentication service
+        # verify response from server
+        # verify that hash has been stored and chained in backend

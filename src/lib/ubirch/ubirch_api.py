@@ -33,24 +33,13 @@ class API:
         if headers is None:
             headers = self._ubirch_headers
 
-        tries_left = 3
-        while tries_left > 0:
-            tries_left -= 1
+        tries_left = 2
+        while True:
             try:
-                r = requests.post(url=url, data=data, headers=headers)
-                if r.status_code == 200:
-                    return r
-
-                if tries_left > 0:
-                    logger.debug(
-                        "!! request to {} failed with status code {}: {} \nRetry...\n".format(url, r.status_code,
-                                                                                              r.text))
-                    r.close()
-                else:
-                    raise Exception(
-                        "!! request to {} failed with status code {}: {}".format(url, r.status_code, r.text))
+                return requests.post(url=url, data=data, headers=headers)
             except OSError as e:
                 # the usocket module sporadically throws an OSError. Just try again when it happens.
+                tries_left -= 1
                 if tries_left > 0:
                     logger.debug("caught {}. Retry...\n".format(e))
                     continue
@@ -73,7 +62,6 @@ class API:
     def register_identity(self, key_registration: bytes) -> requests.Response:
         """
         Register an identity at the key service.
-        Throws an exception if sending request failed
         :param key_registration: the key registration data
         :return: the response from the server
         """
@@ -90,7 +78,6 @@ class API:
     def send_upp(self, uuid: UUID, upp: bytes) -> requests.Response:
         """
         Send data to the authentication service. Requires encoding before sending.
-        Throws an exception if sending request failed
         :param uuid: the sender's UUID
         :param upp: the msgpack encoded data to send (UPP)
         :return: the response from the server
@@ -102,7 +89,6 @@ class API:
     def send_data(self, uuid: UUID, message: bytes) -> requests.Response:
         """
         Send a message to the ubirch data service.
-        Throws an exception if sending request failed
         :param uuid: the sender's UUID
         :param message: the message to send to the data service
         :return: the response from the server
@@ -114,7 +100,6 @@ class API:
     def verify(self, data: bytes, quick=False) -> requests.Response:
         """
         Verify a given hash at the verification service. Returns all available verification data.
-        Throws an exception if sending request failed / hash could not be
         :param data: the message hash to verify
         :param quick: only run quick check to verify that the hash has been stored in backend
         :return: the response from the server (if the verification was successful and the data related to it)
