@@ -2,6 +2,7 @@ import binascii
 import logging
 import urequests as requests
 from uuid import UUID
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -9,14 +10,10 @@ logger = logging.getLogger(__name__)
 class API:
     """ubirch API accessor methods."""
 
-    def __init__(self, cfg: dict):
-        self.key_service_url = cfg['keyService']
-        self.data_service_url = cfg['data']
-        self.auth_service_url = cfg['niomon']
-        self.verification_service_url = cfg['verify']
-        self.bootstrap_service_url = cfg['boot']
+    def __init__(self, cfg: Config):
+        self.cfg = cfg
         self._ubirch_headers = {
-            'X-Ubirch-Credential': binascii.b2a_base64(cfg['password']).decode().rstrip('\n'),
+            'X-Ubirch-Credential': binascii.b2a_base64(cfg.password).decode().rstrip('\n'),
             'X-Ubirch-Auth-Type': 'ubirch'
         }
 
@@ -53,9 +50,9 @@ class API:
         :param imsi: the SIM international mobile subscriber identity (IMSI)
         :return: the response from the server
         """
-        logger.debug("** bootstrapping identity {} at {}".format(imsi, self.bootstrap_service_url))
+        logger.debug("** bootstrapping identity {} at {}".format(imsi, self.cfg.boot))
         self._ubirch_headers['X-Ubirch-IMSI'] = imsi
-        r = requests.get(self.bootstrap_service_url, headers=self._ubirch_headers)
+        r = requests.get(self.cfg.boot, headers=self._ubirch_headers)
         del self._ubirch_headers['X-Ubirch-IMSI']
         return r
 
@@ -65,13 +62,13 @@ class API:
         :param key_registration: the key registration data
         :return: the response from the server
         """
-        logger.debug("** sending key registration message to " + self.key_service_url)
-        if str(self.key_service_url).endswith("/mpack"):
-            return self._send_request(self.key_service_url,
+        logger.debug("** sending key registration message to " + self.cfg.keyService)
+        if str(self.cfg.keyService).endswith("/mpack"):
+            return self._send_request(self.cfg.keyService,
                                       key_registration,
                                       headers={'Content-Type': 'application/octet-stream'})
         else:
-            return self._send_request(self.key_service_url,
+            return self._send_request(self.cfg.keyService,
                                       key_registration,
                                       headers={'Content-Type': 'application/json'})
 
@@ -82,9 +79,9 @@ class API:
         :param upp: the msgpack encoded data to send (UPP)
         :return: the response from the server
         """
-        logger.debug("** sending UPP to " + self.auth_service_url)
+        logger.debug("** sending UPP to " + self.cfg.niomon)
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
-        return self._send_request(self.auth_service_url, upp)
+        return self._send_request(self.cfg.niomon, upp)
 
     def send_data(self, uuid: UUID, message: bytes) -> requests.Response:
         """
@@ -93,9 +90,9 @@ class API:
         :param message: the message to send to the data service
         :return: the response from the server
         """
-        logger.debug("** sending data message to " + self.data_service_url)
+        logger.debug("** sending data message to " + self.cfg.data)
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
-        return self._send_request(self.data_service_url, binascii.hexlify(message))
+        return self._send_request(self.cfg.data, binascii.hexlify(message))
 
     def verify(self, data: bytes, quick=False) -> requests.Response:
         """
@@ -104,7 +101,7 @@ class API:
         :param quick: only run quick check to verify that the hash has been stored in backend
         :return: the response from the server (if the verification was successful and the data related to it)
         """
-        url = self.verification_service_url
+        url = self.cfg.verify
         if not quick:
             url = url + '/verify'
         logger.debug("** verifying hash: {} ({})".format(binascii.b2a_base64(data).decode(), url))

@@ -7,6 +7,7 @@ import os
 import time
 from network import LTE
 from uuid import UUID
+from config import Config
 from .ubirch_data_packer import pack_data_msgpack
 from .ubirch_sim import SimProtocol
 from .ubirch_api import API
@@ -46,13 +47,13 @@ def get_certificate(device_id: str, device_uuid: UUID, proto: SimProtocol) -> st
 
 class UbirchSimClient:
 
-    def __init__(self, name: str, cfg: dict, lte: LTE):
+    def __init__(self, name: str, cfg: Config, lte: LTE):
 
         # initialize the ubirch protocol interface and backend API
         self.device_name = name
-        cfg['keyService'] = str(cfg['keyService']).rstrip("/mpack")
+        cfg.keyService = cfg.keyService.rstrip("/mpack")
         self.api = API(cfg)
-        self.ubirch = SimProtocol(lte=lte, at_debug=cfg['debug'])
+        self.ubirch = SimProtocol(lte=lte, at_debug=cfg.debug)
 
         # get IMSI from SIM
         imsi = self.ubirch.get_imsi()

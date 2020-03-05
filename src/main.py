@@ -5,14 +5,14 @@ import sys
 import time
 import ubinascii
 import ujson as json
-from config import get_config
+from config import Config
 from connection import NB_IoT, WIFI
 from file_logging import Logfile
 from uuid import UUID
 
 # Pycom specifics
 import pycom
-from pyboard import Pysense, Pytrack
+from pyboard import Pysense, Pytrack, Pycoproc
 
 logger = logging.getLogger(__name__)
 
@@ -53,12 +53,12 @@ class Main:
     def __init__(self) -> None:
 
         # load configuration from file todo (throws exception if configuration file is missing)
-        self.cfg = get_config()
+        self.cfg = Config()
 
         print("\n** MAC    : " + ubinascii.hexlify(machine.unique_id(), ':').decode() + "\n")
 
         # generate UUID if no SIM is used (otherwise UUID shall ne retrieved from SIM)
-        if not self.cfg['sim']:
+        if not self.cfg.sim:
             self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
             print("** UUID   : " + str(self.uuid) + "\n")
 
@@ -70,7 +70,7 @@ class Main:
                         f.write(str(self.uuid))
 
         # check if ubirch backend password is already known. If unknown, look for it on SD card.
-        if 'password' not in self.cfg:
+        if self.cfg.password is None:
             api_config_file = 'config.txt'
             # get config from SD card
             if SD_CARD_MOUNTED and api_config_file in os.listdir('/sd'):
@@ -82,56 +82,57 @@ class Main:
                     machine.idle()
 
             # add API config from SD card to existing config
-            # fixme bootstrap and verification service url are not in default config
-            #  -> defaults to 'prod' stage! what if config.txt contains demo config?
-            # todo change in web UI or change here?
-            self.cfg.update(api_config)
-            print("** configuration:\n{}\n".format(self.cfg))
+            self.cfg.set_api_config(api_config)
+            # print("** configuration:\n{}\n".format(self.cfg)) todo print config
 
             # # todo not sure about this.
             # #  pro: user can take sd card out after first init;
             # #  con: user can't change config by writing new config to sd card
             # # write everything to config file (ujson does not support json.dump())
-            # with open(self.cfg["filename"], 'w') as f:
-            #     f.write(json.dumps(self.cfg))
+            # with open(self.cfg.filename, 'w') as f:
+            #     f.write(json.dumps(self.cfg.dict))
 
         # set debug level
-        if self.cfg['debug']:
+        if self.cfg.debug:
             logging.basicConfig(level=logging.DEBUG)
 
         # set up logging to file
-        if self.cfg['logfile']:
+        if self.cfg.logfile:
             self.logfile = Logfile()
 
         # connect to network
         try:
-            if self.cfg['connection'] == "wifi":
+            if self.cfg.connection == "wifi":
                 from network import WLAN
                 wlan = WLAN(mode=WLAN.STA)
-                self.connection = WIFI(wlan, self.cfg['networks'])
-            elif self.cfg['connection'] == "nbiot":
+                self.connection = WIFI(wlan, self.cfg.networks)
+            elif self.cfg.connection == "nbiot":
                 if not hasattr(self, 'lte'):
                     from network import LTE
                     self.lte = LTE()
-                self.connection = NB_IoT(self.lte, self.cfg['apn'])
+                self.connection = NB_IoT(self.lte, self.cfg.apn)
             else:
                 raise Exception("Connection type {} not supported. Supported types: 'wifi' and 'nbiot'".format(
-                    self.cfg['connection']))
+                    self.cfg.connection))
         except OSError as e:
             self.report(repr(e) + " Resetting device...", LED_PURPLE, reset=True)
 
-        # initialize the sensor based on the type of the Pycom expansion board
-        if self.cfg['type'] == "pysense":
-            self.sensor = Pysense()  # todo throws OSError: I2C bus error when trying to initialise wrong board
-        elif self.cfg['type'] == "pytrack":
-            self.sensor = Pytrack()
-        else:
-            raise Exception("Expansion board type {} not supported. Supported types: 'pysense' and 'pytrack'".format(
-                self.cfg['type']))
+        # initialize the sensor
+        try:
+            py = Pycoproc()
+            v = py.read_hw_version()
+            if v == 2:
+                self.sensor = Pysense()
+                print("** initialised Pysense")
+            if v == 3:
+                self.sensor = Pytrack()
+                print("** initialised Pytrack")
+        except OSError:
+            raise Exception("Expansion board type not supported. Supported types: Pysense and Pytrack")
 
         # initialise ubirch client
         try:
-            if self.cfg['sim']:
+            if self.cfg.sim:
                 from ubirch import UbirchSimClient
                 device_name = "A"
                 if not hasattr(self, 'lte'):
@@ -152,7 +153,7 @@ class Main:
             sys.print_exception(error)
         else:
             print(error)
-        if self.cfg['logfile']: self.logfile.log(error)
+        if self.cfg.logfile: self.logfile.log(error)
         if reset:
             time.sleep(5)
             machine.reset()
@@ -201,7 +202,7 @@ class Main:
     def loop(self):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
-        print("** starting loop... (interval = {} seconds)\n".format(self.cfg["interval"]))
+        print("** starting loop... (interval = {} seconds)\n".format(self.cfg.interval))
         while True:
             start_time = time.time()
             pycom.rgbled(LED_GREEN)
@@ -230,9 +231,9 @@ class Main:
 
             print("** done.\n")
             passed_time = time.time() - start_time
-            if self.cfg['interval'] > passed_time:
+            if self.cfg.interval > passed_time:
                 pycom.rgbled(0)  # LED off
-                time.sleep(self.cfg['interval'] - passed_time)
+                time.sleep(self.cfg.interval - passed_time)
 
 
 main = Main()
