@@ -20,18 +20,19 @@ def set_time(ntp: str) -> bool:
 class Connection:
 
     def __init__(self, cfg: Config):
-        # LTE can only be instantiate once. Instantiate LTE here so it can be used for
-        # modem (SIM) operations outside this class even if network connection is via WIFI.
-        # silently fail, if LTE module is not available. (only means that there is no modem on the board)
-        from network import LTE
-        self.lte = LTE()
+        # LTE can only be instantiated once. Do it here if SIM is used so LTE instance can be used
+        # for modem operations outside this class even if network connection is via WIFI.
+        if cfg.sim:
+            from network import LTE
+            self.lte = LTE()
 
-        if type == "wifi":
+        if cfg.connection == "wifi":
             self.network = WIFI(cfg.networks)
-        elif type == "nbiot":
+        elif cfg.connection == "nbiot":
             self.network = NB_IoT(self.lte, cfg.apn)
         else:
-            raise Exception("Connection type {} not supported. Supported types: 'wifi' and 'nbiot'".format(type))
+            raise Exception(
+                "Connection type {} not supported. Supported types: 'wifi' and 'nbiot'".format(cfg.connection))
 
     def connect(self) -> bool:
         return self.network.connect()
@@ -43,7 +44,7 @@ class Connection:
         return self.network.disconnect()
 
 
-class NB_IoT():
+class NB_IoT:
 
     def __init__(self, lte, apn: str):
         self.lte = lte
@@ -90,7 +91,8 @@ class NB_IoT():
         self.lte.disconnect()
 
 
-class WIFI():
+class WIFI:
+
     def __init__(self, networks: dict):
         from network import WLAN
         self.wlan = WLAN(mode=WLAN.STA)
