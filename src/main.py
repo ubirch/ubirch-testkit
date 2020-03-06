@@ -6,13 +6,13 @@ import time
 import ubinascii
 import ujson as json
 from config import Config
-from connection import Connection
+from connection import Connection, NB_IoT
 from file_logging import Logfile
 from uuid import UUID
 
 # Pycom specifics
 import pycom
-from pyboard import Pysense, Pytrack, Pycoproc
+from pyboard import Pyboard
 
 logger = logging.getLogger(__name__)
 
@@ -44,12 +44,12 @@ class Main:
 
     def __init__(self) -> None:
 
-        # load configuration from file todo (throws exception if configuration file is missing)
+        # load configuration from file
         self.cfg = Config()
 
         print("\n** MAC    : " + ubinascii.hexlify(machine.unique_id(), ':').decode() + "\n")
 
-        # generate UUID if no SIM is used (otherwise UUID shall ne retrieved from SIM)
+        # generate UUID if no SIM is used (otherwise UUID shall be retrieved from SIM)
         if not self.cfg.sim:
             self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
             print("** UUID   : " + str(self.uuid) + "\n")
@@ -87,32 +87,19 @@ class Main:
 
         # connect to network
         try:
-            self.connection = Connection(self.cfg.connection)
+            self.connection = Connection(self.cfg)
         except OSError as e:
             self.report(repr(e) + " Resetting device...", LED_PURPLE, reset=True)
 
-        # initialize the sensor
-        try:
-            py = Pycoproc()
-            v = py.read_hw_version()
-            if v == 2:
-                self.sensor = Pysense()
-                print("** initialised Pysense")
-            if v == 3:
-                self.sensor = Pytrack()
-                print("** initialised Pytrack")
-        except OSError:
-            raise Exception("Expansion board type not supported. Supported types: Pysense and Pytrack")
+        # initialize the sensors
+        self.sensor = Pyboard()
 
         # initialise ubirch client
         try:
             if self.cfg.sim:
                 from ubirch import UbirchSimClient
                 device_name = "A"
-                if not hasattr(self, 'lte'):
-                    from network import LTE
-                    self.lte = LTE()
-                self.ubirch_client = UbirchSimClient(device_name, self.cfg, self.lte)
+                self.ubirch_client = UbirchSimClient(device_name, self.cfg, self.connection.lte)
             else:
                 from ubirch import UbirchClient
                 self.ubirch_client = UbirchClient(self.uuid, self.cfg)
@@ -132,47 +119,6 @@ class Main:
             time.sleep(5)
             machine.reset()
 
-    def prepare_data(self) -> dict:
-        """
-        Prepare the data from the sensor module and return it in the format we need.
-        :return: a dictionary (json) with the data
-        """
-
-        data = {
-            "V": self.sensor.voltage()
-        }
-
-        if isinstance(self.sensor, Pysense) or isinstance(self.sensor, Pytrack):
-            accel = self.sensor.accelerometer.acceleration()
-            roll = self.sensor.accelerometer.roll()
-            pitch = self.sensor.accelerometer.pitch()
-
-            data.update({
-                "AccX": accel[0],
-                "AccY": accel[1],
-                "AccZ": accel[2],
-                "AccRoll": roll,
-                "AccPitch": pitch
-            })
-
-        if isinstance(self.sensor, Pysense):
-            data.update({
-                "T": self.sensor.barometer.temperature(),
-                "P": self.sensor.barometer.pressure(),
-                # "Alt": self.sensor.altimeter.altitude(),
-                "H": self.sensor.humidity.humidity(),
-                "L_blue": self.sensor.light()[0],
-                "L_red": self.sensor.light()[1]
-            })
-
-        if isinstance(self.sensor, Pytrack):
-            data.update({
-                "GPS_long": self.sensor.location.coordinates()[0],
-                "GPS_lat": self.sensor.location.coordinates()[1]
-            })
-
-        return data
-
     def loop(self):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
@@ -183,7 +129,7 @@ class Main:
 
             # get data
             print("** getting measurements:")
-            data = self.prepare_data()
+            data = self.sensor.get_data()
             pretty_print_data(data)
 
             # make sure device is still connected
