@@ -1,32 +1,49 @@
 import sys
 import time
 import machine
+from config import Config
 
 
-class Connection():
+def set_time(ntp: str) -> bool:
+    rtc = machine.RTC()
+    i = 0
+    sys.stdout.write("++ setting time")
+    rtc.ntp_sync(ntp, 3600)
+    while not rtc.synced() and i < 60:
+        sys.stdout.write(".")
+        time.sleep(1.0)
+        i += 1
+    print("\n-- current time: {}\n".format(rtc.now()))
+    return rtc.synced()
+
+
+class Connection:
+
+    def __init__(self, cfg: Config):
+        # LTE can only be instantiate once. Instantiate LTE here so it can be used for
+        # modem (SIM) operations outside this class even if network connection is via WIFI.
+        # silently fail, if LTE module is not available. (only means that there is no modem on the board)
+        from network import LTE
+        self.lte = LTE()
+
+        if type == "wifi":
+            self.network = WIFI(cfg.networks)
+        elif type == "nbiot":
+            self.network = NB_IoT(self.lte, cfg.apn)
+        else:
+            raise Exception("Connection type {} not supported. Supported types: 'wifi' and 'nbiot'".format(type))
+
     def connect(self) -> bool:
-        raise NotImplementedError()
+        return self.network.connect()
 
     def is_connected(self) -> bool:
-        raise NotImplementedError()
+        return self.network.is_connected()
 
     def disconnect(self):
-        raise NotImplementedError()
-
-    def set_time(self, ntp: str) -> bool:
-        rtc = machine.RTC()
-        i = 0
-        sys.stdout.write("++ setting time")
-        rtc.ntp_sync(ntp, 3600)
-        while not rtc.synced() and i < 60:
-            sys.stdout.write(".")
-            time.sleep(1.0)
-            i += 1
-        print("\n-- current time: {}\n".format(rtc.now()))
-        return rtc.synced()
+        return self.network.disconnect()
 
 
-class NB_IoT(Connection):
+class NB_IoT():
 
     def __init__(self, lte, apn: str):
         self.lte = lte
@@ -34,7 +51,7 @@ class NB_IoT(Connection):
             raise OSError("!! unable to attach to NB-IoT network.")
         if not self.connect():
             raise OSError("!! unable to connect to NB-IoT network.")
-        if not self.set_time('185.15.72.251'):
+        if not set_time('185.15.72.251'):
             raise OSError("!! unable to set time.")
 
     def attach(self, apn: str) -> bool:
@@ -66,20 +83,21 @@ class NB_IoT(Connection):
             return True
         return False
 
-    def is_connected(self):
+    def is_connected(self) -> bool:
         return self.lte.isconnected()
 
     def disconnect(self):
         self.lte.disconnect()
 
 
-class WIFI(Connection):
-    def __init__(self, wlan, networks: dict):
-        self.wlan = wlan
+class WIFI():
+    def __init__(self, networks: dict):
+        from network import WLAN
+        self.wlan = WLAN(mode=WLAN.STA)
         self.networks = networks
         if not self.connect():
             raise OSError("!! unable to connect to WIFI network.")
-        if not self.set_time('pool.ntp.org'):
+        if not set_time('pool.ntp.org'):
             raise OSError("!! unable to set time.")
 
     def connect(self) -> bool:
@@ -107,7 +125,7 @@ class WIFI(Connection):
             else:
                 return False
 
-    def is_connected(self):
+    def is_connected(self) -> bool:
         return self.wlan.isconnected()
 
     def disconnect(self):

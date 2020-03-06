@@ -6,7 +6,7 @@ import time
 import ubinascii
 import ujson as json
 from config import Config
-from connection import NB_IoT, WIFI
+from connection import Connection
 from file_logging import Logfile
 from uuid import UUID
 
@@ -20,14 +20,6 @@ LED_GREEN = 0x002200
 LED_YELLOW = 0x444400
 LED_RED = 0x7f0000
 LED_PURPLE = 0x220022
-
-# mount SD card if there is one
-try:
-    sd = machine.SD()
-    os.mount(sd, '/sd')
-    SD_CARD_MOUNTED = True
-except OSError:
-    SD_CARD_MOUNTED = False
 
 
 def pretty_print_data(data: dict):
@@ -85,13 +77,6 @@ class Main:
             self.cfg.set_api_config(api_config)
             # print("** configuration:\n{}\n".format(self.cfg)) todo print config
 
-            # # todo not sure about this.
-            # #  pro: user can take sd card out after first init;
-            # #  con: user can't change config by writing new config to sd card
-            # # write everything to config file (ujson does not support json.dump())
-            # with open(self.cfg.filename, 'w') as f:
-            #     f.write(json.dumps(self.cfg.dict))
-
         # set debug level
         if self.cfg.debug:
             logging.basicConfig(level=logging.DEBUG)
@@ -102,18 +87,7 @@ class Main:
 
         # connect to network
         try:
-            if self.cfg.connection == "wifi":
-                from network import WLAN
-                wlan = WLAN(mode=WLAN.STA)
-                self.connection = WIFI(wlan, self.cfg.networks)
-            elif self.cfg.connection == "nbiot":
-                if not hasattr(self, 'lte'):
-                    from network import LTE
-                    self.lte = LTE()
-                self.connection = NB_IoT(self.lte, self.cfg.apn)
-            else:
-                raise Exception("Connection type {} not supported. Supported types: 'wifi' and 'nbiot'".format(
-                    self.cfg.connection))
+            self.connection = Connection(self.cfg.connection)
         except OSError as e:
             self.report(repr(e) + " Resetting device...", LED_PURPLE, reset=True)
 
