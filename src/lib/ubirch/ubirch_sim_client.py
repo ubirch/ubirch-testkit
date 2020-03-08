@@ -26,32 +26,32 @@ def asn1tosig(data: bytes):
     return part1 + part2
 
 
-def get_certificate(device_id: str, device_uuid: UUID, proto: SimProtocol) -> str:
+def get_certificate(key_entry_id: str, proto: SimProtocol) -> str:
     """
     Get a signed json with the key registration request until CSR handling is in place.
     """
     # TODO fix handling of key validity (will be fixed by handling CSR generation through SIM card)
+    device_uuid = proto.get_uuid(key_entry_id)
     TIME_FMT = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}.000Z'
     now = machine.RTC().now()
     created = not_before = TIME_FMT.format(now[0], now[1], now[2], now[3], now[4], now[5])
     later = time.localtime(time.mktime(now) + 30758400)
     not_after = TIME_FMT.format(later[0], later[1], later[2], later[3], later[4], later[5])
-    pub_base64 = binascii.b2a_base64(proto.get_key(device_id)).decode()[:-1]
+    pub_base64 = binascii.b2a_base64(proto.get_key(key_entry_id)).decode()[:-1]
     # json must be compact and keys must be sorted alphabetically
     REG_TMPL = '{{"algorithm":"ecdsa-p256v1","created":"{}","hwDeviceId":"{}","pubKey":"{}","pubKeyId":"{}","validNotAfter":"{}","validNotBefore":"{}"}}'
     REG = REG_TMPL.format(created, str(device_uuid), pub_base64, pub_base64, not_after, not_before).encode()
     # get the ASN.1 encoded signature and extract the signature bytes from it
-    signature = asn1tosig(proto.sign(device_id, REG, 0x00))
+    signature = asn1tosig(proto.sign(key_entry_id, REG, 0x00))
     return '{{"pubKeyInfo":{},"signature":"{}"}}'.format(REG.decode(), binascii.b2a_base64(signature).decode()[:-1])
 
 
 class UbirchSimClient:
 
-    def __init__(self, name: str, cfg: Config, lte: LTE):
+    def __init__(self, lte: LTE, cfg: Config):
 
         # initialize the ubirch protocol interface and backend API
-        self.device_name = name
-        cfg.keyService = cfg.keyService.rstrip("/mpack")
+        self.device_name = "ukey"
         self.api = API(cfg)
         self.ubirch = SimProtocol(lte=lte, at_debug=cfg.debug)
 
@@ -82,18 +82,24 @@ class UbirchSimClient:
         if not self.ubirch.sim_auth(pin):
             raise Exception("PIN not accepted")
 
-        # after boot or restart try to register certificate
-        self.uuid = self.ubirch.get_uuid(name)
+        self.uuid = self.ubirch.get_uuid(self.key_name)
 
+        # after boot or restart try to register certificate
         # create a certificate for the device and register public key at ubirch key service
         # todo this will be replaced by the X.509 certificate from the SIM card
-        cert = get_certificate(name, self.uuid, self.ubirch)
+        key_registration = get_certificate(self.key_name, self.ubirch).encode()
 
-        # send certificate to key service
+        ##################################################################################
+        # send key registration message to key service
         print("** registering identity at key service ...")
-        r = self.api.register_identity(cert.encode())
-        r.close()
-        print("** identity registered\n")
+        r = self.api.register_identity(key_registration)
+        if r.status_code == 200:
+            r.close()
+            print("** identity registered\n")
+        else:
+            raise Exception(
+                "!! request to {} failed with status code {}: {}".format(self.api.cfg.keyService, r.status_code,
+                                                                         r.text))
 
     def send(self, data: dict):
         """
@@ -107,11 +113,55 @@ class UbirchSimClient:
         logger.debug("** message hash [base64] : {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
 
         # send message to data service
+        print("** sending measurements ...")
+        r = self.api.send_data(self.uuid, message)
+        if r.status_code == 200:
+            print("** measurements successfully sent\n")
+            r.close()
+        else:
+            raise Exception(
+                "!! request to {} failed with status code {}: {}".format(self.api.cfg.data, r.status_code, r.text))
 
         # create UPP with the data message hash
         upp = self.ubirch.message_chained(self.device_name, message_hash)
         logger.debug("** UPP [msgpack]: {}".format(binascii.hexlify(upp).decode()))
 
         # send UPP to authentication service
-        # verify response from server
-        # verify that hash has been stored and chained in backend
+        print("** sending measurement certificate ...")
+        r = self.api.send_upp(self.uuid, upp)
+        if r.status_code == 200:
+            print("hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
+            print("** measurement certificate successfully sent\n")
+
+            # verify response from server
+            response_content = r.content
+            try:
+                logger.debug(
+                    "** verifying response from {}: {}".format(self.api.cfg.niomon, binascii.hexlify(response_content)))
+                self.ubirch.message_verify(self.key_name, response_content)
+                logger.debug("** response verified\n")
+            except Exception as e:
+                raise Exception(
+                    "!! response verification failed: {}. {} ".format(e, binascii.hexlify(response_content)))
+        else:
+            raise Exception(
+                "!! request to {} failed with status code {}: {}".format(self.api.cfg.niomon, r.status_code, r.text))
+
+        if not self.verify_hash_in_backend(message_hash):
+            raise Exception("!! backend verification of hash {} failed.".format(message_hash))
+
+    def verify_hash_in_backend(self, message_hash) -> bool:
+        """verify that hash has been stored and chained in backend"""
+        print("** verifying hash in backend ...")
+        retries = 4
+        while retries > 0:
+            time.sleep(0.5)
+            r = self.api.verify(message_hash)
+            if r.status_code == 200:
+                print("** backend verification successful: {}".format(r.text))
+                return True
+            else:
+                r.close()
+                print("Hash could not be verified yet. Retry... ({} attempt(s) left)".format(retries))
+                retries -= 1
+        return False
