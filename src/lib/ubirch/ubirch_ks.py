@@ -10,7 +10,7 @@ class KeyStore:
 
     def __init__(self, cfg_root: str = "") -> None:
         self._cfg_root = cfg_root
-        self._names = {}
+        self.names = {}
         self._sks = {}
         self._vks = {}
 
@@ -31,7 +31,7 @@ class KeyStore:
 
     def insert_verifying_key(self, name: str, uuid: UUID, verifying_key: ed25519.VerifyingKey):
         self._vks[uuid.hex] = verifying_key
-        self._names[name] = uuid.hex
+        self.names[name] = uuid
 
     def insert_keypair(self, name: str, uuid: UUID, signing_key: ed25519.SigningKey):
         self._sks[uuid.hex] = signing_key
@@ -51,13 +51,13 @@ class KeyStore:
 
     def get_verifying_key_with_name(self, name: str) -> ed25519.VerifyingKey:
         try:
-            return self.get_verifying_key(self._names[name])
+            return self.get_verifying_key(self.names[name].hex)
         except KeyError:
             raise Exception("No known verifying key for name {}".format(name))
 
     def get_signing_key_with_name(self, name: str) -> ed25519.SigningKey:
         try:
-            return self.get_signing_key(self._names[name])
+            return self.get_signing_key(self.names[name].hex)
         except KeyError:
             raise Exception("No known signing key for name {}".format(name))
 
