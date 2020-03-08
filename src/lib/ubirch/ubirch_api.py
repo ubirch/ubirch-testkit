@@ -1,4 +1,5 @@
 import binascii
+import json
 import logging
 import urequests as requests
 from uuid import UUID
@@ -63,12 +64,15 @@ class API:
         :return: the response from the server
         """
         if str(key_registration).startswith("{"):
-            logger.debug("** register identity [json] at " + self.cfg.keyService.rstrip("/mpack"))
+            logger.debug("** register identity at " + self.cfg.keyService.rstrip("/mpack"))
+            logger.debug("** key registration message [json]: {}".format(json.dumps(key_registration)))
             return self._send_request(self.cfg.keyService.rstrip("/mpack"),
                                       key_registration,
                                       headers={'Content-Type': 'application/octet-stream'})
         else:
-            logger.debug("** register identity [msgpack] at " + self.cfg.keyService)
+            logger.debug("** register identity at " + self.cfg.keyService)
+            logger.debug(
+                "** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
             return self._send_request(self.cfg.keyService,
                                       key_registration,
                                       headers={'Content-Type': 'application/json'})
