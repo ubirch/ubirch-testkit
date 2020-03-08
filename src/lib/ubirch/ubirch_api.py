@@ -62,7 +62,7 @@ class API:
         :param key_registration: the key registration data
         :return: the response from the server
         """
-        if key_registration.startswith(b'{'):
+        if str(key_registration).startswith("{"):
             logger.debug("** register identity [json] at " + self.cfg.keyService.rstrip("/mpack"))
             return self._send_request(self.cfg.keyService.rstrip("/mpack"),
                                       key_registration,
