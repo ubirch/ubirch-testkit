@@ -51,19 +51,22 @@ class KeyStore:
 
     def get_verifying_key_with_name(self, name: str) -> ed25519.VerifyingKey:
         try:
-            return self.get_verifying_key(self.names[name].hex)
+            return self.get_verifying_key(self.get_uuid(name).hex)
         except KeyError:
             raise Exception("No known verifying key for name {}".format(name))
 
     def get_signing_key_with_name(self, name: str) -> ed25519.SigningKey:
         try:
-            return self.get_signing_key(self.names[name].hex)
+            return self.get_signing_key(self.get_uuid(name).hex)
         except KeyError:
             raise Exception("No known signing key for name {}".format(name))
 
-    def get_certificate(self, uuid: UUID) -> dict:
-        """Get a self signed certificate for the public key"""
+    def get_uuid(self, name: str):
+        return self.names[name]
 
+    def get_certificate(self, name: str) -> dict:
+        """Get a self signed certificate for the public key"""
+        uuid = self.get_uuid(name)
         pubkey = self.get_verifying_key(uuid).to_bytes()
         created = os.stat(self._cfg_root + str(uuid) + ".bin")[7]
         not_before = created
