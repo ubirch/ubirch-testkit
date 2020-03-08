@@ -47,6 +47,7 @@ STK_APP_SELECT = '00A4040010{}'  # APDU Select Application ([1], 2.1.1)
 STK_APP_RANDOM = '80B900{:02X}00'  # APDU Generate Secure Random ([1], 2.1.3)
 STK_APP_SS_SELECT = '80A50000{:02X}{}'  # APDU Select SS Entry ([1], 2.1.4)
 STK_APP_DELETE_ALL = '80E50000'  # APDU Delete All SS Entries
+STK_APP_SS_ENTRY_ID_GET = '80B10000{:02X}{}'  # APDU Get SS Entry ID
 
 # ubirch specific commands
 STK_APP_KEY_GENERATE = '80B28000{:02X}{}'  # APDU Generate Key Pair ([1], 2.1.7)
@@ -280,8 +281,8 @@ class SimProtocol:
             (0xD0, bytes([0x21]))
         ])
         args = self._encode_tag([
-            (0xC4, ("_" + entry_id).encode()),
             (0xC4, entry_id.encode()),
+            (0xC4, ("_" + entry_id).encode()),
             (0xE5, cert_args)
         ])
 
@@ -302,10 +303,9 @@ class SimProtocol:
         :return: the certificate bytes
         """
         if self.DEBUG: print("getting X.509 certificate for key with entry ID " + entry_id)
-        cert_id = entry_id + "_c"
         self.lte.pppsuspend()
         # select SS certificate entry
-        (data, code) = self._select_ss_entry(cert_id)
+        (data, code) = self._select_ss_entry(entry_id)
         if code == STK_OK:
             # get the certificate
             (data, code) = self._execute(STK_APP_CERT_GET.format(0))
@@ -324,17 +324,34 @@ class SimProtocol:
         :return: the UUID
         """
         if self.DEBUG: print("getting UUID from entry ID " + entry_id)
-        pubkey_id = "_" + entry_id
         self.lte.pppsuspend()
         # select SS public key entry
-        (data, code) = self._select_ss_entry(pubkey_id)
+        (data, code) = self._select_ss_entry(entry_id)
+        self.lte.pppresume()
         if code == STK_OK:
             # get the UUID
-            self.lte.pppresume()
             uuid_bytes = [tag[1] for tag in self._decode_tag(data) if tag[0] == 0xc0][0]
             return UUID(uuid_bytes)
 
+        raise Exception(code)
+
+    def get_verification_key(self, uuid: UUID) -> bytes:
+        """
+        Get the public key for a given UUID from the SIM storage.
+        :param uuid: the entry title of the verification key to look for
+        :return: the public key bytes
+        """
+        if self.DEBUG: print("getting verification key for UUID " + str(uuid))
+        self.lte.pppsuspend()
+        # get the entry ID that has UUID as entry title
+        (data, code) = self._execute(STK_APP_SS_ENTRY_ID_GET.format(int(len(uuid.hex) / 2), uuid.hex))
+        (data, code) = self._get_response(code)
         self.lte.pppresume()
+        if code == STK_OK:
+            key_name = [tag[1] for tag in self._decode_tag(data) if tag[0] == 0xc4][0]
+            # get the key with that entry ID
+            return self.get_key(key_name.decode())
+
         raise Exception(code)
 
     def get_key(self, entry_id: str) -> bytes:
@@ -344,10 +361,9 @@ class SimProtocol:
         :return: the public key bytes
         """
         if self.DEBUG: print("getting public key with entry ID " + entry_id)
-        pubkey_id = "_" + entry_id
         self.lte.pppsuspend()
         # select SS public key entry
-        (data, code) = self._select_ss_entry(pubkey_id)
+        (data, code) = self._select_ss_entry(entry_id)
         if code == STK_OK:
             # get the key
             args = self._encode_tag([(0xD0, bytes([0x00]))])
@@ -373,13 +389,13 @@ class SimProtocol:
         self.lte.pppsuspend()
         # see ch 4.1.14 ID and Title (ID shall be fix and title the UUID of the device)
 
-        # prefix public key entry id and public key title with a '_'
+        # prefix private key entry id and private key title with a '_'
         # SS entries must have unique keys and titles
-        args = self._encode_tag([(0xC4, str.encode("_" + entry_id)),
+        args = self._encode_tag([(0xC4, str.encode(entry_id)),
                                  (0xC0, binascii.unhexlify(entry_title)),
                                  (0xC1, bytes([0x03])),
-                                 (0xC4, str.encode(entry_id)),
-                                 (0xC0, binascii.unhexlify(entry_title)),
+                                 (0xC4, str.encode("_" + entry_id)),
+                                 (0xC0, binascii.unhexlify("_" + entry_title)),
                                  (0xC1, bytes([0x03]))
                                  ])
         (data, code) = self._execute(STK_APP_KEY_GENERATE.format(int(len(args) / 2), args))
@@ -400,7 +416,7 @@ class SimProtocol:
         :return: the signed message or throws an exceptions if failed
         """
         self.lte.pppsuspend()
-        args = self._encode_tag([(0xC4, str.encode(entry_id)), (0xD0, bytes([0x21]))])
+        args = self._encode_tag([(0xC4, str.encode('_' + entry_id)), (0xD0, bytes([0x21]))])
         if hash_before_sign:
             protocol_version |= 0x40  # set flag for automatic hashing
         (data, code) = self._execute(STK_APP_SIGN_INIT.format(protocol_version, int(len(args) / 2), args))
@@ -433,7 +449,7 @@ class SimProtocol:
         :return: the verification response or throws an exceptions if failed
         """
         self.lte.pppsuspend()
-        args = self._encode_tag([(0xC4, str.encode('_' + entry_id)), (0xD0, bytes([0x21]))])
+        args = self._encode_tag([(0xC4, str.encode(entry_id)), (0xD0, bytes([0x21]))])
         (data, code) = self._execute(STK_APP_VERIFY_INIT.format(protocol_version, int(len(args) / 2), args))
         if code == STK_OK:
             args = binascii.hexlify(value).decode()
