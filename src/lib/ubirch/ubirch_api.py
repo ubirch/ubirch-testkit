@@ -62,12 +62,13 @@ class API:
         :param key_registration: the key registration data
         :return: the response from the server
         """
-        logger.debug("** sending key registration message to " + self.cfg.keyService)
-        if str(self.cfg.keyService).endswith("/mpack"):
-            return self._send_request(self.cfg.keyService,
+        if key_registration.startswith(b'{'):
+            logger.debug("** register identity [json] at " + self.cfg.keyService.rstrip("/mpack"))
+            return self._send_request(self.cfg.keyService.rstrip("/mpack"),
                                       key_registration,
                                       headers={'Content-Type': 'application/octet-stream'})
         else:
+            logger.debug("** register identity [msgpack] at " + self.cfg.keyService)
             return self._send_request(self.cfg.keyService,
                                       key_registration,
                                       headers={'Content-Type': 'application/json'})
