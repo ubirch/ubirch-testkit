@@ -443,7 +443,7 @@ class SimProtocol:
         Verify a signed message using the given entry_id key.
         :param entry_id: the key to use for verification
         :param value: the message to verify
-        :param protocol_version: 0xx0 = regular verification
+        :param protocol_version: 0x00 = regular verification
                                  0x22 = Ubirch Proto v2 signed message
                                  0x23 = Ubirch Proto v2 chained message
         :return: the verification response or throws an exceptions if failed
@@ -494,4 +494,9 @@ class SimProtocol:
         :param upp: the UPP to verify
         :return: whether the message can be verified
         """
-        return self.verify(name, upp, APP_UBIRCH_SIGNED)
+        if upp[1] == APP_UBIRCH_SIGNED:
+            return self.verify(name, upp, APP_UBIRCH_SIGNED)
+        elif upp[1] == APP_UBIRCH_CHAINED:
+            return self.verify(name, upp, APP_UBIRCH_CHAINED)
+        else:
+            raise Exception("unknown message type")  # todo take this out after testing

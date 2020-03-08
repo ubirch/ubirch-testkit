@@ -1,18 +1,13 @@
 import binascii
 import json
-import logging
 import asn1
 import machine
 import os
 import time
+import urequests as requests
 from network import LTE
-from uuid import UUID
 from config import Config
-from .ubirch_data_packer import pack_data_msgpack
 from .ubirch_sim import SimProtocol
-from .ubirch_api import API
-
-logger = logging.getLogger(__name__)
 
 
 def asn1tosig(data: bytes):
@@ -26,39 +21,29 @@ def asn1tosig(data: bytes):
     return part1 + part2
 
 
-def get_certificate(key_entry_id: str, proto: SimProtocol) -> str:
-    """
-    Get a signed json with the key registration request until CSR handling is in place.
-    """
-    # TODO fix handling of key validity (will be fixed by handling CSR generation through SIM card)
-    device_uuid = proto.get_uuid(key_entry_id)
-    TIME_FMT = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}.000Z'
-    now = machine.RTC().now()
-    created = not_before = TIME_FMT.format(now[0], now[1], now[2], now[3], now[4], now[5])
-    later = time.localtime(time.mktime(now) + 30758400)
-    not_after = TIME_FMT.format(later[0], later[1], later[2], later[3], later[4], later[5])
-    pub_base64 = binascii.b2a_base64(proto.get_key(key_entry_id)).decode()[:-1]
-    # json must be compact and keys must be sorted alphabetically
-    REG_TMPL = '{{"algorithm":"ecdsa-p256v1","created":"{}","hwDeviceId":"{}","pubKey":"{}","pubKeyId":"{}","validNotAfter":"{}","validNotBefore":"{}"}}'
-    REG = REG_TMPL.format(created, str(device_uuid), pub_base64, pub_base64, not_after, not_before).encode()
-    # get the ASN.1 encoded signature and extract the signature bytes from it
-    signature = asn1tosig(proto.sign(key_entry_id, REG, 0x00))
-    return '{{"pubKeyInfo":{},"signature":"{}"}}'.format(REG.decode(), binascii.b2a_base64(signature).decode()[:-1])
-
-
-class UbirchSimClient:
+class UbirchSimClient(SimProtocol):
 
     def __init__(self, lte: LTE, cfg: Config):
+        self.cfg = cfg
+        self.key_name = "ukey"
+        super().__init__(lte=lte, at_debug=cfg.debug)
 
-        # initialize the ubirch protocol interface and backend API
-        self.device_name = "ukey"
-        self.api = API(cfg)
-        self.ubirch = SimProtocol(lte=lte, at_debug=cfg.debug)
+        self.unlock_sim()
 
+        self.uuid = self.get_uuid(self.key_name)
+        print("** UUID   : " + str(self.uuid) + "\n")
+
+    def unlock_sim(self):
         # get IMSI from SIM
-        imsi = self.ubirch.get_imsi()
-        print("IMSI: " + imsi)
+        imsi = self.get_imsi()
+        print("** IMSI: " + imsi)
+        # get pin to unlock SIM
+        pin = self._get_pin(imsi)
+        # use PIN to authenticate against the SIM application
+        if not self.sim_auth(pin):
+            raise Exception("PIN not accepted")
 
+    def _get_pin(self, imsi) -> str:
         # load PIN or bootstrap if PIN unknown
         pin_file = imsi + ".bin"
         pin = ""
@@ -68,7 +53,7 @@ class UbirchSimClient:
                 pin = f.readline().decode()
         else:
             print("bootstrapping SIM identity " + imsi)
-            r = self.api.bootstrap_sim_identity(imsi)
+            r = self._bootstrap_sim_identity(imsi)
             if r.status_code == 200:
                 info = json.loads(r.content)
                 print("bootstrapping successful: " + info)
@@ -77,91 +62,38 @@ class UbirchSimClient:
                     f.write(pin.encode())
             else:
                 raise Exception("bootstrapping failed with status code {}: {}".format(r.status_code, r.text))
+        return pin
 
-        # use PIN to authenticate against the SIM application
-        if not self.ubirch.sim_auth(pin):
-            raise Exception("PIN not accepted")
-
-        self.uuid = self.ubirch.get_uuid(self.key_name)
-
-        # after boot or restart try to register certificate
-        # create a certificate for the device and register public key at ubirch key service
-        # todo this will be replaced by the X.509 certificate from the SIM card
-        key_registration = get_certificate(self.key_name, self.ubirch).encode()
-
-        ##################################################################################
-        # send key registration message to key service
-        print("** registering identity at key service ...")
-        r = self.api.register_identity(key_registration)
-        if r.status_code == 200:
-            r.close()
-            print("** identity registered\n")
-        else:
-            raise Exception(
-                "!! request to {} failed with status code {}: {}".format(self.api.cfg.keyService, r.status_code,
-                                                                         r.text))
-
-    def send(self, data: dict):
+    def _bootstrap_sim_identity(self, imsi: str) -> requests.Response:
         """
-        Send data message to ubirch data service and certificate of the message to ubirch authentication service.
-        Throws exception if sending message failed  or response from backend couldn't be verified.
-        :param data: data map to to be sent
+        Claim SIM identity at the ubirch backend.
+        The response contains the SIM applet PIN to unlock crypto functionality.
+        :param imsi: the SIM international mobile subscriber identity (IMSI)
+        :return: the response from the server
         """
-        # pack data message containing measurements, device UUID and timestamp to ensure unique hash
-        message, message_hash = pack_data_msgpack(self.uuid, data)
-        logger.debug("** data message [msgpack]: {}".format(binascii.hexlify(message).decode()))
-        logger.debug("** message hash [base64] : {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
+        logger.debug("** bootstrapping identity {} at {}".format(imsi, self.cfg.boot))
+        headers = {
+            'X-Ubirch-IMSI': imsi,
+            'X-Ubirch-Credential': binascii.b2a_base64(self.cfg.password).decode().rstrip('\n'),
+            'X-Ubirch-Auth-Type': 'ubirch'
+        }
+        return requests.get(self.cfg.boot, headers=headers)
 
-        # send message to data service
-        print("** sending measurements ...")
-        r = self.api.send_data(self.uuid, message)
-        if r.status_code == 200:
-            print("** measurements successfully sent\n")
-            r.close()
-        else:
-            raise Exception(
-                "!! request to {} failed with status code {}: {}".format(self.api.cfg.data, r.status_code, r.text))
-
-        # create UPP with the data message hash
-        upp = self.ubirch.message_chained(self.device_name, message_hash)
-        logger.debug("** UPP [msgpack]: {}".format(binascii.hexlify(upp).decode()))
-
-        # send UPP to authentication service
-        print("** sending measurement certificate ...")
-        r = self.api.send_upp(self.uuid, upp)
-        if r.status_code == 200:
-            print("hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
-            print("** measurement certificate successfully sent\n")
-
-            # verify response from server
-            response_content = r.content
-            try:
-                logger.debug(
-                    "** verifying response from {}: {}".format(self.api.cfg.niomon, binascii.hexlify(response_content)))
-                self.ubirch.message_verify(self.key_name, response_content)
-                logger.debug("** response verified\n")
-            except Exception as e:
-                raise Exception(
-                    "!! response verification failed: {}. {} ".format(e, binascii.hexlify(response_content)))
-        else:
-            raise Exception(
-                "!! request to {} failed with status code {}: {}".format(self.api.cfg.niomon, r.status_code, r.text))
-
-        if not self.verify_hash_in_backend(message_hash):
-            raise Exception("!! backend verification of hash {} failed.".format(message_hash))
-
-    def verify_hash_in_backend(self, message_hash) -> bool:
-        """verify that hash has been stored and chained in backend"""
-        print("** verifying hash in backend ...")
-        retries = 4
-        while retries > 0:
-            time.sleep(0.5)
-            r = self.api.verify(message_hash)
-            if r.status_code == 200:
-                print("** backend verification successful: {}".format(r.text))
-                return True
-            else:
-                r.close()
-                print("Hash could not be verified yet. Retry... ({} attempt(s) left)".format(retries))
-                retries -= 1
-        return False
+    def get_certificate(self, entry_id: str) -> bytes:
+        """
+        Get a signed json with the key registration request until CSR handling is in place.
+        TODO this will be replaced by the X.509 certificate from the SIM card
+        """
+        TIME_FMT = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}.000Z'
+        now = machine.RTC().now()
+        created = not_before = TIME_FMT.format(now[0], now[1], now[2], now[3], now[4], now[5])
+        later = time.localtime(time.mktime(now) + 30758400)
+        not_after = TIME_FMT.format(later[0], later[1], later[2], later[3], later[4], later[5])
+        pub_base64 = binascii.b2a_base64(self.get_key(self.key_name)).decode()[:-1]
+        # json must be compact and keys must be sorted alphabetically
+        REG_TMPL = '{{"algorithm":"ecdsa-p256v1","created":"{}","hwDeviceId":"{}","pubKey":"{}","pubKeyId":"{}","validNotAfter":"{}","validNotBefore":"{}"}}'
+        REG = REG_TMPL.format(created, str(self.uuid), pub_base64, pub_base64, not_after, not_before).encode()
+        # get the ASN.1 encoded signature and extract the signature bytes from it
+        signature = asn1tosig(self.sign(self.key_name, REG, 0x00))
+        return '{{"pubKeyInfo":{},"signature":"{}"}}'.format(REG.decode(),
+                                                             binascii.b2a_base64(signature).decode()[:-1]).encode()
