@@ -13,7 +13,20 @@ from .ubirch_protocol import Protocol, UBIRCH_PROTOCOL_TYPE_REG
 logger = logging.getLogger(__name__)
 
 
-class UbirchProtocolClient(Protocol):
+class ProtoImpl(Protocol):
+
+    def __init__(self, keystore: KeyStore, signatures: dict = None):
+        self._keystore = keystore
+        super().__init__(self._keystore.names, signatures)
+
+    def _sign(self, uuid: UUID, message: bytes) -> bytes:
+        return self._keystore.get_signing_key(uuid).sign(message)
+
+    def _verify(self, uuid: UUID, message: bytes, signature: bytes) -> bytes:
+        return self._keystore.get_verifying_key(uuid).verify(signature, message)
+
+
+class UbirchProtocolClient:
     UUID_DEMO = UUID(binascii.unhexlify("9d3c78ff22f34441a5d185c636d486ff"))  # UUID of dev/demo stage
     UUID_PROD = UUID(binascii.unhexlify("10b2e1a456b34fff9adacc8c20f93016"))  # UUID of prod stage
     PUB_DEMO = ed25519.VerifyingKey(binascii.unhexlify(
@@ -32,21 +45,21 @@ class UbirchProtocolClient(Protocol):
         self.api = API(cfg)
 
         # load existing key pair or generate new if there is none
-        self._keystore = KeyStore()
-        self._keystore.load_keys(self.device_name, uuid)
+        keystore = KeyStore()
+        keystore.load_keys(self.device_name, uuid)
 
         # store backend public keys in keystore
-        self._keystore.insert_verifying_key("demo", self.UUID_DEMO, self.PUB_DEMO)
-        self._keystore.insert_verifying_key("prod", self.UUID_PROD, self.PUB_PROD)
+        keystore.insert_verifying_key("demo", self.UUID_DEMO, self.PUB_DEMO)
+        keystore.insert_verifying_key("prod", self.UUID_PROD, self.PUB_PROD)
 
         # after boot or restart try to register certificate
-        cert = self._keystore.get_certificate(self.uuid)
+        cert = keystore.get_certificate(self.uuid)
         logger.debug("** key certificate : {}".format(json.dumps(cert)))
 
         # initialize ubirch protocol
-        super().__init__(self._keystore.names)
+        self.ubirch = ProtoImpl(keystore)
 
-        key_registration = self.message_signed(self.device_name, cert, UBIRCH_PROTOCOL_TYPE_REG)
+        key_registration = self.ubirch.message_signed(self.device_name, cert, UBIRCH_PROTOCOL_TYPE_REG)
         logger.debug("** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
 
         # send key registration message to key service
@@ -60,12 +73,6 @@ class UbirchProtocolClient(Protocol):
             raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.api.cfg.keyService, r.status_code,
                                                                          r.text))
-
-    def _sign(self, uuid: UUID, message: bytes) -> bytes:
-        return self._keystore.get_signing_key(uuid).sign(message)
-
-    def _verify(self, uuid: UUID, message: bytes, signature: bytes) -> bytes:
-        return self._keystore.get_verifying_key(uuid).verify(signature, message)
 
     def send(self, data: dict):
         """
@@ -89,7 +96,7 @@ class UbirchProtocolClient(Protocol):
                 "!! request to {} failed with status code {}: {}".format(self.api.cfg.data, r.status_code, r.text))
 
         # create UPP with the data message hash
-        upp = self.message_chained(self.device_name, message_hash)
+        upp = self.ubirch.message_chained(self.device_name, message_hash)
         logger.debug("** UPP [msgpack]: {}".format(binascii.hexlify(upp).decode()))
 
         # send UPP to authentication service
@@ -103,7 +110,7 @@ class UbirchProtocolClient(Protocol):
             response_content = r.content
             logger.debug(
                 "** verifying response from {}: {}".format(self.api.cfg.niomon, binascii.hexlify(response_content)))
-            verified = self.message_verify(self.device_name, response_content)
+            verified = self.ubirch.message_verify(self.device_name, response_content)
             if not verified:
                 raise Exception(
                     "!! signature verification failed: {} ".format(binascii.hexlify(response_content).decode()))
