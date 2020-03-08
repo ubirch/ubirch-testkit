@@ -13,37 +13,40 @@ from .ubirch_protocol import Protocol, UBIRCH_PROTOCOL_TYPE_REG
 logger = logging.getLogger(__name__)
 
 
-class UbirchClient(Protocol):
-    UUID_DEV = UUID(binascii.unhexlify("9d3c78ff22f34441a5d185c636d486ff"))  # UUID of dev/demo stage
+class UbirchProtocolClient(Protocol):
+    UUID_DEMO = UUID(binascii.unhexlify("9d3c78ff22f34441a5d185c636d486ff"))  # UUID of dev/demo stage
     UUID_PROD = UUID(binascii.unhexlify("10b2e1a456b34fff9adacc8c20f93016"))  # UUID of prod stage
-    PUB_DEV = ed25519.VerifyingKey(binascii.unhexlify(
+    PUB_DEMO = ed25519.VerifyingKey(binascii.unhexlify(
         "a2403b92bc9add365b3cd12ff120d020647f84ea6983f98bc4c87e0f4be8cd66"))  # public key for dev/demo stage
     PUB_PROD = ed25519.VerifyingKey(binascii.unhexlify(
         "ef8048ad06c0285af0177009381830c46cec025d01d86085e75a4f0041c2e690"))  # public key for prod stage
 
-    def __init__(self, uuid: UUID, cfg: Config):
+    def __init__(self, cfg: Config, uuid: UUID):
         """
         Initialize the ubirch-protocol implementation and read existing
         key or generate a new key pair. Generating a new key pair requires
         the system time to be set or the certificate may be unusable.
         """
-        super().__init__()
-
+        self.device_name = "A"
         self.uuid = uuid
         self.api = API(cfg)
 
         # load existing key pair or generate new if there is none
-        self._keystore = KeyStore(self.uuid)
+        self._keystore = KeyStore()
+        self._keystore.load_keys(self.device_name, uuid)
 
         # store backend public keys in keystore
-        self._keystore.insert_verifying_key(self.UUID_DEV, self.PUB_DEV)
-        self._keystore.insert_verifying_key(self.UUID_PROD, self.PUB_PROD)
+        self._keystore.insert_verifying_key("demo", self.UUID_DEMO, self.PUB_DEMO)
+        self._keystore.insert_verifying_key("prod", self.UUID_PROD, self.PUB_PROD)
 
         # after boot or restart try to register certificate
-        cert = self._keystore.get_certificate()
+        cert = self._keystore.get_certificate(self.uuid)
         logger.debug("** key certificate : {}".format(json.dumps(cert)))
 
-        key_registration = self.message_signed(self.uuid, UBIRCH_PROTOCOL_TYPE_REG, cert)
+        # initialize ubirch protocol
+        super().__init__(self._keystore.names)
+
+        key_registration = self.message_signed(self.device_name, cert, UBIRCH_PROTOCOL_TYPE_REG)
         logger.debug("** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
 
         # send key registration message to key service
@@ -59,7 +62,7 @@ class UbirchClient(Protocol):
                                                                          r.text))
 
     def _sign(self, uuid: UUID, message: bytes) -> bytes:
-        return self._keystore.get_signing_key().sign(message)
+        return self._keystore.get_signing_key(uuid).sign(message)
 
     def _verify(self, uuid: UUID, message: bytes, signature: bytes) -> bytes:
         return self._keystore.get_verifying_key(uuid).verify(signature, message)
@@ -86,7 +89,7 @@ class UbirchClient(Protocol):
                 "!! request to {} failed with status code {}: {}".format(self.api.cfg.data, r.status_code, r.text))
 
         # create UPP with the data message hash
-        upp = self.message_chained(self.uuid, 0x00, message_hash)
+        upp = self.message_chained(self.device_name, message_hash)
         logger.debug("** UPP [msgpack]: {}".format(binascii.hexlify(upp).decode()))
 
         # send UPP to authentication service
@@ -98,14 +101,13 @@ class UbirchClient(Protocol):
 
             # verify response from server
             response_content = r.content
-            try:
-                logger.debug(
-                    "** verifying response from {}: {}".format(self.api.cfg.niomon, binascii.hexlify(response_content)))
-                self.message_verify(response_content)
-                logger.debug("** response verified\n")
-            except Exception as e:
+            logger.debug(
+                "** verifying response from {}: {}".format(self.api.cfg.niomon, binascii.hexlify(response_content)))
+            verified = self.message_verify(self.device_name, response_content)
+            if not verified:
                 raise Exception(
-                    "!! response verification failed: {}. {} ".format(e, binascii.hexlify(response_content)))
+                    "!! signature verification failed: {} ".format(binascii.hexlify(response_content).decode()))
+            logger.debug("** response verified\n")
         else:
             raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.api.cfg.niomon, r.status_code, r.text))

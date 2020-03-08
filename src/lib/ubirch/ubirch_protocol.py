@@ -15,7 +15,6 @@
 # limitations under the License.
 
 import hashlib
-
 import umsgpack as msgpack
 from uuid import UUID
 
@@ -36,7 +35,7 @@ UBIRCH_PROTOCOL_TYPE_HSK = 0x02
 class Protocol(object):
     _signatures = {}
 
-    def __init__(self, signatures: dict = None) -> None:
+    def __init__(self, names: dict, signatures: dict = None) -> None:
         """
         Initialize the protocol.
         :param signatures: previously known signatures
@@ -44,6 +43,7 @@ class Protocol(object):
         if signatures is None:
             signatures = {}
         self._signatures = signatures
+        self._names = names
 
     def set_saved_signatures(self, signatures: dict) -> None:
         """
@@ -112,21 +112,21 @@ class Protocol(object):
         msg[-1] = signature
         return signature, self._serialize(msg)
 
-    def message_signed(self, uuid: UUID, type: int, payload: any, save_signature: bool = False) -> bytes:
+    def message_signed(self, name: str, payload: any, type: int = UBIRCH_PROTOCOL_TYPE_BIN,
+                       save_signature: bool = False) -> bytes:
         """
         Create a new signed ubirch-protocol message.
-        :param uuid: the uuid of the device that sends the message, part of the envelope
-        :param type: a hint of the type of message sent (0-255)
+        :param name: the device name linked to the uuid of the device that sends the message
         :param payload: the actual message payload
+        :param type: a hint of the type of message sent (0-255)
         :param save_signature: save the signature of the created message so the next chained message contains it
         :return: the encoded and signed message
         """
-        # we need to ensure we get a 16bit integer serialized (0xFF | version)
-        # the 0xFF is replaced by 0x00 in the serialized code
+        uuid = self._names[name]
         msg = [
             SIGNED,
             uuid.bytes,
-            type & 0xffff,
+            type,
             payload,
             0
         ]
@@ -138,26 +138,25 @@ class Protocol(object):
         # serialize result and return the message
         return serialized
 
-    def message_chained(self, uuid: UUID, type: int, payload: any) -> bytes:
+    def message_chained(self, name: str, payload: any, type: int = UBIRCH_PROTOCOL_TYPE_BIN) -> bytes:
         """
         Create a new chained ubirch-protocol message.
         Stores the context, the last signature, to be included in the next message.
-        :param uuid: the uuid of the device that sends the message, part of the envelope
-        :param type: a hint of the type of message sent (0-255)
+        :param name: the device name linked to the uuid of the device that sends the message
         :param payload: the actual message payload
-        :return: the encoded and signed message
+        :param type: a hint of the type of message sent (0-255)
+        :return: the encoded and chained message
         """
+        uuid = self._names[name]
 
         # retrieve last known signature or null bytes
         last_signature = self._signatures.get(uuid, b'\0' * 64)
 
-        # we need to ensure we get a 16bit integer serialized (0xFF | version)
-        # the 0xFF is replaced by 0x00 in the serialized code
         msg = [
             CHAINED,
             uuid.bytes,
             last_signature,
-            type & 0xffff,
+            type,
             payload,
             0
         ]
@@ -178,20 +177,26 @@ class Protocol(object):
         """
         return self._verify(uuid, self._hash(message), signature)
 
-    def message_verify(self, message: bytes) -> list:
+    def message_verify(self, name: str, message: bytes) -> bool:
         """
-        Verify the integrity of the message and decode the contents.
+        Verify the integrity of a ubirch message.
         Throws an exception if the message is not verifiable.
         :param message: the msgpack encoded message
-        :return: the decoded message
+        :return: whether the message can be verified
         """
-        if len(message) < 70:
-            raise Exception("message format wrong (size < 70 bytes): {}".format(len(message)))
+        min_len = 88
+        if len(message) < min_len:
+            raise Exception("wrong message format (size < {} bytes): {}".format(min_len, len(message)))
+
         unpacked = msgpack.unpackb(message)
-        uuid = UUID(bytes=unpacked[1])
+        uuid = UUID(unpacked[1])
         if unpacked[0] == SIGNED:
             signature = unpacked[4]
         else:
             signature = unpacked[5]
-        self._prepare_and_verify(uuid, message[0:-66], signature)
-        return unpacked
+
+        try:
+            self._prepare_and_verify(uuid, message[0:-66], signature)
+            return True
+        except ValueError:
+            return False
