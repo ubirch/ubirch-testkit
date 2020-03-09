@@ -55,6 +55,7 @@ class UbirchClient:
 
         # after boot or restart try to register public key at ubirch key service
         key_registration = self.driver.get_certificate()
+        if self.debug: print(key_registration.decode())
 
         # send key registration message to key service
         print("** registering identity at key service ...")

@@ -61,7 +61,7 @@ class Main:
 
         # initialise ubirch client
         try:
-            self.ubirch_client = UbirchClient(self.cfg, lte=self.connection.lte, uuid=self.cfg['uuid'])  # FIXME
+            self.ubirch_client = UbirchClient(self.cfg, lte=self.connection.lte, uuid=self.cfg.get('uuid'))  # FIXME
         except Exception as e:
             self.report(e, LED_RED)
             self.report("!! Initialisation failed. Resetting device...", LED_RED, reset=True)

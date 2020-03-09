@@ -6,7 +6,6 @@ import os
 import time
 import urequests as requests
 from network import LTE
-from config import Config
 from .ubirch_sim import SimProtocol
 
 
@@ -23,10 +22,12 @@ def asn1tosig(data: bytes):
 
 class UbirchSimClient(SimProtocol):
 
-    def __init__(self, lte: LTE, cfg: Config):
-        self.cfg = cfg
+    def __init__(self, cfg: dict, lte: LTE):
         self.key_name = "ukey"
-        super().__init__(lte=lte, at_debug=cfg.debug)
+        self.debug = cfg['debug']
+        self.bootstrap_service_url = cfg['bootstrap']
+        self.auth = cfg['password']
+        super().__init__(lte=lte, at_debug=self.debug)
 
         self._unlock_sim()
 
@@ -48,7 +49,7 @@ class UbirchSimClient(SimProtocol):
         pin_file = imsi + ".bin"
         pin = ""
         if pin_file in os.listdir('.'):
-            print("loading PIN for " + imsi)
+            print("loading PIN for " + imsi + "\n")
             with open(pin_file, "rb") as f:
                 pin = f.readline().decode()
         else:
@@ -56,7 +57,7 @@ class UbirchSimClient(SimProtocol):
             r = self._bootstrap_sim_identity(imsi)
             if r.status_code == 200:
                 info = json.loads(r.content)
-                print("bootstrapping successful: " + info)
+                print("bootstrapping successful: " + info + "\n")
                 pin = info['pin']
                 with open(pin_file, "wb") as f:
                     f.write(pin.encode())
@@ -71,15 +72,15 @@ class UbirchSimClient(SimProtocol):
         :param imsi: the SIM international mobile subscriber identity (IMSI)
         :return: the response from the server
         """
-        if self.cfg.debug: ("** bootstrapping identity {} at {}".format(imsi, self.cfg.boot))
+        if self.debug: ("** bootstrapping identity {} at {}".format(imsi, self.bootstrap_service_url))
         headers = {
             'X-Ubirch-IMSI': imsi,
-            'X-Ubirch-Credential': binascii.b2a_base64(self.cfg.password).decode().rstrip('\n'),
+            'X-Ubirch-Credential': binascii.b2a_base64(self.auth).decode().rstrip('\n'),
             'X-Ubirch-Auth-Type': 'ubirch'
         }
-        return requests.get(self.cfg.boot, headers=headers)
+        return requests.get(self.bootstrap_service_url, headers=headers)
 
-    def get_certificate(self, entry_id: str) -> bytes:
+    def get_certificate(self) -> bytes:
         """
         Get a signed json with the key registration request until CSR handling is in place.
         TODO this will be replaced by the X.509 certificate from the SIM card
