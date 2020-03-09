@@ -28,12 +28,12 @@ class UbirchSimClient(SimProtocol):
         self.key_name = "ukey"
         super().__init__(lte=lte, at_debug=cfg.debug)
 
-        self.unlock_sim()
+        self._unlock_sim()
 
         self.uuid = self.get_uuid(self.key_name)
         print("** UUID   : " + str(self.uuid) + "\n")
 
-    def unlock_sim(self):
+    def _unlock_sim(self):
         # get IMSI from SIM
         imsi = self.get_imsi()
         print("** IMSI: " + imsi)
@@ -71,7 +71,7 @@ class UbirchSimClient(SimProtocol):
         :param imsi: the SIM international mobile subscriber identity (IMSI)
         :return: the response from the server
         """
-        logger.debug("** bootstrapping identity {} at {}".format(imsi, self.cfg.boot))
+        if self.cfg.debug: ("** bootstrapping identity {} at {}".format(imsi, self.cfg.boot))
         headers = {
             'X-Ubirch-IMSI': imsi,
             'X-Ubirch-Credential': binascii.b2a_base64(self.cfg.password).decode().rstrip('\n'),
