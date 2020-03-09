@@ -8,59 +8,21 @@ from .pycoproc import Pycoproc
 
 class Pyboard:
 
-    def __init__(self):
-        try:
-            py = Pycoproc()
-            v = py.read_hw_version()
-            if v == 2:
-                self.sensor = Pysense()
-            elif v == 3:
-                self.sensor = Pytrack()
-            else:
-                self.sensor = py  # fixme dont know what to do here
-        except OSError:
-            # raise Exception("Expansion board type not supported. Supported types: Pysense and Pytrack")
-            self.sensor = Pysense()  # fixme this is a quick hack because older version of expansion board throw OSError
+    def __init__(self, type: str):
+        if type == "pysense":
+            self.sensor = Pysense()
+        elif type == "pytrack":
+            self.sensor = Pytrack()
+        else:
+            raise Exception("Expansion board type {} not supported. Supported types: 'pysense' and 'pytrack'".format(
+                type))
 
     def get_data(self) -> dict:
         """
         Get data from the sensors
         :return: a dictionary (json) with the data
         """
-        data = {
-            "V": self.sensor.voltage()
-        }
-
-        if isinstance(self.sensor, Pysense) or isinstance(self.sensor, Pytrack):
-            accel = self.sensor.accelerometer.acceleration()
-            roll = self.sensor.accelerometer.roll()
-            pitch = self.sensor.accelerometer.pitch()
-
-            data.update({
-                "AccX": accel[0],
-                "AccY": accel[1],
-                "AccZ": accel[2],
-                "AccRoll": roll,
-                "AccPitch": pitch
-            })
-
-        if isinstance(self.sensor, Pysense):
-            data.update({
-                "T": self.sensor.barometer.temperature(),
-                "P": self.sensor.barometer.pressure(),
-                # "Alt": self.sensor.altimeter.altitude(),
-                "H": self.sensor.humidity.humidity(),
-                "L_blue": self.sensor.light()[0],
-                "L_red": self.sensor.light()[1]
-            })
-
-        if isinstance(self.sensor, Pytrack):
-            data.update({
-                "GPS_long": self.sensor.location.coordinates()[0],
-                "GPS_lat": self.sensor.location.coordinates()[1]
-            })
-
-        return data
+        return self.sensor.get_data()
 
 
 class Pysense(Pycoproc):
