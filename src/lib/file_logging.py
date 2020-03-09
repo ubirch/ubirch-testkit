@@ -1,13 +1,16 @@
-from machine import RTC
+import machine
 import os
 import sys
 
-rtc = RTC()
+LED_GREEN = 0x002200
+LED_YELLOW = 0x444400
+LED_RED = 0x7f0000
+LED_PURPLE = 0x220022
 
-MAX_FILE_SIZE = 10000  # in bytes
 
-
-class Logfile:
+class FileLogger:
+    MAX_FILE_SIZE = 10000  # in bytes
+    rtc = machine.RTC()
 
     def __init__(self):
         # set up error logging to log file
@@ -26,13 +29,13 @@ class Logfile:
             # start overwriting oldest logs once file reached its max size
             # known issue: once file reached its max size,
             # file position will always be set to beginning after device reset
-            if self.file_position > MAX_FILE_SIZE:
+            if self.file_position > self.MAX_FILE_SIZE:
                 self.file_position = 0
             # set file to recent position
             f.seek(self.file_position, 0)
 
             # log error message and traceback if error is an exception
-            t = rtc.now()
+            t = self.rtc.now()
             f.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
             if isinstance(error, Exception):
                 sys.print_exception(error, f)
