@@ -18,8 +18,6 @@ import hashlib
 import umsgpack as msgpack
 from uuid import UUID
 
-logger = lambda msg: print(__name__+"{}".format(msg))
-
 # ubirch-protocol constants
 UBIRCH_PROTOCOL_VERSION = 2
 
