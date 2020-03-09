@@ -1,25 +1,15 @@
-import logging
 import machine
 import os
-import sys
 import time
-import ubinascii
-import ujson as json
-from config import Config
+import sys
 from connection import Connection, NB_IoT
-from file_logging import Logfile
+from file_logging import FileLogger, LED_GREEN, LED_RED, LED_YELLOW, LED_PURPLE
+import ubirch
 from uuid import UUID
 
 # Pycom specifics
 import pycom
 from pyboard import Pyboard
-
-logger = logging.getLogger(__name__)
-
-LED_GREEN = 0x002200
-LED_YELLOW = 0x444400
-LED_RED = 0x7f0000
-LED_PURPLE = 0x220022
 
 
 def pretty_print_data(data: dict):
@@ -44,65 +34,27 @@ class Main:
 
     def __init__(self) -> None:
 
-        # load configuration from file
-        self.cfg = Config()
-
-        print("\n** MAC    : " + ubinascii.hexlify(machine.unique_id(), ':').decode() + "\n")
-
-        # generate UUID if no SIM is used (otherwise UUID shall be retrieved from SIM)
-        if not self.cfg.sim:
-            self.uuid = UUID(b'UBIR' + 2 * machine.unique_id())
-            print("** UUID   : " + str(self.uuid) + "\n")
-
-            if SD_CARD_MOUNTED:
-                # write UUID to file on SD card if file doesn't already exist
-                uuid_file = "uuid.txt"
-                if uuid_file not in os.listdir('/sd'):
-                    with open('/sd/' + uuid_file, 'w') as f:
-                        f.write(str(self.uuid))
-
-        # check if ubirch backend password is already known. If unknown, look for it on SD card.
-        if self.cfg.password is None:
-            api_config_file = 'config.txt'
-            # get config from SD card
-            if SD_CARD_MOUNTED and api_config_file in os.listdir('/sd'):
-                with open('/sd/' + api_config_file, 'r') as f:
-                    api_config = json.load(f)  # todo what if password still not in config?
-            else:
-                self.report("!! missing password", LED_YELLOW)  # todo document what yellow LED means for user
-                while True:
-                    machine.idle()
-
-            # add API config from SD card to existing config
-            self.cfg.set_api_config(api_config)
-            # print("** configuration:\n{}\n".format(self.cfg)) todo print config
-
-        # set debug level
-        if self.cfg.debug:
-            logging.basicConfig(level=logging.DEBUG)
-
         # set up logging to file
-        if self.cfg.logfile:
-            self.logfile = Logfile()
-
-        # connect to network
-        try:
-            self.connection = Connection(self.cfg)
-        except OSError as e:
-            self.report(repr(e) + " Resetting device...", LED_PURPLE, reset=True)
+        if CFG.logfile:
+            self.logfile = FileLogger()
 
         # initialize the sensors
         self.sensor = Pyboard()
 
+        # connect to network
+        try:
+            self.connection = Connection(CFG)
+        except OSError as e:
+            self.report(repr(e) + " Resetting device...", LED_PURPLE, reset=True)
+
         # initialise ubirch client
         try:
-            if self.cfg.sim:
-                from ubirch import UbirchSimClient
-                device_name = "A"
-                self.ubirch_client = UbirchSimClient(device_name, self.cfg, self.connection.lte)
+            if CFG.sim:
+                from ubirch.ubirch_sim_client import UbirchSimClient
+                self.ubirch_client = UbirchSimClient(CFG, self.connection.lte)
             else:
-                from ubirch import UbirchClient
-                self.ubirch_client = UbirchClient(self.uuid, self.cfg)
+                from ubirch.ubirch_protocol_client import UbirchProtocolClient
+                self.ubirch_client = UbirchProtocolClient(PYCOM_UUID)
         except Exception as e:
             self.report(e, LED_RED)
             self.report("!! Initialisation failed. Resetting device...", LED_RED, reset=True)
@@ -114,7 +66,7 @@ class Main:
             sys.print_exception(error)
         else:
             print(error)
-        if self.cfg.logfile: self.logfile.log(error)
+        if CFG.logfile: self.logfile.log(error)
         if reset:
             time.sleep(5)
             machine.reset()
@@ -122,7 +74,7 @@ class Main:
     def loop(self):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
-        print("** starting loop... (interval = {} seconds)\n".format(self.cfg.interval))
+        print("** starting loop... (interval = {} seconds)\n".format(CFG.interval))
         while True:
             start_time = time.time()
             pycom.rgbled(LED_GREEN)
@@ -151,9 +103,9 @@ class Main:
 
             print("** done.\n")
             passed_time = time.time() - start_time
-            if self.cfg.interval > passed_time:
+            if CFG.interval > passed_time:
                 pycom.rgbled(0)  # LED off
-                time.sleep(self.cfg.interval - passed_time)
+                time.sleep(CFG.interval - passed_time)
 
 
 main = Main()
