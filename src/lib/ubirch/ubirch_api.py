@@ -3,7 +3,6 @@ import json
 import logging
 import urequests as requests
 from uuid import UUID
-from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -11,10 +10,14 @@ logger = logging.getLogger(__name__)
 class API:
     """ubirch API accessor methods."""
 
-    def __init__(self, cfg: Config):
-        self.cfg = cfg
+    def __init__(self, cfg: dict):
+        self.key_service_url = cfg['keyService']
+        self.data_service_url = cfg['data']
+        self.auth_service_url = cfg['niomon']
+        self.verification_service_url = cfg['verify']
+        self.bootstrap_service_url = cfg['bootstrap']
         self._ubirch_headers = {
-            'X-Ubirch-Credential': binascii.b2a_base64(cfg.password).decode().rstrip('\n'),
+            'X-Ubirch-Credential': binascii.b2a_base64(cfg['password']).decode().rstrip('\n'),
             'X-Ubirch-Auth-Type': 'ubirch'
         }
 
@@ -51,16 +54,16 @@ class API:
         :return: the response from the server
         """
         if str(key_registration).startswith("{"):
-            logger.debug("** register identity at " + self.cfg.keyService.rstrip("/mpack"))
+            logger.debug("** register identity at " + self.key_service_url.rstrip("/mpack"))
             logger.debug("** key registration message [json]: {}".format(json.dumps(key_registration)))
-            return self._send_request(self.cfg.keyService.rstrip("/mpack"),
+            return self._send_request(self.key_service_url.rstrip("/mpack"),
                                       key_registration,
                                       headers={'Content-Type': 'application/octet-stream'})
         else:
-            logger.debug("** register identity at " + self.cfg.keyService)
+            logger.debug("** register identity at " + self.key_service_url)
             logger.debug(
                 "** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
-            return self._send_request(self.cfg.keyService,
+            return self._send_request(self.key_service_url,
                                       key_registration,
                                       headers={'Content-Type': 'application/json'})
 
@@ -71,9 +74,9 @@ class API:
         :param upp: the msgpack encoded data to send (UPP)
         :return: the response from the server
         """
-        logger.debug("** sending UPP to " + self.cfg.niomon)
+        logger.debug("** sending UPP to " + self.auth_service_url)
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
-        return self._send_request(self.cfg.niomon, upp)
+        return self._send_request(self.auth_service_url, upp)
 
     def send_data(self, uuid: UUID, message: bytes) -> requests.Response:
         """
@@ -82,9 +85,9 @@ class API:
         :param message: the message to send to the data service
         :return: the response from the server
         """
-        logger.debug("** sending data message to " + self.cfg.data)
+        logger.debug("** sending data message to " + self.data_service_url)
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
-        return self._send_request(self.cfg.data, binascii.hexlify(message))
+        return self._send_request(self.data_service_url, binascii.hexlify(message))
 
     def verify(self, data: bytes, quick=False) -> requests.Response:
         """
@@ -93,7 +96,7 @@ class API:
         :param quick: only run quick check to verify that the hash has been stored in backend
         :return: the response from the server (if the verification was successful and the data related to it)
         """
-        url = self.cfg.verify
+        url = self.verification_service_url
         if not quick:
             url = url + '/verify'
         logger.debug("** verifying hash: {} ({})".format(binascii.b2a_base64(data).decode(), url))

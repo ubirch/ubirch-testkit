@@ -1,0 +1,11 @@
+{
+  "sim": true,
+  "connection": "nbiot",
+  "apn": "iot.1nce.net",
+  "board": "pysense",
+  "logfile": false,
+  "debug": false,
+  "interval": 60,
+  "env": "prod",
+  "password": null
+}

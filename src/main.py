@@ -1,15 +1,17 @@
+import binascii
+from config import get_config
 import machine
-import os
-import time
 import sys
+import time
 from connection import Connection, NB_IoT
-from file_logging import FileLogger, LED_GREEN, LED_RED, LED_YELLOW, LED_PURPLE
-import ubirch
-from uuid import UUID
+from file_logging import FileLogger, LED_GREEN, LED_YELLOW, LED_RED, LED_PURPLE
 
 # Pycom specifics
 import pycom
 from pyboard import Pyboard
+
+# ubirch client
+from ubirch import UbirchClient
 
 
 def pretty_print_data(data: dict):
@@ -32,29 +34,34 @@ class Main:
     |
     """
 
-    def __init__(self) -> None:
+    def __init__(self):
+        print("\n** MAC    : " + binascii.hexlify(machine.unique_id(), ':').decode() + "\n")
+
+        # load configuration
+        try:
+            self.cfg = get_config()
+        except Exception as e:
+            self.report(e, LED_YELLOW)  # todo document what yellow LED means for user
+            while True:
+                machine.idle()
+
+        print("** configuration:\n{}\n".format(self.cfg))
 
         # set up logging to file
-        if CFG.logfile:
-            self.logfile = FileLogger()
+        if self.cfg['logfile']: self.logfile = FileLogger()
 
         # initialize the sensors
-        self.sensor = Pyboard()
+        self.sensor = Pyboard(self.cfg['board'])
 
         # connect to network
         try:
-            self.connection = Connection(CFG)
+            self.connection = Connection(self.cfg)
         except OSError as e:
             self.report(repr(e) + " Resetting device...", LED_PURPLE, reset=True)
 
         # initialise ubirch client
         try:
-            if CFG.sim:
-                from ubirch.ubirch_sim_client import UbirchSimClient
-                self.ubirch_client = UbirchSimClient(CFG, self.connection.lte)
-            else:
-                from ubirch.ubirch_protocol_client import UbirchProtocolClient
-                self.ubirch_client = UbirchProtocolClient(PYCOM_UUID)
+            self.ubirch_client = UbirchClient(self.cfg, lte=self.connection.lte, uuid=self.cfg['uuid'])  # FIXME
         except Exception as e:
             self.report(e, LED_RED)
             self.report("!! Initialisation failed. Resetting device...", LED_RED, reset=True)
@@ -66,7 +73,7 @@ class Main:
             sys.print_exception(error)
         else:
             print(error)
-        if CFG.logfile: self.logfile.log(error)
+        if self.cfg['logfile']: self.logfile.log(error)
         if reset:
             time.sleep(5)
             machine.reset()
@@ -74,7 +81,7 @@ class Main:
     def loop(self):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
-        print("** starting loop... (interval = {} seconds)\n".format(CFG.interval))
+        print("** starting loop... (interval = {} seconds)\n".format(self.cfg['interval']))
         while True:
             start_time = time.time()
             pycom.rgbled(LED_GREEN)
@@ -90,7 +97,7 @@ class Main:
 
             # send data to ubirch data service and certificate to ubirch auth service
             try:
-                self.ubirch_client.send(data)
+                self.ubirch_client.seal_and_send(data)
             except Exception as e:
                 self.report(e, LED_RED)
                 if isinstance(e, OSError):
@@ -103,9 +110,9 @@ class Main:
 
             print("** done.\n")
             passed_time = time.time() - start_time
-            if CFG.interval > passed_time:
+            if self.cfg['interval'] > passed_time:
                 pycom.rgbled(0)  # LED off
-                time.sleep(CFG.interval - passed_time)
+                time.sleep(self.cfg['interval'] - passed_time)
 
 
 main = Main()

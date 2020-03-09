@@ -1,7 +1,6 @@
 import sys
 import time
 import machine
-from config import Config
 
 
 def set_time(ntp: str) -> bool:
@@ -19,21 +18,21 @@ def set_time(ntp: str) -> bool:
 
 class Connection:
 
-    def __init__(self, cfg: Config):
+    def __init__(self, cfg: dict):
         # LTE can only be instantiated once. Do it here if SIM is used so LTE instance can be used
         # for modem operations outside this class even if network connection is via WIFI.
         self.lte = None
-        if cfg.sim:
+        if cfg['sim']:
             from network import LTE
             self.lte = LTE()
 
-        if cfg.connection == "wifi":
-            self.network = WIFI(cfg.networks)
-        elif cfg.connection == "nbiot":
-            self.network = NB_IoT(self.lte, cfg.apn)
+        if cfg['connection'] == "wifi":
+            self.network = WIFI(cfg['networks'])
+        elif cfg['connection'] == "nbiot":
+            self.network = NB_IoT(self.lte, cfg['apn'])
         else:
             raise Exception(
-                "Connection type {} not supported. Supported types: 'wifi' and 'nbiot'".format(cfg.connection))
+                "Connection type {} not supported. Supported types: 'wifi' and 'nbiot'".format(cfg['connection']))
 
     def connect(self) -> bool:
         return self.network.connect()
