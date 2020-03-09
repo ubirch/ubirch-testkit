@@ -53,19 +53,19 @@ class API:
         :param key_registration: the key registration data
         :return: the response from the server
         """
-        if str(key_registration).startswith("{"):
+        if key_registration.decode().startswith("{"):
             logger.debug("** register identity at " + self.key_service_url.rstrip("/mpack"))
             logger.debug("** key registration message [json]: {}".format(json.dumps(key_registration)))
             return self._send_request(self.key_service_url.rstrip("/mpack"),
                                       key_registration,
-                                      headers={'Content-Type': 'application/octet-stream'})
+                                      headers={'Content-Type': 'application/json'})
         else:
             logger.debug("** register identity at " + self.key_service_url)
             logger.debug(
                 "** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
             return self._send_request(self.key_service_url,
                                       key_registration,
-                                      headers={'Content-Type': 'application/json'})
+                                      headers={'Content-Type': 'application/octet-stream'})
 
     def send_upp(self, uuid: UUID, upp: bytes) -> requests.Response:
         """
