@@ -6,40 +6,6 @@ from uuid import UUID
 from hashlib import sha512
 
 
-def pack_data_msgpack(uuid: UUID, data: dict) -> (bytes, bytes):
-    """
-    Generate a msgpack formatted message for the ubirch data service.
-    The message contains the device UUID, timestamp and data to ensure unique hash.
-    The sha512 hash of the message will be appended to the message.
-    :param uuid: the device UUID
-    :param data: the mapped data to be sent to the ubirch data service
-    :return: the msgpack formatted message, the hash of the data message
-    """
-    # hint for the message format (version)
-    MSG_TYPE = 1
-
-    msg = [
-        uuid.bytes,
-        MSG_TYPE,
-        int(time.time()),
-        data,
-        0
-    ]
-
-    # calculate hash of message (without last array element)
-    serialized = msgpack.packb(msg)[0:-1]
-    message_hash = sha512(serialized).digest()
-
-    # replace last element in array with the hash
-    msg[-1] = message_hash
-    serialized = msgpack.packb(msg)
-
-    return serialized, message_hash
-
-
-# todo def pack_data_json(uuid: UUID, data: dict) -> (bytes, bytes):
-
-
 class UbirchClient:
 
     def __init__(self, cfg: dict, lte=None, uuid=None):
@@ -75,33 +41,58 @@ class UbirchClient:
         :param data: data map to be sealed and sent
         """
         # pack data message containing measurements, device UUID and timestamp to ensure unique hash
-        message, message_hash = pack_data_msgpack(self.driver.uuid, data)  # todo change to json
-        if self.debug:
-            print("** data message [msgpack]: {}".format(binascii.hexlify(message).decode()))
-            print("** message hash [base64] : {}".format(binascii.b2a_base64(message_hash).decode().rstrip('\n')))
+        message, message_hash = self.pack_data_msgpack(self.driver.uuid, data)  # todo change to json
 
         # send data message to data service
         self.send_data(message)
 
         # seal the data message hash
-        upp = self.seal(message_hash)
+        print("** sealing hash: {}".format(binascii.b2a_base64(message_hash).decode()))
+        upp = self.driver.message_chained(self.driver.key_name, message_hash)
+        if self.debug:
+            print("** UPP [msgpack]: {}".format(binascii.hexlify(upp).decode()))
 
         # send the sealed hash to the ubirch backend to be anchored to the blockchain
         self.send_to_blockchain(upp)
 
-        # verify with the ubirch backend that the hash has been received and anchored
+        # verify with the ubirch backend that the hash has been received, verified and chained
         self.verify_hash_in_backend(message_hash)
 
-    def seal(self, message_hash):
+    def pack_data_msgpack(self, uuid: UUID, data: dict) -> (bytes, bytes):
         """
-        Seal a message hash in a chained UPP (ubirch protocol package)
-        :param message_hash: the hash of the data to be sealed in a UPP
-        :return: the chained UPP
+        Generate a msgpack formatted message for the ubirch data service.
+        The message contains the device UUID, timestamp and data to ensure unique hash.
+        The sha512 hash of the message will be appended to the message.
+        :param uuid: the device UUID
+        :param data: the mapped data to be sent to the ubirch data service
+        :return: the msgpack formatted message, the hash of the data message
         """
-        print("** sealing hash: {}".format(binascii.b2a_base64(message_hash).decode()))
-        upp = self.driver.message_chained(self.driver.key_name, message_hash)
-        print("** UPP [msgpack]: {}".format(binascii.hexlify(upp).decode()))
-        return upp
+        # hint for the message format (version)
+        MSG_TYPE = 1
+
+        msg = [
+            uuid.bytes,
+            MSG_TYPE,
+            int(time.time()),
+            data,
+            0
+        ]
+
+        # calculate hash of message (without last array element)
+        serialized = msgpack.packb(msg)[0:-1]
+        message_hash = sha512(serialized).digest()
+
+        # replace last element in array with the hash
+        msg[-1] = message_hash
+        serialized = msgpack.packb(msg)
+
+        if self.debug:
+            print("** data message [msgpack]: {}".format(binascii.hexlify(serialized).decode()))
+            print("** message hash [base64] : {}".format(binascii.b2a_base64(message_hash).decode()))
+
+        return serialized, message_hash
+
+    # todo def pack_data_json(uuid: UUID, data: dict) -> (bytes, bytes):
 
     def send_data(self, message):
         """
@@ -130,7 +121,9 @@ class UbirchClient:
         if r.status_code == 200:
             print("** measurement certificate successfully sent\n")
             # verify response from server
-            self.verify_server_response(r.content)
+            #  todo not implemented for SIM yet (missing server public keys)
+            # self.verify_server_response(r.content)
+            r.close()
         else:
             raise Exception(
                 "!! request to {} failed with status code {}: {}".format(self.api.verification_service_url,
@@ -164,9 +157,7 @@ class UbirchClient:
                 return
             else:
                 r.close()
-                if self.debug: print(
-                    "Hash could not be verified yet. ({}: {})\nRetry... ({} attempt(s) left)".format(r.status_code,
-                                                                                                     r.content,
-                                                                                                     retries))
+                if self.debug:
+                    print("Hash could not be verified yet. Retry... ({} attempt(s) left)".format(retries))
                 retries -= 1
-        raise Exception("!! backend verification of hash {} failed.".format(message_hash))
+        raise Exception("!! backend verification of hash {} failed.".format(binascii.b2a_base64(message_hash).decode()))
