@@ -489,15 +489,14 @@ class SimProtocol:
 
     def message_verify(self, name: str, upp: bytes) -> bool:
         """
-        [WIP] Verify a signed ubirch message. todo not implemented for SIM yet (missing server public keys)
+        Verify a signed ubirch message.
         :param name: the name of the key entry_id to use (i.e. a servers public key)
         :param upp: the UPP to verify
         :return: whether the message can be verified
         """
-        # if upp[1] == APP_UBIRCH_SIGNED:
-        #     return self.verify(name, upp, APP_UBIRCH_SIGNED)
-        # elif upp[1] == APP_UBIRCH_CHAINED:
-        #     return self.verify(name, upp, APP_UBIRCH_CHAINED)
-        # else:
-        #     return self.verify(name, upp, 0x00)
-        return True  # fixme replace this once backend keys can be stored on SIM
+        if upp[1] == APP_UBIRCH_SIGNED:
+            return self.verify(name, upp, APP_UBIRCH_SIGNED)
+        elif upp[1] == APP_UBIRCH_CHAINED:
+            return self.verify(name, upp, APP_UBIRCH_CHAINED)
+        else:
+            return self.verify(name, upp, 0x00)
