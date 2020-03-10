@@ -92,7 +92,7 @@ class Main:
             pretty_print_data(data)
 
             # make sure device is still connected
-            if not self.connection.is_connected() and not self.connection.connect():  # todo check if its safe to do this in one line
+            if not self.connection.is_connected() and not self.connection.connect():
                 self.report("!! unable to connect to network. Resetting device...", LED_PURPLE, reset=True)
 
             # send data to ubirch data service and certificate to ubirch auth service
