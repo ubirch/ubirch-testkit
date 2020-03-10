@@ -57,7 +57,7 @@ class UbirchSimClient(SimProtocol):
             r = self._bootstrap_sim_identity(imsi)
             if r.status_code == 200:
                 info = json.loads(r.content)
-                print("bootstrapping successful: " + info + "\n")
+                print("bootstrapping successful: " + repr(info) + "\n")
                 pin = info['pin']
                 with open(pin_file, "wb") as f:
                     f.write(pin.encode())
