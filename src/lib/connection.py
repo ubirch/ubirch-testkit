@@ -21,10 +21,11 @@ class Connection:
     def __init__(self, cfg: dict):
         # LTE can only be instantiated once. Do it here if SIM is used so LTE instance can be used
         # for modem operations outside this class even if network connection is via WIFI.
-        self.lte = None
-        if cfg['sim']:
+        try:
             from network import LTE
             self.lte = LTE()
+        except ImportError as e:
+            self.lte = None
 
         if cfg['connection'] == "wifi":
             self.network = WIFI(cfg['networks'])
