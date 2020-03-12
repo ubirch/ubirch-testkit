@@ -1,5 +1,5 @@
-import binascii
 import ed25519
+import ubinascii as binascii
 from uuid import UUID
 from .ubirch_ks import KeyStore
 from .ubirch_protocol import Protocol, UBIRCH_PROTOCOL_TYPE_REG
