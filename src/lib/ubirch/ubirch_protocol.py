@@ -93,8 +93,8 @@ class Protocol(object):
         """
         raise NotImplementedError("verification not implemented")
 
-    def _serialize(self, msg: any) -> bytearray:
-        return bytearray(msgpack.packb(msg))
+    def _serialize(self, msg: any) -> bytes:
+        return bytes(msgpack.packb(msg))
 
     def _prepare_and_sign(self, uuid: UUID, msg: any) -> (bytes, bytes):
         """

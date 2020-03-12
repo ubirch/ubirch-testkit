@@ -1,16 +1,13 @@
-import logging
 import ubinascii as binascii
-import ujson as json
 import urequests as requests
 from uuid import UUID
-
-logger = logging.getLogger(__name__)
 
 
 class API:
     """ubirch API accessor methods."""
 
     def __init__(self, cfg: dict):
+        self.debug = cfg['debug']
         self.key_service_url = cfg['keyService']
         self.data_service_url = cfg['data']
         self.auth_service_url = cfg['niomon']
@@ -34,7 +31,7 @@ class API:
         if headers is None:
             headers = self._ubirch_headers
 
-        tries_left = 2
+        tries_left = 3
         while True:
             try:
                 return requests.post(url=url, data=data, headers=headers)
@@ -42,7 +39,8 @@ class API:
                 # the usocket module sporadically throws an OSError. Just try again when it happens.
                 tries_left -= 1
                 if tries_left > 0:
-                    logger.debug("caught {}. Retry...\n".format(e))
+                    if self.debug:
+                        print("caught {}. Retry...\n".format(e))
                     continue
                 else:
                     raise
@@ -53,16 +51,17 @@ class API:
         :param key_registration: the key registration data
         :return: the response from the server
         """
-        if str(key_registration).startswith("{"):
-            logger.debug("** register identity at " + self.key_service_url.rstrip("/mpack"))
-            logger.debug("** key registration message [json]: {}".format(json.dumps(key_registration)))
+        if key_registration.decode().startswith("{"):
+            if self.debug:
+                print("** register identity at " + self.key_service_url.rstrip("/mpack"))
+                print("** key registration message [json]: {}".format(key_registration.decode()))
             return self._send_request(self.key_service_url.rstrip("/mpack"),
                                       key_registration,
                                       headers={'Content-Type': 'application/json'})
         else:
-            logger.debug("** register identity at " + self.key_service_url)
-            logger.debug(
-                "** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
+            if self.debug:
+                print("** register identity at " + self.key_service_url)
+                print("** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
             return self._send_request(self.key_service_url,
                                       key_registration,
                                       headers={'Content-Type': 'application/octet-stream'})
@@ -74,7 +73,8 @@ class API:
         :param upp: the msgpack encoded data to send (UPP)
         :return: the response from the server
         """
-        logger.debug("** sending UPP to " + self.auth_service_url)
+        if self.debug:
+            print("** sending UPP to " + self.auth_service_url)
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
         return self._send_request(self.auth_service_url, upp)
 
@@ -85,7 +85,8 @@ class API:
         :param message: the message to send to the data service
         :return: the response from the server
         """
-        logger.debug("** sending data message to " + self.data_service_url)
+        if self.debug:
+            print("** sending data message to " + self.data_service_url)
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
         return self._send_request(self.data_service_url, binascii.hexlify(message))
 
@@ -99,7 +100,8 @@ class API:
         url = self.verification_service_url
         if not quick:
             url = url + '/verify'
-        logger.debug("** verifying hash: {} ({})".format(binascii.b2a_base64(data).decode(), url))
+        if self.debug:
+            print("** verifying hash: {} ({})".format(binascii.b2a_base64(data).decode().rstrip('\n'), url))
         return self._send_request(url,
                                   binascii.b2a_base64(data).decode().rstrip('\n'),
                                   headers={'Accept': 'application/json', 'Content-Type': 'text/plain'})

@@ -97,7 +97,5 @@ class UbirchSimClient(SimProtocol):
         REG = REG_TMPL.format(created, str(self.uuid), pub_base64, pub_base64, not_after, not_before).encode()
         # get the ASN.1 encoded signature and extract the signature bytes from it
         signature = asn1tosig(self.sign(self.key_name, REG, 0x00))
-        cert = '{{"pubKeyInfo":{},"signature":"{}"}}'.format(REG.decode(), binascii.b2a_base64(signature).decode()[:-1])
-        if self.debug:
-            print(cert)
-        return cert.encode()
+        return '{{"pubKeyInfo":{},"signature":"{}"}}'.format(REG.decode(),
+                                                             binascii.b2a_base64(signature).decode()[:-1]).encode()
