@@ -1,6 +1,6 @@
-import binascii
-import json
 import logging
+import ubinascii as binascii
+import ujson as json
 import urequests as requests
 from uuid import UUID
 
@@ -53,7 +53,7 @@ class API:
         :param key_registration: the key registration data
         :return: the response from the server
         """
-        if key_registration.decode().startswith("{"):
+        if str(key_registration).startswith("{"):
             logger.debug("** register identity at " + self.key_service_url.rstrip("/mpack"))
             logger.debug("** key registration message [json]: {}".format(json.dumps(key_registration)))
             return self._send_request(self.key_service_url.rstrip("/mpack"),
