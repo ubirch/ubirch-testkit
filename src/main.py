@@ -1,8 +1,8 @@
-import binascii
-from config import get_config
 import machine
 import sys
 import time
+import ubinascii as binascii
+from config import get_config
 from connection import Connection, NB_IoT
 from file_logging import FileLogger, LED_GREEN, LED_YELLOW, LED_RED, LED_PURPLE
 

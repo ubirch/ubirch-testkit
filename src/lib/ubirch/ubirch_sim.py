@@ -25,10 +25,9 @@
 """
 
 import time
-from uuid import UUID
-
 import ubinascii as binascii
 from network import LTE
+from uuid import UUID
 
 # AT+CSIM=LENGTH,COMMAND
 

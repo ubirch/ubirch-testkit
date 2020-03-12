@@ -1,5 +1,5 @@
-import binascii
-import json
+import ubinascii as binascii
+import ujson as json
 import asn1
 import machine
 import os
@@ -72,7 +72,8 @@ class UbirchSimClient(SimProtocol):
         :param imsi: the SIM international mobile subscriber identity (IMSI)
         :return: the response from the server
         """
-        if self.debug: ("** bootstrapping identity {} at {}".format(imsi, self.bootstrap_service_url))
+        if self.debug:
+            print("** bootstrapping identity {} at {}".format(imsi, self.bootstrap_service_url))
         headers = {
             'X-Ubirch-IMSI': imsi,
             'X-Ubirch-Credential': binascii.b2a_base64(self.auth).decode().rstrip('\n'),
@@ -96,5 +97,7 @@ class UbirchSimClient(SimProtocol):
         REG = REG_TMPL.format(created, str(self.uuid), pub_base64, pub_base64, not_after, not_before).encode()
         # get the ASN.1 encoded signature and extract the signature bytes from it
         signature = asn1tosig(self.sign(self.key_name, REG, 0x00))
-        return '{{"pubKeyInfo":{},"signature":"{}"}}'.format(REG.decode(),
-                                                             binascii.b2a_base64(signature).decode()[:-1]).encode()
+        cert = '{{"pubKeyInfo":{},"signature":"{}"}}'.format(REG.decode(), binascii.b2a_base64(signature).decode()[:-1])
+        if self.debug:
+            print(cert)
+        return cert.encode()

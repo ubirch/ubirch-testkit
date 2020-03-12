@@ -1,6 +1,6 @@
-import json
-import os
 import machine
+import os
+import ujson as json
 from uuid import UUID
 
 NIOMON_SERVICE = "https://niomon.{}.ubirch.com/"
