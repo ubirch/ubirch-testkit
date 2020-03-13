@@ -13,7 +13,7 @@
 
 ### Getting started
 1. Register at the [ubirch web UI](https://console.prod.ubirch.com) and log in.
- (TODO: bootstrapping currently only deployed on demo stage -> go to https://console.demo.ubirch.com  for now)
+ (TODO: bootstrapping currently only deployed on dev stage -> go to https://console.dev.ubirch.com  for now)
 1. Go to `Things` and click on `+ ADD NEW DEVICE`. Enter the IMSI of your SIM card to the `ID` field
  and click on `register`. (TODO: not implemented yet)
 1. Click on the newly registered "Thing" (your IMSI) and copy the `apiConfig`.
