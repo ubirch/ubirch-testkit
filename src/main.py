@@ -4,7 +4,7 @@ import time
 import ubinascii as binascii
 from config import get_config
 from connection import Connection, NB_IoT
-from file_logging import FileLogger, LED_GREEN, LED_YELLOW, LED_RED, LED_PURPLE
+from file_logging import FileLogger, LED_GREEN, LED_YELLOW, LED_ORANGE, LED_RED, LED_PURPLE
 
 # Pycom specifics
 import pycom
@@ -99,7 +99,7 @@ class Main:
             try:
                 self.ubirch_client.seal_and_send(data)
             except Exception as e:
-                self.report(e, LED_RED)
+                self.report(e, LED_ORANGE)
                 if isinstance(e, OSError):
                     machine.reset()
 
