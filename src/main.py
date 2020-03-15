@@ -3,7 +3,7 @@ import sys
 import time
 import ubinascii as binascii
 from config import get_config
-from connection import Connection, NB_IoT
+from connection import get_connection, NB_IoT
 from file_logging import FileLogger, LED_GREEN, LED_YELLOW, LED_ORANGE, LED_RED, LED_PURPLE
 
 # Pycom specifics
@@ -41,7 +41,7 @@ class Main:
         try:
             self.cfg = get_config()
         except Exception as e:
-            self.report(e, LED_YELLOW)  # todo document what yellow LED means for user
+            self.report(e, LED_YELLOW)
             while True:
                 machine.idle()
 
@@ -55,7 +55,7 @@ class Main:
 
         # connect to network
         try:
-            self.connection = Connection(self.cfg)
+            self.connection = get_connection(self.cfg)
         except OSError as e:
             self.report(repr(e) + " Resetting device...", LED_PURPLE, reset=True)
 
