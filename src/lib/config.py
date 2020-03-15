@@ -9,14 +9,6 @@ DATA_SERVICE = "https://data.{}.ubirch.com/v1/msgPack"
 VERIFICATION_SERVICE = "https://verify.{}.ubirch.com/api/upp"
 BOOTSTRAP_SERVICE = "https://api.console.{}.ubirch.com/ubirch-web-ui/api/v1/devices/bootstrap"
 
-# mount SD card if there is one
-try:
-    sd = machine.SD()
-    os.mount(sd, '/sd')
-    SD_CARD_MOUNTED = True
-except OSError:
-    SD_CARD_MOUNTED = False
-
 
 def get_config(user_config: str = "config.json") -> dict:
     """
@@ -31,7 +23,7 @@ def get_config(user_config: str = "config.json") -> dict:
           "<WIFI SSID>": "<WIFI PASSWORD>"
         },
         "board": "<'pysense' or 'pytrack'>",
-        "password": "<password for the ubirch backend>",
+        "password": "<auth token for the ubirch backend>",
         "keyService": "<URL of key registration service>",
         "niomon": "<URL of authentication service>",
         "data": "<URL of data service>",
@@ -56,6 +48,14 @@ def get_config(user_config: str = "config.json") -> dict:
             user_cfg = json.load(c)
             cfg.update(user_cfg)
 
+    # mount SD card if there is one
+    try:
+        sd = machine.SD()
+        os.mount(sd, '/sd')
+        SD_CARD_MOUNTED = True
+    except OSError:
+        SD_CARD_MOUNTED = False
+
     # generate UUID if no SIM is used (otherwise UUID shall be retrieved from SIM)
     if not cfg['sim']:
         cfg['uuid'] = UUID(b'UBIR' + 2 * machine.unique_id())
@@ -68,7 +68,7 @@ def get_config(user_config: str = "config.json") -> dict:
                 with open('/sd/' + uuid_file, 'w') as f:
                     f.write(str(cfg['uuid']))
 
-    # if ubirch backend password is missing, look for it on SD card
+    # if ubirch backend auth token is missing, look for it on SD card
     if cfg['password'] is None:
         api_config_file = 'config.txt'
         # get config from SD card
@@ -78,7 +78,7 @@ def get_config(user_config: str = "config.json") -> dict:
                 # update existing config with API config from SD card
                 cfg.update(api_config)
         else:
-            raise Exception("!! no password set")
+            raise Exception("no auth token in config")
 
     # ensure that all necessary service URLs have been set and set default values if not
     if 'niomon' not in cfg:

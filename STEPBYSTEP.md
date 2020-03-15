@@ -58,7 +58,7 @@
    It should then look like this:
     ```json
     {
-      "type": "<BOARD TYPE>",
+      "board": "<BOARD TYPE>",
       "connection": "<CONNECTION TYPE>",
       "networks": {
         "<WIFI SSID>": "<WIFI PASSWORD>"
@@ -125,7 +125,7 @@ which is the certificate of the data's authenticity, and sends it to the Ubirch 
 1. Configure your query and make sure your device is still running
 1. Enjoy the data coming in from your device
 
-## (Optional - for experts) Check Blockchain Anchoring [DRAFT]
+## (Optional - for experts) Check Blockchain Anchoring
 1. While the Pycom is connected and running, and Atom is open, check the pymakr console in Atom and wait for a hash of 
 a measurement certificate to appear, e.g.:
     ```
@@ -136,15 +136,10 @@ a measurement certificate to appear, e.g.:
 
 1. Send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests):
     ```
-    curl -s -X POST -H "accept: application/json" -H "Content-Type: text/plain" -d "$HASH" "$URL"
+    curl -s -X POST -H "accept: application/json" -H "Content-Type: text/plain" -d "$HASH" "https://verify.demo.ubirch.com/api/upp/verify"
     ```
-    * Replace `$HASH` with the hash copied in step 1
-    * Replace `$URL` with
-        * `https://verify.dev.ubirch.com/api/upp/verify` or
-        * `https://verify.demo.ubirch.com/api/upp/verify` or
-        * `https://verify.prod.ubirch.com/api/upp/verify`
-    
-      depending on the environment you are using
+    > Replace `$HASH` with the hash copied in step 1
+
 
 1. The response will list all blockchain anchors containing this measurement certificate. The `txid` (Blockchain 
 Transaction ID) of each anchors entry can be used to lookup the entry in the according blockchain explorer (consider 
