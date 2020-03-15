@@ -9,7 +9,7 @@ import ubinascii as binascii
 from config import get_config
 from connection import get_connection, NB_IoT
 from file_logging import FileLogger, LED_GREEN, LED_YELLOW, LED_ORANGE, LED_RED, LED_PURPLE
-from pyboard import Pyboard
+from pyboard import get_sensors
 # ubirch client
 from ubirch import UbirchClient
 
@@ -63,7 +63,7 @@ class Main:
         if self.cfg['logfile']: self.logfile = FileLogger()
 
         # initialize the sensors
-        self.sensor = Pyboard(self.cfg['board'])
+        self.sensors = get_sensors(self.cfg['board'])
 
         # initialise ubirch client
         try:
@@ -93,8 +93,8 @@ class Main:
 
             # get data
             print("** getting measurements:")
-            data = self.sensor.get_data()
-            self.sensor.print_data(data)
+            data = self.sensors.get_data()
+            self.sensors.print_data(data)
 
             # make sure device is still connected or reconnect
             if not self.connection.is_connected() and not self.connection.connect():
