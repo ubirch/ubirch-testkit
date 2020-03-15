@@ -1,4 +1,5 @@
 import ubinascii as binascii
+
 import urequests as requests
 from uuid import UUID
 
@@ -8,6 +9,7 @@ class API:
 
     def __init__(self, cfg: dict):
         self.debug = cfg['debug']
+        self.auth = cfg['password']
         self.key_service_url = cfg['keyService']
         self.data_service_url = cfg['data']
         self.auth_service_url = cfg['niomon']
@@ -105,3 +107,19 @@ class API:
         return self._send_request(url,
                                   binascii.b2a_base64(data).decode().rstrip('\n'),
                                   headers={'Accept': 'application/json', 'Content-Type': 'text/plain'})
+
+    def bootstrap_sim_identity(self, imsi: str) -> requests.Response:
+        """
+        Claim SIM identity at the ubirch backend.
+        The response contains the SIM applet PIN to unlock crypto functionality.
+        :param imsi: the SIM international mobile subscriber identity (IMSI)
+        :return: the response from the server
+        """
+        if self.debug:
+            print("** bootstrapping identity {} at {}".format(imsi, self.bootstrap_service_url))
+        headers = {
+            'X-Ubirch-IMSI': imsi,
+            'X-Ubirch-Credential': binascii.b2a_base64(self.auth).decode().rstrip('\n'),
+            'X-Ubirch-Auth-Type': 'ubirch'
+        }
+        return requests.get(self.bootstrap_service_url, headers=headers)

@@ -24,12 +24,19 @@ class Pyboard:
         """
         return self.sensor.get_data()
 
+    def print_data(self, data: dict):
+        print("{")
+        for key in sorted(data):
+            print("  \"{}\": {},".format(key, data[key]))
+        print("}\n")
+
 
 class Pysense(Pycoproc):
 
     def __init__(self):
         """Initialized sensors on Pysense"""
         super().__init__(i2c=None, sda='P22', scl='P21')
+
         self.accelerometer = LIS2HH12(self)
         self.light = LTR329ALS01(self).light
         self.humidity = SI7006A20(self)

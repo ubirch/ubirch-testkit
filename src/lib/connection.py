@@ -1,22 +1,20 @@
 import sys
 import time
+
 import machine
 
 
 class Connection:
 
     def __init__(self):
-        try:
-            from network import LTE
-            self.lte = LTE()
-        except ImportError:
-            self.lte = None
+        from network import LTE
+        self.lte = LTE()
 
-    def set_time(self: str) -> bool:
+    def set_time(self, ntp: str) -> bool:
         rtc = machine.RTC()
         i = 0
         sys.stdout.write("++ setting time")
-        rtc.ntp_sync(self, 3600)
+        rtc.ntp_sync(ntp, 3600)
         while not rtc.synced() and i < 60:
             sys.stdout.write(".")
             time.sleep(1.0)

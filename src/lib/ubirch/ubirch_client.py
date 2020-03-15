@@ -1,29 +1,56 @@
+import os
 import time
-import ubinascii as binascii
-import umsgpack as msgpack
 from hashlib import sha512
+
+import machine
+import ubinascii as binascii
+import ujson as json
+from network import LTE
+
+import asn1
+import umsgpack as msgpack
 from uuid import UUID
 from .ubirch_api import API
+from .ubirch_sim import SimProtocol
+
+
+def asn1tosig(data: bytes):
+    s1 = asn1.asn1_node_root(data)
+    a1 = asn1.asn1_node_first_child(data, s1)
+    part1 = asn1.asn1_get_value(data, a1)
+    a2 = asn1.asn1_node_next(data, a1)
+    part2 = asn1.asn1_get_value(data, a2)
+    if len(part1) > 32: part1 = part1[1:]
+    if len(part2) > 32: part2 = part2[1:]
+    return part1 + part2
 
 
 class UbirchClient:
 
-    def __init__(self, cfg: dict, lte=None, uuid=None):
+    def __init__(self, cfg: dict, lte: LTE):
         self.debug = cfg['debug']
+        self.key_name = "A"
         self.api = API(cfg)
+        self.bootstrap_service_url = cfg['bootstrap']
+        self.auth = cfg['password']
+        self.sim = SimProtocol(lte=lte, at_debug=self.debug)
 
-        if cfg['sim']:
-            from .ubirch_sim_client import UbirchSimClient
-            self.driver = UbirchSimClient(cfg, lte)
-        else:
-            from .ubirch_protocol_client import UbirchProtocolClient
-            self.driver = UbirchProtocolClient(uuid)
+        # get IMSI from SIM
+        imsi = self.sim.get_imsi()
+        print("** IMSI   : " + imsi)
+
+        # unlock SIM
+        pin = self._get_pin(imsi)
+        if not self.sim.sim_auth(pin):
+            raise Exception("PIN not accepted")
+
+        # get UUID from SIM
+        self.uuid = self.sim.get_uuid(self.key_name)
+        print("** UUID   : " + str(self.uuid) + "\n")
 
         # after boot or restart try to register public key at ubirch key service
-        key_registration = self.driver.get_certificate()
-
-        # send key registration message to key service
         print("** registering identity at key service ...")
+        key_registration = self._get_certificate()
         r = self.api.register_identity(key_registration)
         if r.status_code == 200:
             r.close()
@@ -33,21 +60,61 @@ class UbirchClient:
                 "!! request to {} failed with status code {}: {}".format(self.api.key_service_url, r.status_code,
                                                                          r.text))
 
-    def seal_and_send(self, data: dict):
+    def _get_pin(self, imsi: str) -> str:
+        # load PIN or bootstrap if PIN unknown
+        pin_file = imsi + ".bin"
+        pin = ""
+        if pin_file in os.listdir('.'):
+            print("loading PIN for " + imsi + "\n")
+            with open(pin_file, "rb") as f:
+                pin = f.readline().decode()
+        else:
+            print("bootstrapping SIM identity " + imsi)
+            r = self.api.bootstrap_sim_identity(imsi)
+            if r.status_code == 200:
+                info = json.loads(r.content)
+                print("bootstrapping successful: " + repr(info) + "\n")
+                pin = info['pin']
+                with open(pin_file, "wb") as f:
+                    f.write(pin.encode())
+            else:
+                raise Exception("bootstrapping failed with status code {}: {}".format(r.status_code, r.text))
+        return pin
+
+    def _get_certificate(self) -> bytes:
+        """
+        Get a signed json with the key registration request until CSR handling is in place.
+        TODO this will be replaced by the X.509 certificate from the SIM card
+        """
+        TIME_FMT = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}.000Z'
+        now = machine.RTC().now()
+        created = not_before = TIME_FMT.format(now[0], now[1], now[2], now[3], now[4], now[5])
+        later = time.localtime(time.mktime(now) + 30758400)
+        not_after = TIME_FMT.format(later[0], later[1], later[2], later[3], later[4], later[5])
+        pub_base64 = binascii.b2a_base64(self.sim.get_key(self.key_name)).decode()[:-1]
+        # json must be compact and keys must be sorted alphabetically
+        REG_TMPL = '{{"algorithm":"ecdsa-p256v1","created":"{}","hwDeviceId":"{}","pubKey":"{}","pubKeyId":"{}","validNotAfter":"{}","validNotBefore":"{}"}}'
+        REG = REG_TMPL.format(created, str(self.uuid), pub_base64, pub_base64, not_after, not_before).encode()
+        # get the ASN.1 encoded signature and extract the signature bytes from it
+        signature = asn1tosig(self.sim.sign(self.key_name, REG, 0x00))
+        return '{{"pubKeyInfo":{},"signature":"{}"}}'.format(REG.decode(),
+                                                             binascii.b2a_base64(signature).decode()[:-1]).encode()
+
+    def send(self, data: dict):
         """
         Send data message to ubirch data service and certificate of the message to ubirch authentication service.
         Throws exception if operation failed.
         :param data: data map to be sealed and sent
         """
         # pack data message containing measurements, device UUID and timestamp to ensure unique hash
-        message, message_hash = self.pack_data_msgpack(self.driver.uuid, data)  # todo change to json
+        message, message_hash = self.pack_data_msgpack(self.uuid, data)  # todo change to json
 
         # send data message to data service
         self.send_data(message)
 
         # seal the data message hash
         print("** sealing hash: {}".format(binascii.b2a_base64(message_hash).decode()))
-        upp = self.driver.message_chained(self.driver.key_name, message_hash)
+        upp = self.sim.message_chained(self.key_name, message_hash)
         if self.debug:
             print("** UPP [msgpack]: {}".format(binascii.hexlify(upp).decode()))
 
@@ -100,7 +167,7 @@ class UbirchClient:
         :param message: the ubirch data message todo msgpack OR json
         """
         print("** sending measurements ...")
-        r = self.api.send_data(self.driver.uuid, message)
+        r = self.api.send_data(self.uuid, message)
         if r.status_code == 200:
             print("** measurements successfully sent\n")
             r.close()
@@ -116,7 +183,7 @@ class UbirchClient:
         :param upp: the UPP to be anchored to the blockchain
         """
         print("** sending measurement certificate ...")
-        r = self.api.send_upp(self.driver.uuid, upp)
+        r = self.api.send_upp(self.uuid, upp)
         if r.status_code == 200:
             print("** measurement certificate successfully sent\n")
             # verify response from server
@@ -135,7 +202,7 @@ class UbirchClient:
         :param server_response: the response from the ubirch backend
         """
         print("** verifying server response: {}".format(binascii.hexlify(server_response).decode()))
-        if self.driver.message_verify(self.driver.key_name, server_response):
+        if self.sim.message_verify(self.key_name, server_response):
             print("** response verified\n")
         else:
             raise Exception("!! response verification failed: {} ".format(binascii.hexlify(server_response).decode()))

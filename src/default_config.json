@@ -1,5 +1,4 @@
 {
-  "sim": true,
   "connection": "nbiot",
   "apn": "iot.1nce.net",
   "board": "pysense",

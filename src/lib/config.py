@@ -1,7 +1,7 @@
-import machine
 import os
+
+import machine
 import ujson as json
-from uuid import UUID
 
 NIOMON_SERVICE = "https://niomon.{}.ubirch.com/"
 KEY_SERVICE = "https://key.{}.ubirch.com/api/keyService/v1/pubkey/mpack"
@@ -14,9 +14,8 @@ def get_config(user_config: str = "config.json") -> dict:
     """
     Load available configurations. First set default configuration (see "default_config.json"),
     then overwrite defaults with configuration from user config file ("config.json")
-    the config.json should be placed next to this file
+    the config file should be placed in the same directory than this file
     {
-        "sim": <true or false>,
         "connection": "<'wifi' or 'nbiot'>",
         "apn": "<APN for NB IoT connection",
         "networks": {
@@ -48,37 +47,24 @@ def get_config(user_config: str = "config.json") -> dict:
             user_cfg = json.load(c)
             cfg.update(user_cfg)
 
-    # mount SD card if there is one
-    try:
-        sd = machine.SD()
-        os.mount(sd, '/sd')
-        SD_CARD_MOUNTED = True
-    except OSError:
-        SD_CARD_MOUNTED = False
-
-    # generate UUID if no SIM is used (otherwise UUID shall be retrieved from SIM)
-    if not cfg['sim']:
-        cfg['uuid'] = UUID(b'UBIR' + 2 * machine.unique_id())
-        print("** UUID   : " + str(cfg['uuid']) + "\n")
-
-        if SD_CARD_MOUNTED:
-            # write UUID to file on SD card if file doesn't already exist
-            uuid_file = "uuid.txt"
-            if uuid_file not in os.listdir('/sd'):
-                with open('/sd/' + uuid_file, 'w') as f:
-                    f.write(str(cfg['uuid']))
-
     # if ubirch backend auth token is missing, look for it on SD card
     if cfg['password'] is None:
-        api_config_file = 'config.txt'
+        # mount SD card if there is one (throws exception if operation fails)
+        sd = machine.SD()
+        os.mount(sd, '/sd')
+
         # get config from SD card
-        if SD_CARD_MOUNTED and api_config_file in os.listdir('/sd'):
-            with open('/sd/' + api_config_file, 'r') as f:
-                api_config = json.load(f)
-                # update existing config with API config from SD card
-                cfg.update(api_config)
-        else:
-            raise Exception("no auth token in config")
+        api_config_file = 'config.txt'
+
+        # todo
+        # if api_config_file not in os.listdir('/sd'):
+        #     raise FileNotFoundError("!! no file named {} on SD card", api_config_file)
+
+        with open('/sd/' + api_config_file, 'r') as f:
+            api_config = json.load(f)
+
+        # update existing config with API config from SD card
+        cfg.update(api_config)
 
     # ensure that all necessary service URLs have been set and set default values if not
     if 'niomon' not in cfg:
