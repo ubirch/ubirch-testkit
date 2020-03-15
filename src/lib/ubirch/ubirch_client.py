@@ -159,4 +159,5 @@ class UbirchClient:
                 if self.debug:
                     print("Hash could not be verified yet. Retry... ({} attempt(s) left)".format(retries))
                 retries -= 1
-        raise Exception("!! backend verification of hash {} failed.".format(binascii.b2a_base64(message_hash).decode()))
+        raise Exception("!! backend verification of hash {} failed.".format(
+            binascii.b2a_base64(message_hash).decode().rstrip('\n')))
