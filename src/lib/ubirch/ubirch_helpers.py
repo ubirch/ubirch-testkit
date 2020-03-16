@@ -1,16 +1,13 @@
+import asn1
+import machine
 import os
 import time
-from hashlib import sha256
-
-import machine
 import ubinascii as binascii
 import ujson as json
-
-import asn1
 import umsgpack as msgpack
 from uuid import UUID
 from .ubirch_api import API
-from .ubirch_sim import SimProtocol
+from .ubirch_sim import SimProtocol, APP_UBIRCH_SIGNED, APP_UBIRCH_CHAINED
 
 
 def asn1tosig(data: bytes):
@@ -89,10 +86,11 @@ def pack_data_msgpack(uuid: UUID, data: dict) -> bytes:
     return msgpack.packb(msg)
 
 
-def hash(message: bytes) -> bytes:
-    """
-    Calculate SHA 256 hash of a serialized message
-    :param message: the serialized message
-    :return: the SHA 256 hash of the message
-    """
-    return sha256(message).digest()
+def get_payload(upp: bytes) -> bytes:
+    unpacked = msgpack.unpackb(upp)
+    if unpacked[0] == APP_UBIRCH_SIGNED:
+        return unpacked[3]
+    elif unpacked[0] == APP_UBIRCH_CHAINED:
+        return unpacked[4]
+    else:
+        raise Exception("!! can't get payload from {} (not a UPP)")
