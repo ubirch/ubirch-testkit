@@ -4,7 +4,7 @@ import ubinascii as binascii
 from network import LTE
 
 from .ubirch_api import API
-from .ubirch_helpers import get_certificate, get_pin, pack_data_msgpack
+from .ubirch_helpers import get_certificate, get_pin, pack_data_msgpack, hash
 from .ubirch_sim import SimProtocol
 
 
@@ -12,7 +12,7 @@ class UbirchClient:
 
     def __init__(self, cfg: dict, lte: LTE):
         self.debug = cfg['debug']
-        self.key_name = "A"
+        self.key_name = "A"  # fixme -> "ukey"
         self.api = API(cfg)
         self.bootstrap_service_url = cfg['bootstrap']
         self.auth = cfg['password']
@@ -43,7 +43,8 @@ class UbirchClient:
         :param data: data map to be sealed and sent
         """
         # pack data message containing measurements, device UUID and timestamp to ensure unique hash
-        message, message_hash = pack_data_msgpack(self.uuid, data)  # todo change to json
+        message = pack_data_msgpack(self.uuid, data)
+        message_hash = hash(message)  # todo create chained message with automatic hashing and retrieve hash from UPP
         if self.debug:
             print("** data message [msgpack]: {}".format(binascii.hexlify(message).decode()))
             print("** message hash [base64] : {}".format(binascii.b2a_base64(message_hash).decode()))
