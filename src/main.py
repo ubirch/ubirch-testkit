@@ -1,17 +1,26 @@
-import sys
-import time
-
 import machine
-# Pycom specifics
-import pycom
+import os
+import time
 import ubinascii as binascii
-
 from config import get_config
 from connection import get_connection, NB_IoT
-from file_logging import FileLogger, LED_GREEN, LED_YELLOW, LED_ORANGE, LED_RED, LED_PURPLE
+from error_handling import ErrorHandler, set_led, print_to_console, LED_GREEN, LED_YELLOW, LED_ORANGE, LED_RED, \
+    LED_PURPLE
+
+# Pycom specifics
+import pycom
 from pyboard import get_sensors
+
 # ubirch client
 from ubirch import UbirchClient
+
+try:
+    # mount SD card if there is one
+    sd = machine.SD()
+    os.mount(sd, '/sd')
+    SD_CARD_MOUNTED = True
+except OSError:
+    SD_CARD_MOUNTED = False
 
 
 def sleep_until_next_interval(start_time, interval):
@@ -28,66 +37,48 @@ def wake_up():
 
 
 class Main:
-    """
-    |  UBIRCH example for pycom modules.
-    |
-    |  The devices creates a unique UUID and sends data to the ubirch data and auth services.
-    |  At the initial start these steps are required:
-    |
-    |  - start the pycom module with this code
-    |  - take note of the UUID printed on the serial console
-    |  - register your device at the Ubirch Web UI
-    |
-    """
+    """ ubirch SIM TestKit """
 
     def __init__(self):
-        print("\n** MAC    : " + binascii.hexlify(machine.unique_id(), ':').decode() + "\n")
 
         # load configuration
         try:
-            self.cfg = get_config()
+            cfg = get_config(sd_card_mounted=SD_CARD_MOUNTED)
         except Exception as e:
-            self.report(e, LED_YELLOW)
+            set_led(LED_YELLOW)
+            print_to_console(e)
             while True:
                 machine.idle()
 
-        print("** configuration:\n{}\n".format(self.cfg))
+        print("** configuration:\n{}\n".format(cfg))
+
+        # set up error handling
+        self.error_handler = ErrorHandler(file_logging_enabled=cfg['logfile'], sd_card_mounted=SD_CARD_MOUNTED)
 
         # connect to network
         try:
-            self.connection = get_connection(self.cfg)
+            self.connection = get_connection(cfg)
         except OSError as e:
-            self.report(repr(e) + " Resetting device...", LED_PURPLE, reset=True)
-
-        # set up logging to file
-        if self.cfg['logfile']: self.logfile = FileLogger()
-
-        # initialize the sensors
-        self.sensors = get_sensors(self.cfg['board'])
+            self.error_handler.report(repr(e) + " Resetting device...", LED_PURPLE, reset=True)
 
         # initialise ubirch client
         try:
-            self.ubirch_client = UbirchClient(self.cfg, lte=self.connection.lte)
+            self.ubirch_client = UbirchClient(cfg, lte=self.connection.lte)
         except Exception as e:
-            self.report(e, LED_RED)
-            self.report("!! Initialisation failed. Resetting device...", LED_RED, reset=True)
+            self.error_handler.report("!! Initialisation failed: {}\n Resetting device...".format(e),
+                                      LED_RED,
+                                      reset=True)
 
-    def report(self, error: str or Exception, led_color: int, reset: bool = False):
-        pycom.heartbeat(False)
-        pycom.rgbled(led_color)
-        if isinstance(error, Exception):
-            sys.print_exception(error)
-        else:
-            print(error)
-        if self.cfg['logfile']: self.logfile.log(error)
-        if reset:
-            time.sleep(5)
-            machine.reset()
+        # initialise the sensors
+        self.sensors = get_sensors(cfg['board'])
+
+        # set interval
+        self.interval = cfg['interval']
 
     def loop(self):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
-        print("** starting loop... (interval = {} seconds)\n".format(self.cfg['interval']))
+        print("** starting loop... (interval = {} seconds)\n".format(self.interval))
         while True:
             start_time = wake_up()
 
@@ -113,7 +104,7 @@ class Main:
             if isinstance(self.connection, NB_IoT):
                 self.connection.disconnect()
 
-            sleep_until_next_interval(start_time, self.cfg['interval'])
+            sleep_until_next_interval(start_time, self.interval)
 
 
 main = Main()

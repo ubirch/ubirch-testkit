@@ -1,6 +1,4 @@
 import os
-
-import machine
 import ujson as json
 
 NIOMON_SERVICE = "https://niomon.{}.ubirch.com/"
@@ -10,7 +8,7 @@ VERIFICATION_SERVICE = "https://verify.{}.ubirch.com/api/upp"
 BOOTSTRAP_SERVICE = "https://api.console.{}.ubirch.com/ubirch-web-ui/api/v1/devices/bootstrap"
 
 
-def get_config(user_config: str = "config.json") -> dict:
+def get_config(user_config: str = "config.json", sd_card_mounted: bool = False) -> dict:
     """
     Load available configurations. First set default configuration (see "default_config.json"),
     then overwrite defaults with configuration from user config file ("config.json")
@@ -47,19 +45,13 @@ def get_config(user_config: str = "config.json") -> dict:
             user_cfg = json.load(c)
             cfg.update(user_cfg)
 
-    # if ubirch backend auth token is missing, look for it on SD card
+    # if ubirch backend auth token is not set, look for it on SD card
     if cfg['password'] is None:
-        # mount SD card if there is one (throws exception if operation fails)
-        sd = machine.SD()
-        os.mount(sd, '/sd')
+        api_config_file = 'config.txt'
+        if not sd_card_mounted or api_config_file not in os.listdir('/sd'):
+            raise Exception("missing auth token")
 
         # get config from SD card
-        api_config_file = 'config.txt'
-
-        # todo
-        # if api_config_file not in os.listdir('/sd'):
-        #     raise FileNotFoundError("!! no file named {} on SD card", api_config_file)
-
         with open('/sd/' + api_config_file, 'r') as f:
             api_config = json.load(f)
 
