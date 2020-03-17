@@ -1,7 +1,5 @@
 import time
-
 import ubinascii as binascii
-
 import urequests as requests
 from uuid import UUID
 
@@ -11,7 +9,6 @@ class API:
 
     def __init__(self, cfg: dict):
         self.debug = cfg['debug']
-        self.auth = cfg['password']
         self.key_service_url = cfg['keyService']
         self.data_service_url = cfg['data']
         self.auth_service_url = cfg['niomon']
@@ -22,7 +19,7 @@ class API:
             'X-Ubirch-Auth-Type': 'ubirch'
         }
 
-    def _send_request(self, url: str, data: bytes, headers=None) -> bytes:
+    def _send_request(self, url: str, data: bytes, headers: dict) -> bytes:
         """
         Send a http request to the ubirch backend.
         This method accounts for the possibility of an uncritical fail and simply tries again, if sending failed.
@@ -32,10 +29,7 @@ class API:
         :param headers: the headers for the request. If not specified, the standard ubirch headers will be used
         :return: the response from the server
         """
-        if headers is None:
-            headers = self._ubirch_headers
-
-        tries_left = 1  # fixme
+        tries_left = 3
         while True:
             try:
                 r = requests.post(url=url, data=data, headers=headers)
@@ -76,20 +70,12 @@ class API:
         :param key_registration: the key registration data
         :return: the response from the server
         """
-        if key_registration.decode().startswith("{"):
-            if self.debug:
-                print("** register identity at " + self.key_service_url.rstrip("/mpack"))
-                print("** key registration message [json]: {}".format(key_registration.decode()))
-            return self._send_request(self.key_service_url.rstrip("/mpack"),
-                                      key_registration,
-                                      headers={'Content-Type': 'application/json'})
-        else:
-            if self.debug:
-                print("** register identity at " + self.key_service_url)
-                print("** key registration message [msgpack]: {}".format(binascii.hexlify(key_registration).decode()))
-            return self._send_request(self.key_service_url,
-                                      key_registration,
-                                      headers={'Content-Type': 'application/octet-stream'})
+        if self.debug:
+            print("** register identity at " + self.key_service_url.rstrip("/mpack"))
+            print("** key registration message [json]: {}".format(key_registration.decode()))
+        return self._send_request(url=self.key_service_url.rstrip("/mpack"),
+                                  data=key_registration,
+                                  headers={'Content-Type': 'application/json'})
 
     def send_upp(self, uuid: UUID, upp: bytes) -> bytes:
         """
@@ -101,7 +87,9 @@ class API:
         if self.debug:
             print("** sending UPP to " + self.auth_service_url)
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
-        return self._send_request(self.auth_service_url, upp)
+        return self._send_request(url=self.auth_service_url,
+                                  data=upp,
+                                  headers=self._ubirch_headers)
 
     def send_data(self, uuid: UUID, message: bytes) -> bytes:
         """
@@ -113,7 +101,9 @@ class API:
         if self.debug:
             print("** sending data message to " + self.data_service_url)
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
-        return self._send_request(self.data_service_url, binascii.hexlify(message))
+        return self._send_request(url=self.data_service_url,
+                                  data=binascii.hexlify(message),
+                                  headers=self._ubirch_headers)
 
     def verify(self, data: bytes, quick=False) -> bytes:
         """
@@ -127,8 +117,8 @@ class API:
             url = url + '/verify'
         if self.debug:
             print("** verifying hash: {} ({})".format(binascii.b2a_base64(data).decode().rstrip('\n'), url))
-        return self._send_request(url,
-                                  binascii.b2a_base64(data).decode().rstrip('\n'),
+        return self._send_request(url=url,
+                                  data=binascii.b2a_base64(data).decode().rstrip('\n'),
                                   headers={'Accept': 'application/json', 'Content-Type': 'text/plain'})
 
     def bootstrap_sim_identity(self, imsi: str) -> requests.Response:
@@ -140,9 +130,5 @@ class API:
         """
         if self.debug:
             print("** bootstrapping identity {} at {}".format(imsi, self.bootstrap_service_url))
-        headers = {
-            'X-Ubirch-IMSI': imsi,
-            'X-Ubirch-Credential': binascii.b2a_base64(self.auth).decode().rstrip('\n'),
-            'X-Ubirch-Auth-Type': 'ubirch'
-        }
-        return requests.get(self.bootstrap_service_url, headers=headers)
+        self._ubirch_headers['X-Ubirch-IMSI'] = imsi
+        return requests.get(url=self.bootstrap_service_url, headers=self._ubirch_headers)
