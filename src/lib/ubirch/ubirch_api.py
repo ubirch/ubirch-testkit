@@ -21,12 +21,12 @@ class API:
 
     def _send_request(self, url: str, data: bytes, headers: dict) -> bytes:
         """
-        Send a http request to the ubirch backend.
+        Send a http post request to the ubirch backend.
         This method accounts for the possibility of an uncritical fail and simply tries again, if sending failed.
         Throws an exception if sending failed several times
         :param url: the backend service URL
         :param data: the data to send to the backend
-        :param headers: the headers for the request. If not specified, the standard ubirch headers will be used
+        :param headers: the headers for the request
         :return: the response from the server
         """
         tries_left = 3

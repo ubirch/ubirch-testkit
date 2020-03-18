@@ -14,12 +14,6 @@ class Pyboard(Pycoproc):
         """
         raise NotImplementedError
 
-    def print_data(self, data: dict):
-        print("{")
-        for key in sorted(data):
-            print("  \"{}\": {},".format(key, data[key]))
-        print("}\n")
-
 
 class Pysense(Pyboard):
 
@@ -36,7 +30,7 @@ class Pysense(Pyboard):
         self.light = LTR329ALS01(self).light
         self.humidity = SI7006A20(self)
         self.barometer = MPL3115A2(self, mode=PRESSURE)
-        self.altimeter = MPL3115A2(self, mode=ALTITUDE)
+        # self.altimeter = MPL3115A2(self, mode=ALTITUDE)
 
     def get_data(self) -> dict:
         return {
@@ -87,3 +81,10 @@ def get_sensors(type: str) -> Pyboard:
         return Pytrack()
     else:
         raise Exception("Expansion board type {} not supported. Supported types: 'pysense' and 'pytrack'".format(type))
+
+
+def print_data(data: dict) -> None:
+    print("{")
+    for key in sorted(data):
+        print("  \"{}\": {},".format(key, data[key]))
+    print("}\n")

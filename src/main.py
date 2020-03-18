@@ -1,7 +1,6 @@
 import machine
 import os
 import time
-import ubinascii as binascii
 from config import get_config
 from connection import get_connection, NB_IoT
 from error_handling import ErrorHandler, set_led, print_to_console, LED_GREEN, LED_YELLOW, LED_ORANGE, LED_RED, \
@@ -9,7 +8,7 @@ from error_handling import ErrorHandler, set_led, print_to_console, LED_GREEN, L
 
 # Pycom specifics
 import pycom
-from pyboard import get_sensors
+from pyboard import get_sensors, print_data
 
 # ubirch client
 from ubirch import UbirchClient
@@ -23,17 +22,19 @@ except OSError:
     SD_CARD_MOUNTED = False
 
 
+def wake_up():
+    # disable blue heartbeat blink
+    pycom.heartbeat(False)
+    pycom.rgbled(LED_GREEN)
+    return time.time()
+
+
 def sleep_until_next_interval(start_time, interval):
     passed_time = time.time() - start_time
     if interval > passed_time:
         print("\n** going to sleep...\n")
         pycom.rgbled(0)  # LED off
         time.sleep(interval - passed_time)
-
-
-def wake_up():
-    pycom.rgbled(LED_GREEN)
-    return time.time()
 
 
 class Main:
@@ -65,37 +66,34 @@ class Main:
         try:
             self.ubirch_client = UbirchClient(cfg, lte=self.connection.lte)
         except Exception as e:
-            self.error_handler.report("!! Initialisation failed: {}\n Resetting device...".format(e),
-                                      LED_RED,
-                                      reset=True)
+            self.error_handler.report(repr(e) + " Resetting device...", LED_RED, reset=True)
 
         # initialise the sensors
         self.sensors = get_sensors(cfg['board'])
 
-        # set interval
+        # set measurement interval
         self.interval = cfg['interval']
 
     def loop(self):
-        # disable blue heartbeat blink
-        pycom.heartbeat(False)
-        print("** starting loop... (interval = {} seconds)\n".format(self.interval))
+        print("** starting loop. interval = {} seconds\n".format(self.interval))
         while True:
             start_time = wake_up()
 
             # get data
             print("** getting measurements:")
             data = self.sensors.get_data()
-            self.sensors.print_data(data)
+            print_data(data)
 
             # make sure device is still connected or reconnect
             if not self.connection.is_connected() and not self.connection.connect():
-                self.report("!! unable to connect to network. Resetting device...", LED_PURPLE, reset=True)
+                self.error_handler.report("!! unable to connect to network. Resetting device...", LED_PURPLE,
+                                          reset=True)
 
             # send data to ubirch data service and certificate to ubirch auth service
             try:
                 self.ubirch_client.send(data)
             except Exception as e:
-                self.report(e, LED_ORANGE)
+                self.error_handler.report(e, LED_ORANGE)
                 if isinstance(e, OSError):
                     machine.reset()
 
@@ -108,4 +106,7 @@ class Main:
 
 
 main = Main()
-main.loop()
+try:  # todo
+    main.loop()
+except Exception as e:
+    main.error_handler.report(e, LED_RED, reset=True)
