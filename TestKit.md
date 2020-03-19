@@ -20,16 +20,15 @@
 1. Configure your device:
     * Your IMSI should now show up under **Your Things**. Click on it and copy the `apiConfig`.
     * Create a file `config.txt` on the SD card and paste the configuration into it. It should look like this:
-```json
+    ```json
         {
-          "password": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx",
-          "keyService": "https://key.prod.ubirch.com/api/keyService/v1/pubkey/mpack",
-          "niomon": "https://niomon.prod.ubirch.com/",
-          "data": "https://data.prod.ubirch.com/v1/msgPack"
+            "password": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx",
+            "keyService": "https://key.prod.ubirch.com/api/keyService/v1/pubkey/mpack",
+            "niomon": "https://niomon.prod.ubirch.com/",
+            "data": "https://data.prod.ubirch.com/v1/msgPack"
         }
- ```
-        
-   * Insert the SD card into the Pysense. (TODO: picture of TestKit with arrow where to put SD card)
+    ```
+    * Insert the SD card into the Pysense. (TODO: picture of TestKit with arrow where to put SD card)
 1. Make sure the antenna is attached to the Gpy and power up the TestKit with the micro USB cable. (TODO: more arrows where to put antenna and USB cable)
 
 **That's it!**
@@ -39,8 +38,7 @@ After power up, the TestKit will load the configuration from the SD card, connec
  perform a bootstrap with the **ubirch bootstrap service** to acquire the PIN for the SIM card and then register its public key at the
  **ubirch key service**.
  
-Once the initialisation is done, the device will measure acceleration, external temperature, relative humidity,
- atmospheric pressure and ambient light levels every minute and send a data message to the **ubirch data service**.
+Once the initialisation is done, the device will take measurements every minute and send a data message to the **ubirch data service**.
  The data message contains the device UUID, a timestamp and a map with the sensor data:
  ```json
     {
@@ -57,12 +55,12 @@ Once the initialisation is done, the device will measure acceleration, external 
         "V": "<supply voltage in [V]>"
     }
  ```
-In the next step, the device generates a **Ubirch Protocol Package** (*UPP*) with the unique hash of the serialised data,
+In the next step, the device generates a **Ubirch Protocol Package** (*"UPP"*) with the unique hash of the serialised data,
  UUID and timestamp and signs it using the crypto functionality of the SIM card applet. The private key is stored in the
  secure storage of the SIM card and can not be retrieved.
  
-The sealed data hash is then sent to the **ubirch authentication service** (*"Niomon"*), where it will be verified with the
- previously registered public key and anchored to the blockchain.
+The sealed data hash is then sent to the **ubirch authentication service** (*"Niomon"*), where it will be verified with
+ the previously registered public key and anchored to the blockchain.
  
 ### LED
 The LED on the GPy flashes blue during the initialisation process. If anything goes wrong (or initialisation finished),
@@ -75,13 +73,13 @@ The LED on the GPy flashes blue during the initialisation process. If anything g
 | red | couldn't acquire PIN to unlock SIM from ubirch backend or other backend related issue | Make sure you have registered the correct IMSI at the [ubirch web UI](https://console.prod.ubirch.com) and you copied the `apiConfig` for your IMSI to the `config.txt` file on the SD card.
 | green | it's all good. device is measuring, sending data, sealing and sending data certificate to the ubirch backend| see next chapter |
 | orange | sending data or data certificate to the ubirch backend failed |  |
-| off | sleeping until the next measurement interval (60 seconds) | 
+| off | sleeping until the next measurement interval | 
 
-### See the data
-TODO
+### See the data coming in at the backend
+TODO not implemented yet
 
-### Verify the hash
-TODO
+### Verify the data hash in the backend
+TODO not implemented yet
 
 ### Configuration
 You can configure your device by adding further key-value pairs to the `config.txt`-file on the SD card.
