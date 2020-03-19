@@ -20,14 +20,15 @@
 1. Configure your device:
     * Your IMSI should now show up under **Your Things**. Click on it and copy the `apiConfig`.
     * Create a file `config.txt` on the SD card and paste the configuration into it. It should look like this:
-    ```json
-    {
-      "password": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx",
-      "keyService": "https://key.prod.ubirch.com/api/keyService/v1/pubkey/mpack",
-      "niomon": "https://niomon.prod.ubirch.com/",
-      "data": "https://data.prod.ubirch.com/v1/msgPack"
-    }
-    ```
+```json
+        {
+          "password": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx",
+          "keyService": "https://key.prod.ubirch.com/api/keyService/v1/pubkey/mpack",
+          "niomon": "https://niomon.prod.ubirch.com/",
+          "data": "https://data.prod.ubirch.com/v1/msgPack"
+        }
+ ```
+        
    * Insert the SD card into the Pysense. (TODO: picture of TestKit with arrow where to put SD card)
 1. Make sure the antenna is attached to the Gpy and power up the TestKit with the micro USB cable. (TODO: more arrows where to put antenna and USB cable)
 
@@ -35,13 +36,13 @@
 
 ### How it works
 After power up, the TestKit will load the configuration from the SD card, connect to the NB-IoT network,
- perform a bootstrap with the ubirch backend to acquire the PIN for the SIM card and register its public key at the
- ubirch key service.
+ perform a bootstrap with the **ubirch bootstrap service** to acquire the PIN for the SIM card and then register its public key at the
+ **ubirch key service**.
  
 Once the initialisation is done, the device will measure acceleration, external temperature, relative humidity,
- atmospheric pressure and ambient light levels every minute and send a data message to the ubirch data service.
+ atmospheric pressure and ambient light levels every minute and send a data message to the **ubirch data service**.
  The data message contains the device UUID, a timestamp and a map with the sensor data:
-  ```json
+ ```json
     {
         "AccPitch": "<accelerator Pitch in [deg]>",
         "AccRoll": "<accelerator Roll in [deg]>",
@@ -55,7 +56,13 @@ Once the initialisation is done, the device will measure acceleration, external 
         "T": "<external temperature in [°C]>",
         "V": "<supply voltage in [V]>"
     }
-```
+ ```
+In the next step, the device generates a **Ubirch Protocol Package** (*UPP*) with the unique hash of the serialised data,
+ UUID and timestamp and signs it using the crypto functionality of the SIM card applet. The private key is stored in the
+ secure storage of the SIM card and can not be retrieved.
+ 
+The sealed data hash is then sent to the **ubirch authentication service** (*"Niomon"*), where it will be verified with the
+ previously registered public key and anchored to the blockchain.
  
 ### LED
 The LED on the GPy flashes blue during the initialisation process. If anything goes wrong (or initialisation finished),
