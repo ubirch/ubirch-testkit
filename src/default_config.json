@@ -2,7 +2,7 @@
   "connection": "nbiot",
   "apn": "iot.1nce.net",
   "board": "pysense",
-  "logfile": false,
+  "logfile": true,
   "debug": false,
   "interval": 60,
   "env": "prod",
