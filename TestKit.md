@@ -21,12 +21,12 @@
     * Your IMSI should now show up under **Your Things**. Click on it and copy the `apiConfig`.
     * Create a file `config.txt` on the SD card and paste the configuration into it. It should look like this:
     ```json
-        {
-            "password": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx",
-            "keyService": "https://key.prod.ubirch.com/api/keyService/v1/pubkey/mpack",
-            "niomon": "https://niomon.prod.ubirch.com/",
-            "data": "https://data.prod.ubirch.com/v1/msgPack"
-        }
+    {
+        "password": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx",
+        "keyService": "https://key.prod.ubirch.com/api/keyService/v1/pubkey/mpack",
+        "niomon": "https://niomon.prod.ubirch.com/",
+        "data": "https://data.prod.ubirch.com/v1/msgPack"
+    }
     ```
     * Insert the SD card into the Pysense. (TODO: picture of TestKit with arrow where to put SD card)
 1. Make sure the antenna is attached to the Gpy and power up the TestKit with the micro USB cable. (TODO: more arrows where to put antenna and USB cable)
@@ -40,21 +40,21 @@ After power up, the TestKit will load the configuration from the SD card, connec
  
 Once the initialisation is done, the device will take measurements every minute and send a data message to the **ubirch data service**.
  The data message contains the device UUID, a timestamp and a map with the sensor data:
- ```json
-    {
-        "AccPitch": "<accelerator Pitch in [deg]>",
-        "AccRoll": "<accelerator Roll in [deg]>",
-        "AccX": "<acceleration on x-axis in [G]>",
-        "AccY": "<acceleration on y-axis in [G]>",
-        "AccZ": "<acceleration on z-axis in [G]>",
-        "H": "<relative humidity in [%RH]>",
-        "L_blue": "<ambient light levels (violet-blue wavelength) in [lux]>",
-        "L_red": "<ambient light levels (red wavelength) in [lux]>",
-        "P": "<atmospheric pressure in [Pa]>",
-        "T": "<external temperature in [°C]>",
-        "V": "<supply voltage in [V]>"
-    }
- ```
+```json
+{
+    "AccPitch": "<accelerator Pitch in [deg]>",
+    "AccRoll": "<accelerator Roll in [deg]>",
+    "AccX": "<acceleration on x-axis in [G]>",
+    "AccY": "<acceleration on y-axis in [G]>",
+    "AccZ": "<acceleration on z-axis in [G]>",
+    "H": "<relative humidity in [%RH]>",
+    "L_blue": "<ambient light levels (violet-blue wavelength) in [lux]>",
+    "L_red": "<ambient light levels (red wavelength) in [lux]>",
+    "P": "<atmospheric pressure in [Pa]>",
+    "T": "<external temperature in [°C]>",
+    "V": "<supply voltage in [V]>"
+}
+```
 In the next step, the device generates a **Ubirch Protocol Package** (*"UPP"*) with the unique hash of the serialised data,
  UUID and timestamp and signs it using the crypto functionality of the SIM card applet. The private key is stored in the
  secure storage of the SIM card and can not be retrieved.
@@ -84,34 +84,35 @@ TODO not implemented yet
 ### Configuration
 You can configure your device by adding further key-value pairs to the `config.txt`-file on the SD card.
  These are the configuration options:
- ```json
-    {
-        "connection": "<'wifi' or 'nbiot'>",
-        "apn": "<APN for NB IoT connection",
-        "networks": {
-          "<WIFI SSID>": "<WIFI PASSWORD>"
-        },
-        "board": "<'pysense' or 'pytrack'>",
-        "password": "<auth token for the ubirch backend>",
-        "keyService": "<key registration service URL>",
-        "niomon": "<authentication service URL>",
-        "data": "<data service URL>",
-        "verify": "<verification service URL>",
-        "bootstrap": "<bootstrap service URL>",
-        "logfile": <true or false>,
-        "debug": <true or false>,
-        "interval": <measure interval in seconds>
-    }
+```
+{
+    "connection": "<'wifi' or 'nbiot'>",
+    "apn": "<APN for NB IoT connection",
+    "networks": {
+        "<WIFI SSID>": "<WIFI PASSWORD>"
+    },
+    "board": "<'pysense' or 'pytrack'>",
+    "password": "<auth token for the ubirch backend>",
+    "env": "<ubirch backend environment ('dev', 'demo' or 'prod')>",
+    "keyService": "<key registration service URL>",
+    "niomon": "<authentication service URL>",
+    "data": "<data service URL>",
+    "verify": "<verification service URL>",
+    "bootstrap": "<bootstrap service URL>",
+    "logfile": <true or false>,
+    "debug": <true or false>,
+    "interval": <measure interval in seconds>
+}
 ```
 There are default values for everything except for the `password`-key, but you can overwrite the default configuration
  by simply adding a key-value pair to your config file on the SD card.
 
 The default connection type is NB-IoT, but if you can not connect to a NB-IoT network, you can change it to WIFI by adding...
- ```json
-        "connection": "wifi",
-        "networks": {
-          "<WIFI SSID>": "<WIFI PASSWORD>"
-        },
+```
+    "connection": "wifi",
+    "networks": {
+      "<WIFI SSID>": "<WIFI PASSWORD>"
+    },
 ```
 ...to your config file and replacing `<WIFI SSID>` with your SSID and `<WIFI PASSWORD>` with your password.
 
