@@ -119,6 +119,6 @@ The default connection type is NB-IoT, but if you can not connect to a NB-IoT ne
 ### Log file
 If a SD card is present, the device will create a `log.txt`-file on the card and write an error log to it.
  This can be useful if you are having trouble with your TestKit. 
- 
- Please feel free to contact us for support any time. We are happy to help!
- ---> HARDWARE@ubirch.com <---
+
+### Support
+Please feel free to contact [our helpdesk](https://ubirch.atlassian.net/servicedesk/customer/portal/1) for support.
