@@ -71,11 +71,7 @@ class FileLogger:
 
             # log error message and traceback if error is an exception
             t = self.rtc.now()
-            f.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
-            if isinstance(error, Exception):
-                sys.print_exception(error, f)
-            else:
-                f.write(error + "\n")
+            f.write('{:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d} {}\n'.format(t[0], t[1], t[2], t[3], t[4], t[5], error))
 
             # remember current file position
             self.file_position = f.tell()
