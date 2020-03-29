@@ -43,7 +43,7 @@ class API:
                     time.sleep(0.2)
                     continue
                 else:
-                    raise Exception("!! request to {} failed ({})".format(url, e))
+                    raise Exception("!! request to {} failed: {}".format(url, e))
 
     def _check_response(self, r: requests.Response) -> bytes:
         """
