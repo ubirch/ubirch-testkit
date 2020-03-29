@@ -1,12 +1,15 @@
 # ubirch TestKit
 
 ### Components
-- 1NCE SIM Card with SIGNiT application
-- Pycom GPy
-- Pycom Pysense
-- Pycom LTE antenna
-- micro SD card
-- micro USB cable
+1. 1NCE SIM Card with SIGNiT application
+1. Pycom GPy
+1. Pycom Pysense
+1. Pycom LTE antenna
+1. micro SD card
+1. micro USB cable
+1. battery
+
+<img style="float: right;" src="pictures/assembled.png">
 
 ### What you need
 - micro SD card writer
@@ -18,7 +21,7 @@
     * Click on `register`.
     
 1. Configure your device:
-    * Your IMSI should now show up under **Your Things**. Click on it and copy the `apiConfig`.
+    * After registering your IMSI it should now show up under **Your Things**. Click on it and copy the `apiConfig`.
     * Create a file `config.txt` on the SD card and paste the configuration into it. It should look like this:
     ```json
     {
@@ -28,8 +31,12 @@
         "data": "https://data.prod.ubirch.com/v1/msgPack"
     }
     ```
-    * Insert the SD card into the Pysense. (TODO: picture of TestKit with arrow where to put SD card)
-1. Make sure the antenna is attached to the Gpy and power up the TestKit with the micro USB cable. (TODO: more arrows where to put antenna and USB cable)
+    * Insert the SD card into the Pysense. [(1.)](#assembled-testkit)
+1. Make sure the cellular antenna is attached to the Gpy [(2.)](#assembled-testkit) and power up the TestKit with the micro USB cable. [(3.)](#assembled-testkit)
+> WARNING: Using LTE/NB-IoT connectivity without the antenna being attached could damage the development board!
+
+![assembled](pictures/assembled.png)
+###### Assembled TestKit
 
 **That's it!**
 
@@ -69,7 +76,7 @@ The LED on the GPy flashes blue during the initialisation process. If anything g
 | colour | meaning | what to do |
 |--------|---------|------------|
 | yellow | couldn't get config from SD card | Make sure the SD card is inserted correctly and has a file named `config.txt` with the API config from the ubirch web UI. The content of the file should look like the example in the previous step including the braces (`{` `}`).
-| purple | couldn't connect to network (resets automatically) | Try to find a place with better signal or connect to WIFI instead. (see [here](#configuration))
+| purple | couldn't connect to network (resets automatically) | Try to find a place with better signal or connect to WIFI instead. (see [here](#configuration) how to do that)
 | red | couldn't acquire PIN to unlock SIM from ubirch backend or other backend related issue | Make sure you have registered the correct IMSI at the [ubirch web UI](https://console.prod.ubirch.com) and you copied the `apiConfig` for your IMSI to the `config.txt` file on the SD card.
 | green | it's all good. device is measuring, sending data, sealing and sending data certificate to the ubirch backend| see next chapter |
 | orange | sending data or data certificate to the ubirch backend failed |  |
