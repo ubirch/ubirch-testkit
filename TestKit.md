@@ -1,9 +1,6 @@
 # ubirch TestKit
 
 ### Components
-
-<img style="float: right" width="50%" src="pictures/exploded.jpg">
-
 1. 1NCE SIM Card with SIGNiT application
 1. Pycom GPy
 1. Pycom Pysense
@@ -11,6 +8,7 @@
 1. micro SD card
 1. micro USB cable
 1. battery
+<img style="float: right" width="50%" src="pictures/exploded.jpg">
 
 ### What you need
 - micro SD card writer
