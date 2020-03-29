@@ -2,7 +2,7 @@
 
 ### Components
 
-<img style="float: right;" src="pictures/exploded.jpg">
+<img style="float: right; width: 50%;" src="pictures/exploded.jpg">
 
 1. 1NCE SIM Card with SIGNiT application
 1. Pycom GPy
