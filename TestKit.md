@@ -36,6 +36,7 @@
 > WARNING: Using LTE/NB-IoT connectivity without the antenna being attached could damage the development board!
 
 <img align="middle" width="67%" src="pictures/assembled.png">
+
 ###### Assembled TestKit
 
 **That's it!**
