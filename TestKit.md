@@ -1,8 +1,8 @@
 # ubirch TestKit
 
-### Components
 <img style="float: right" align="right" width="67%" src="pictures/exploded.jpg">
 
+### Components
 - 1NCE SIM Card with SIGNiT application
 - Pycom GPy
 - Pycom Pysense
