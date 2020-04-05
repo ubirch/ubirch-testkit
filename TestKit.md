@@ -35,9 +35,9 @@
 1. Make sure the cellular antenna is attached to the Gpy [(2.)](#assembled-testkit) and power up the TestKit with the micro USB cable. [(3.)](#assembled-testkit)
 > WARNING: Using LTE/NB-IoT connectivity without the antenna being attached could damage the development board!
 
-<img align="middle" width="67%" src="pictures/assembled.png">
-
 ###### Assembled TestKit
+
+<img align="middle" width="67%" src="pictures/assembled.png">
 
 **That's it!**
 
