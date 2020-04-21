@@ -12,7 +12,7 @@ class Pyboard(Pycoproc):
         Get data from the sensors
         :return: a dictionary (json) with the data
         """
-        raise NotImplementedError
+        return {"V": self.voltage()}
 
 
 class Pysense(Pyboard):
@@ -33,8 +33,8 @@ class Pysense(Pyboard):
         # self.altimeter = MPL3115A2(self, mode=ALTITUDE)
 
     def get_data(self) -> dict:
-        return {
-            "V": self.voltage(),
+        data = super().get_data()
+        data.update({
             "AccX": self.accelerometer.acceleration()[0],
             "AccY": self.accelerometer.acceleration()[1],
             "AccZ": self.accelerometer.acceleration()[2],
@@ -46,7 +46,8 @@ class Pysense(Pyboard):
             "H": self.humidity.humidity(),
             "L_blue": self.light()[0],
             "L_red": self.light()[1]
-        }
+        })
+        return data
 
 
 class Pytrack(Pyboard):
@@ -62,8 +63,8 @@ class Pytrack(Pyboard):
         self.location = L76GNSS(self, timeout=30)
 
     def get_data(self) -> dict:
-        return {
-            "V": self.voltage(),
+        data = super().get_data()
+        data.update({
             "AccX": self.accelerometer.acceleration()[0],
             "AccY": self.accelerometer.acceleration()[1],
             "AccZ": self.accelerometer.acceleration()[2],
@@ -71,10 +72,11 @@ class Pytrack(Pyboard):
             "AccPitch": self.accelerometer.pitch(),
             "GPS_long": self.location.coordinates()[0],
             "GPS_lat": self.location.coordinates()[1]
-        }
+        })
+        return data
 
 
-def get_sensors(type: str) -> Pyboard:
+def init_pyboard(type: str) -> Pyboard:
     if type == "pysense":
         return Pysense()
     elif type == "pytrack":

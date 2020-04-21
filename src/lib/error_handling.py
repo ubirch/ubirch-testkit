@@ -2,11 +2,10 @@ import machine
 import os
 import pycom
 import sys
-
 import time
 
 LED_GREEN = 0x002200
-LED_YELLOW = 0x444400
+LED_YELLOW = 0x222200
 LED_ORANGE = 0x442200
 LED_RED = 0x7f0000
 LED_PURPLE = 0x220022
@@ -55,7 +54,7 @@ class FileLogger:
         with open(self.path + self.logfile_name, 'a') as f:
             self.file_position = f.tell()
         print("** file logging enabled\n"
-              "-- name: {}\n"
+              "-- file: {}\n"
               "-- size: {:.1f} kb (free flash memory: {:d} kb)\n".format(
             self.path + self.logfile_name, self.file_position / 1000.0, os.getfree('/flash')))
 
@@ -69,9 +68,15 @@ class FileLogger:
             # set file to recent position
             f.seek(self.file_position, 0)
 
-            # log error message and traceback if error is an exception
+            # log error message
             t = self.rtc.now()
             f.write('{:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d} {}\n'.format(t[0], t[1], t[2], t[3], t[4], t[5], error))
+            # # log error message and traceback if error is an exception
+            # f.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
+            # if isinstance(error, Exception):
+            #     sys.print_exception(error, f)
+            # else:
+            #     f.write(error + "\n")
 
             # remember current file position
             self.file_position = f.tell()

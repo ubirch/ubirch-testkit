@@ -1,14 +1,14 @@
 import machine
 import os
 import time
-from config import get_config
-from connection import get_connection, NB_IoT
+from config import load_config
+from connection import init_connection, NB_IoT
 from error_handling import ErrorHandler, set_led, print_to_console, LED_GREEN, LED_YELLOW, LED_ORANGE, LED_RED, \
     LED_PURPLE
 
 # Pycom specifics
 import pycom
-from pyboard import get_sensors, print_data
+from pyboard import init_pyboard, print_data
 
 # ubirch client
 from ubirch import UbirchClient
@@ -23,8 +23,6 @@ except OSError:
 
 
 def wake_up():
-    # disable blue heartbeat blink
-    pycom.heartbeat(False)
     pycom.rgbled(LED_GREEN)
     return time.time()
 
@@ -34,6 +32,7 @@ def sleep_until_next_interval(start_time, interval):
     if interval > passed_time:
         print("\n** going to sleep...\n")
         pycom.rgbled(0)  # LED off
+        machine.idle()
         time.sleep(interval - passed_time)
 
 
@@ -44,7 +43,7 @@ class Main:
 
         # load configuration
         try:
-            cfg = get_config(sd_card_mounted=SD_CARD_MOUNTED)
+            cfg = load_config(sd_card_mounted=SD_CARD_MOUNTED)
         except Exception as e:
             set_led(LED_YELLOW)
             print_to_console(e)
@@ -58,23 +57,25 @@ class Main:
 
         # connect to network
         try:
-            self.connection = get_connection(cfg)
-        except OSError as e:
-            self.error_handler.report(repr(e) + " Resetting device...", LED_PURPLE, reset=True)
+            self.connection = init_connection(cfg)
+        except Exception as e:
+            self.error_handler.report(str(e) + " Resetting device...", LED_PURPLE, reset=True)
 
         # initialise ubirch client
         try:
             self.ubirch_client = UbirchClient(cfg, lte=self.connection.lte)
         except Exception as e:
-            self.error_handler.report(repr(e) + " Resetting device...", LED_RED, reset=True)
+            self.error_handler.report(str(e) + " Resetting device...", LED_RED, reset=True)
 
         # initialise the sensors
-        self.sensors = get_sensors(cfg['board'])
+        self.sensors = init_pyboard(cfg['board'])
 
         # set measurement interval
         self.interval = cfg['interval']
 
     def loop(self):
+        # disable blue heartbeat blink
+        pycom.heartbeat(False)
         print("** starting loop. interval = {} seconds\n".format(self.interval))
         while True:
             start_time = wake_up()

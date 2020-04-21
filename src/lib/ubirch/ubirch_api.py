@@ -29,17 +29,17 @@ class API:
         :param headers: the headers for the request
         :return: the response from the server
         """
-        tries_left = 3
+        retries = 2
         while True:
             try:
                 r = requests.post(url=url, data=data, headers=headers)
                 return self._check_response(r)
             except Exception as e:
                 # Try again if sending failed.
-                tries_left -= 1
-                if tries_left > 0:
+                if retries > 0:
+                    retries -= 1
                     if self.debug:
-                        print("caught exception: {}. Retry... ({} attempt(s) left)\n".format(e, tries_left))
+                        print("!! sending request failed: {}.\nRetry...\n".format(e))
                     time.sleep(0.2)
                     continue
                 else:
@@ -62,7 +62,7 @@ class API:
         else:
             message = r.text
             r.close()
-            raise Exception("{}: {}".format(status, message))
+            raise Exception("({}): {}".format(status, message))
 
     def register_identity(self, key_registration: bytes) -> bytes:
         """
@@ -71,7 +71,7 @@ class API:
         :return: the response from the server
         """
         if self.debug:
-            print("** register identity at " + self.key_service_url.rstrip("/mpack"))
+            print("** register public key at " + self.key_service_url.rstrip("/mpack"))
             print("** key registration message [json]: {}".format(key_registration.decode()))
         return self._send_request(url=self.key_service_url.rstrip("/mpack"),
                                   data=key_registration,

@@ -1,7 +1,6 @@
+import machine
 import sys
 import time
-
-import machine
 
 
 class Connection:
@@ -112,6 +111,7 @@ class WIFI(Connection):
                 print("!! available networks:")
                 print("!! " + repr([net.ssid for net in nets]))
                 retries -= 1
+                machine.idle()
                 time.sleep(30)
             else:
                 return False
@@ -123,7 +123,7 @@ class WIFI(Connection):
         self.wlan.disconnect()
 
 
-def get_connection(cfg: dict) -> Connection:
+def init_connection(cfg: dict) -> Connection:
     if cfg['connection'] == "wifi":
         return WIFI(cfg['networks'])
     elif cfg['connection'] == "nbiot":

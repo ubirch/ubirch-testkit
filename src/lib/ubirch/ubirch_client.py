@@ -30,7 +30,7 @@ class UbirchClient:
         print("** UUID   : " + str(self.uuid) + "\n")
 
         # after boot or restart try to register public key at ubirch key service
-        print("** registering identity at key service ...")
+        print("** registering public key at key service ...")
         key_registration = get_certificate(self.uuid, self.sim, self.key_name)
         self.api.register_identity(key_registration)
 
@@ -60,8 +60,8 @@ class UbirchClient:
         message_hash = get_payload(upp)
         print("** hash: {}".format(binascii.b2a_base64(message_hash).decode()))
 
-        # verify that the hash was received and verifiable by the backend
-        print("** verifying hash in backend ...")
-        time.sleep(0.2)  # wait for the backend to be ready
-        response = self.api.verify(message_hash, quick=True)
-        if self.debug: print("** verification service response: " + response.decode())
+        # OPTIONAL # verify that the hash was received and verifiable by the backend
+        # print("** verifying hash in backend ...")
+        # time.sleep(0.2)  # wait for the backend to be ready
+        # response = self.api.verify(message_hash, quick=True)
+        # if self.debug: print("** verification service response: " + response.decode())

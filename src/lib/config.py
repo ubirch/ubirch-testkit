@@ -8,7 +8,7 @@ VERIFICATION_SERVICE = "https://verify.{}.ubirch.com/api/upp"
 BOOTSTRAP_SERVICE = "https://api.console.{}.ubirch.com/ubirch-web-ui/api/v1/devices/bootstrap"
 
 
-def get_config(user_config: str = "config.json", sd_card_mounted: bool = False) -> dict:
+def load_config(user_config: str = "config.json", sd_card_mounted: bool = False) -> dict:
     """
     Load available configurations. First set default configuration (see "default_config.json"),
     then overwrite defaults with configuration from user config file ("config.json")
