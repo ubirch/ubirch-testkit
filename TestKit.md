@@ -39,17 +39,17 @@
 
 <img align="middle" width="67%" src="pictures/assembled.png">
 
-**That's it!**
+**That's it!** Once powered up, the program on the TestKit starts running automatically.
 
 ### How it works
-After the power up, the TestKit will load the configuration from the SD card, connect to the NB-IoT network (APN: *iot.1nce.net*)
+On initial start up, the TestKit will load the configuration from the SD card, connect to the NB-IoT network (APN: *iot.1nce.net*)
  and perform a bootstrap with the UBIRCH backend to acquire the SIM card's PIN via HTTPS.
  Once the SIM card is unlocked, the device will request the x509 certificate from the SIM card's secure storage
  and use it to register the SIM card's public key at the UBIRCH backend. Now the device is ready to send signed 
  UBIRCH Protocol Packages (*UPPs*) to the backend to be anchored to the blockchain.
  
-Once the initialisation is done, the device will take measurements once a minute and send a data message to the UBIRCH data service.
- The data message contains the device UUID, a timestamp and a map with the sensor data:
+After initialisation, the device will take measurements once a minute and send a data message to the UBIRCH data service.
+ The data message contains the device UUID, a timestamp and a map of the sensor data:
 ```json
 {
     "AccPitch": "<accelerator Pitch in [deg]>",

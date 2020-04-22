@@ -74,7 +74,7 @@ After upload, the program starts running on the device. On initial start, the de
                 "L_red": "<ambient light levels (red wavelength) in [lux]>",
                 "P": "<atmospheric pressure in [Pa]>",
                 "T": "<external temperature in [°C]>",
-                "V": "<supply voltage in [V]>",
+                "V": "<supply voltage in [V]>"
             }
     ```
 * pytrack:
@@ -87,7 +87,7 @@ After upload, the program starts running on the device. On initial start, the de
                 "AccZ": "<acceleration on z-axis in [G]>",
                 "GPS_lat": "<longitude in [deg]>",
                 "GPS_long": "<latitude in [deg]>",
-                "V": "<supply voltage in [V]>",
+                "V": "<supply voltage in [V]>"
             }
     ```
 ...and send it to the Ubirch data service. Further, it packs the SHA 256 hash of the data into a chained UPP (Ubirch Protocol Package)
