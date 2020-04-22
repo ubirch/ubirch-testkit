@@ -10,7 +10,7 @@ class UbirchClient:
 
     def __init__(self, cfg: dict, lte: LTE):
         self.debug = cfg['debug']
-        self.key_name = "A"  # fixme -> "ukey"
+        self.key_name = "ukey"
         self.api = API(cfg)
         self.bootstrap_service_url = cfg['bootstrap']
         self.auth = cfg['password']
