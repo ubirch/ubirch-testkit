@@ -1,4 +1,4 @@
-# ubirch TestKit
+# UBIRCH TestKit
 
 <img style="float: right" align="right" width="67%" src="pictures/exploded.jpg">
 
@@ -9,26 +9,26 @@
 - Pycom LTE antenna
 - micro SD card
 - micro USB cable
-- battery
 
 ### What you need
 - micro SD card writer
 
-### Getting started
-1. Register your device at the [ubirch web UI](https://console.prod.ubirch.com):  (TODO: bootstrapping currently only deployed on dev stage -> go to https://console.dev.ubirch.com for now)
-    * Once logged in, go to **Things** (in the menu on the left) and click on `+ ADD NEW DEVICE`.  (TODO: not implemented yet)
-    * Enter the IMSI of your SIM card to the **ID** field. You can also add a description for your device, if you want.
-    * Click on `register`.
+### Quick Start
+  **(TODO: IMSI claiming not implemented yet)**
+1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.demo.ubirch.com):  (TODO: bootstrapping currently only deployed on dev stage -> go to **https://console.dev.ubirch.com** for now)
+    - Login or register if you don't have an account yet.
+    - Go to **Things** (in the menu on the left) and click on `+ ADD NEW DEVICE`.
+    - Enter the IMSI of your SIM card to the **ID** field, add a description for your device (e.g. "TestKit") and click on `register`.
+    - Click on your device (IMSI) in the overview and copy the `apiConfig`.
     
 1. Configure your device:
-    * After registering your IMSI it should now show up under **Your Things**. Click on it and copy the `apiConfig`.
-    * Create a file `config.txt` on the SD card and paste the configuration into it. It should look like this:
+    * Create a file `config.txt` on the SD card and paste the `apiConfig` from the previous step into it. It should look like this:
     ```json
     {
         "password": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx",
-        "keyService": "https://key.prod.ubirch.com/api/keyService/v1/pubkey/mpack",
-        "niomon": "https://niomon.prod.ubirch.com/",
-        "data": "https://data.prod.ubirch.com/v1/msgPack"
+        "keyService": "https://key.demo.ubirch.com/api/keyService/v1/pubkey/mpack",
+        "niomon": "https://niomon.demo.ubirch.com/",
+        "data": "https://data.demo.ubirch.com/v1/msgPack"
     }
     ```
     * Insert the SD card into the Pysense. [(1.)](#assembled-testkit)
@@ -42,11 +42,13 @@
 **That's it!**
 
 ### How it works
-After power up, the TestKit will load the configuration from the SD card, connect to the NB-IoT network,
- perform a bootstrap with the **ubirch bootstrap service** to acquire the PIN for the SIM card and then register its public key at the
- **ubirch key service**.
+After the power up, the TestKit will load the configuration from the SD card, connect to the NB-IoT network (APN: *iot.1nce.net*)
+ and perform a bootstrap with the UBIRCH backend to acquire the SIM card's PIN via HTTPS.
+ Once the SIM card is unlocked, the device will request the x509 certificate from the SIM card's secure storage
+ and use it to register the SIM card's public key at the UBIRCH backend. Now the device is ready to send signed 
+ UBIRCH Protocol Packages (*UPPs*) to the backend to be anchored to the blockchain.
  
-Once the initialisation is done, the device will take measurements every minute and send a data message to the **ubirch data service**.
+Once the initialisation is done, the device will take measurements once a minute and send a data message to the UBIRCH data service.
  The data message contains the device UUID, a timestamp and a map with the sensor data:
 ```json
 {
@@ -63,11 +65,12 @@ Once the initialisation is done, the device will take measurements every minute 
     "V": "<supply voltage in [V]>"
 }
 ```
-In the next step, the device generates a **Ubirch Protocol Package** (*"UPP"*) with the unique hash of the serialised data,
- UUID and timestamp and signs it using the crypto functionality of the SIM card applet. The private key is stored in the
- secure storage of the SIM card and can not be retrieved.
+In the next step, a **UBIRCH Protocol Package** (*"UPP"*) will be generated with the unique hash of the serialised data,
+ UUID and timestamp, chained to the previous UPP and signed with the SIM card's private key using the 
+ crypto functionality of the **SIGNiT** applet. The private key is stored in the secure storage of the SIM card and
+ can not be read by the device.
  
-The sealed data hash is then sent to the **ubirch authentication service** (*"Niomon"*), where it will be verified with
+The sealed data hash is then sent to the **UBIRCH authentication service** (*"Niomon"*), where it will be verified with
  the previously registered public key and anchored to the blockchain.
  
 ### LED
@@ -76,11 +79,11 @@ The LED on the GPy flashes blue during the initialisation process. If anything g
 
 | colour | meaning | what to do |
 |--------|---------|------------|
-| yellow | couldn't get config from SD card | Make sure the SD card is inserted correctly and has a file named `config.txt` with the API config from the ubirch web UI. The content of the file should look like the example in the previous step including the braces (`{` `}`).
+| yellow | couldn't get config from SD card | Make sure the SD card is inserted correctly and has a file named `config.txt` with the API config from the UBIRCH web UI. The content of the file should look like the example in the previous step including the braces (`{` `}`).
 | purple | couldn't connect to network (resets automatically) | Try to find a place with better signal or connect to WIFI instead. (see [here](#configuration) how to do that)
-| red | couldn't acquire PIN to unlock SIM from ubirch backend or other backend related issue | Make sure you have registered the correct IMSI at the [ubirch web UI](https://console.prod.ubirch.com) and you copied the `apiConfig` for your IMSI to the `config.txt` file on the SD card.
-| green | it's all good. device is measuring, sending data, sealing and sending data certificate to the ubirch backend| see next chapter |
-| orange | sending data or data certificate to the ubirch backend failed |  |
+| red | couldn't acquire PIN to unlock SIM from UBIRCH backend or other backend related issue | Make sure you have registered the correct IMSI at the [UBIRCH web UI](https://console.demo.ubirch.com) and you copied the `apiConfig` for your IMSI to the `config.txt` file on the SD card.
+| green | it's all good. device is measuring, sending data, sealing and sending data certificate to the UBIRCH backend| see next chapter |
+| orange | sending data or data certificate to the UBIRCH backend failed |  |
 | off | sleeping until the next measurement interval | 
 
 ### See the data coming in at the backend
@@ -90,26 +93,26 @@ TODO not implemented yet
 TODO not implemented yet
 
 ### Configuration
-You can configure your device by adding further key-value pairs to the `config.txt`-file on the SD card.
+You can configure your device by adding key-value pairs to the `config.txt`-file on the SD card.
  These are the configuration options:
 ```
 {
-    "connection": "<'wifi' or 'nbiot'>",
-    "apn": "<APN for NB IoT connection",
+    "connection": "<'wifi' or 'nbiot', defaults to 'nbiot'>",
+    "apn": "<APN for NB IoT connection, defaults to 'iot.1nce.net'>",
     "networks": {
-        "<WIFI SSID>": "<WIFI PASSWORD>"
+        "<your WIFI SSID>": "<your WIFI password>"
     },
-    "board": "<'pysense' or 'pytrack'>",
+    "board": "<pycom expansion board type ('pysense' or 'pytrack'), defaults to 'pysense'>",
     "password": "<auth token for the ubirch backend>",
-    "env": "<ubirch backend environment ('dev', 'demo' or 'prod')>",
-    "keyService": "<key registration service URL>",
-    "niomon": "<authentication service URL>",
-    "data": "<data service URL>",
-    "verify": "<verification service URL>",
-    "bootstrap": "<bootstrap service URL>",
-    "logfile": <true or false>,
-    "debug": <true or false>,
-    "interval": <measure interval in seconds>
+    "env": "<ubirch backend environment ('dev', 'demo' or 'prod'), defaults to 'demo'>",
+    "keyService": "<key registration service URL, defaults to 'https://key.<env>.ubirch.com/api/keyService/v1/pubkey/mpack'>",
+    "niomon": "<authentication service URL, defaults to 'https://niomon.<env>.ubirch.com/'>",
+    "data": "<data service URL, defaults to 'https://data.<env>.ubirch.com/v1/msgPack'>",
+    "verify": "<verification service URL, defaults to 'https://verify.<env>.ubirch.com/api/upp'>",
+    "bootstrap": "<bootstrap service URL, defaults to 'https://api.console.<env>.ubirch.com/ubirch-web-ui/api/v1/devices/bootstrap'>",
+    "logfile": <flag to enable error logging to file (true or false), defaults to 'true'>,
+    "debug": <flag to enable extended debug console output (true or false), defaults to 'false'>,
+    "interval": <measure interval in seconds, defaults to '60'>
 }
 ```
 There are default values for everything except for the `password`-key, but you can overwrite the default configuration
@@ -119,10 +122,10 @@ The default connection type is NB-IoT, but if you can not connect to a NB-IoT ne
 ```
     "connection": "wifi",
     "networks": {
-      "<WIFI SSID>": "<WIFI PASSWORD>"
+      "<WIFI_SSID>": "<WIFI_PASSWORD>"
     },
 ```
-...to your config file and replacing `<WIFI SSID>` with your SSID and `<WIFI PASSWORD>` with your password.
+...to your config file and replacing `<WIFI_SSID>` with your SSID and `<WIFI_PASSWORD>` with your password.
 
 ### Log file
 If a SD card is present, the device will create a `log.txt`-file on the card and write an error log to it.
