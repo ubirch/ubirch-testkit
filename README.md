@@ -6,7 +6,12 @@ The micropython example code uses a SIM Card with SIGNiT applet for cryptographi
  
  If you have a UBIRCH TestKit, you can head over to the [TestKit manual](TestKit.md) and follow the Quick Start
  for rapid UBIRCHING.
-
+ 
+### Prepare your device
+Before you start, you should get the latest firmware for your Pycom.
+ See the [Pycom documentation](https://docs.pycom.io/gettingstarted/installation/firmwaretool/) to learn how to do  a 
+ firmware update and [this manual](https://docs.pycom.io/gettingstarted/connection/gpy/) on how to assemble your device.
+ 
 ### Set up Environment
 1. Get Pymakr for *Atom* or *Visual Studio Code*
     - Download and install [**Atom**](https://atom.io) or [**Visual Studio Code**](https://code.visualstudio.com/download) 
@@ -50,10 +55,13 @@ The micropython example code uses a SIM Card with SIGNiT applet for cryptographi
         - insert SIM card to GPy
         - mount the GPy on the expansion board (LED on the GPy goes over the micro USB port on the expansion board)
         - attach the cellular antenna to the Gpy (next to LED on the GPy)
-            > Using LTE/NB-IoT connectivity without
-     the antenna being attached could damage your device! More info [here](https://docs.pycom.io/gettingstarted/connection/gpy/).
-    - Connect the Pycom device to your computer via USB
-    - watch Pymakr console in your IDE to see if it worked (should show up automatically on the bottom of the Atom window)
+            > Using LTE/NB-IoT connectivity without the antenna being attached could damage your device!
+    - Connect the Pycom device to your computer via USB and watch Pymakr console in your IDE. If it worked, you should see the following output:
+      ```
+      Connecting to /dev/ttyACM0...
+      
+      >>> 
+      ```
     - Press the Pymakr `UPLOAD` button.
 
 ### Program flow
@@ -90,8 +98,10 @@ After upload, the program starts running on the device. On initial start, the de
                 "V": "<supply voltage in [V]>"
             }
     ```
-...and send it to the Ubirch data service. Further, it packs the SHA 256 hash of the data into a chained UPP (Ubirch Protocol Package)
-which is the certificate of the data's authenticity, and sends it to the Ubirch public blockchain based authentication and timestamping service.
+...and send it to the UBIRCH data service. 
+
+It then packs the SHA 256 hash of the data into a signed and chained UPP (Ubirch Protocol Package) which is the certificate
+ of the data's authenticity, and sends it to the UBIRCH public blockchain based authentication and timestamping service.
 
 
 ## Check Blockchain Anchoring
