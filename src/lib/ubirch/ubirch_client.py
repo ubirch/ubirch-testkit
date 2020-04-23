@@ -14,7 +14,7 @@ class UbirchClient:
         self.api = API(cfg)
         self.bootstrap_service_url = cfg['bootstrap']
         self.auth = cfg['password']
-        self.sim = SimProtocol(lte=lte)
+        self.sim = SimProtocol(lte=lte, at_debug=self.debug)
 
         # get IMSI from SIM
         imsi = self.sim.get_imsi()
