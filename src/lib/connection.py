@@ -43,13 +43,14 @@ class NB_IoT(Connection):
             raise OSError("!! unable to set time.")
 
     def attach(self, apn: str) -> bool:
+        sys.stdout.write("++ attaching to the NB-IoT network")
         self.lte.attach(band=8, apn=apn)
         i = 0
-        sys.stdout.write("++ attaching to the NB-IoT network")
         while not self.lte.isattached() and i < 60:
+            i += 1
+            machine.idle()
             time.sleep(1.0)
             sys.stdout.write(".")
-            i += 1
         print("")
         if self.lte.isattached():
             print("-- attached: {} s".format(i))
@@ -57,13 +58,14 @@ class NB_IoT(Connection):
         return False
 
     def connect(self) -> bool:
+        sys.stdout.write("++ connecting to the NB-IoT network")
         self.lte.connect()  # start a data session and obtain an IP address
         i = 0
-        sys.stdout.write("++ connecting to the NB-IoT network")
         while not self.lte.isconnected() and i < 60:
+            i += 1
+            machine.idle()
             time.sleep(1.0)
             sys.stdout.write(".")
-            i += 1
         print("")
         if self.lte.isconnected():
             print("-- connected: {} s\n".format(i))
@@ -91,8 +93,7 @@ class WIFI(Connection):
             raise OSError("!! unable to set time.")
 
     def connect(self) -> bool:
-        retries = 5
-        while True:
+        for _ in range(4):
             nets = self.wlan.scan()
             print("++ searching for wifi networks...")
             for net in nets:
@@ -106,15 +107,12 @@ class WIFI(Connection):
                     print('-- wifi network connected')
                     print('-- IP address: {}\n'.format(self.wlan.ifconfig()))
                     return True
-            if retries > 0:
-                print("!! no usable networks found, trying again in 30s")
-                print("!! available networks:")
-                print("!! " + repr([net.ssid for net in nets]))
-                retries -= 1
-                machine.idle()
-                time.sleep(30)
-            else:
-                return False
+            print("!! no usable networks found, trying again in 30s")
+            print("!! available networks:")
+            print("!! " + repr([net.ssid for net in nets]))
+            machine.idle()
+            time.sleep(30)
+        return False
 
     def is_connected(self) -> bool:
         return self.wlan.isconnected()
