@@ -34,8 +34,9 @@ class ErrorHandler:
         set_led(led_color)
         print_to_console(error)
         self.log_to_file(error)
+        machine.idle()
+        time.sleep(3)
         if reset:
-            time.sleep(5)
             machine.reset()
 
     def log_to_file(self, error):
