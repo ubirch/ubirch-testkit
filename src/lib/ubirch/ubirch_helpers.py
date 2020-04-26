@@ -22,6 +22,20 @@ def asn1tosig(data: bytes):
 
 
 def get_certificate(uuid: UUID, sim: SimProtocol, key_name: str) -> bytes:
+    """Load or create new key certificate. The created certificates are stored in a binary file in the flash memory."""
+    cert_file = str(uuid) + "_crt.bin"
+    if cert_file in os.listdir():
+        print("** loading existing key certificate for identity " + str(uuid))
+        with open(cert_file, "rb") as cf:
+            return cf.read()
+    else:
+        print("** generating new key certificate for identity " + str(uuid))
+        cert = _create_certificate(uuid, sim, key_name)
+        with open(cert_file, "wb") as cf:
+            cf.write(cert)
+
+
+def _create_certificate(uuid: UUID, sim: SimProtocol, key_name: str) -> bytes:
     """
     Get a signed json with the key registration request until CSR handling is in place.
     TODO this will be replaced by the X.509 certificate from the SIM card
