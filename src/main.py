@@ -30,7 +30,6 @@ def wake_up():
 def sleep_until_next_interval(start_time, interval):
     passed_time = time.time() - start_time
     if interval > passed_time:
-        print("\n** going to sleep...\n")
         pycom.rgbled(0)  # LED off
         machine.idle()
         time.sleep(interval - passed_time)
@@ -76,7 +75,7 @@ class Main:
     def loop(self):
         # disable blue heartbeat blink
         pycom.heartbeat(False)
-        print("** starting loop. interval = {} seconds\n".format(self.interval))
+        print("\n** starting loop (interval = {} seconds)\n".format(self.interval))
         while True:
             start_time = wake_up()
 
@@ -95,19 +94,15 @@ class Main:
                 self.ubirch_client.send(data)
             except Exception as e:
                 self.error_handler.report(e, LED_ORANGE)
-                if isinstance(e, OSError):
-                    machine.reset()
 
             # LTE stops working after a while, so we disconnect after sending
             # and reconnect again in the next interval to make sure it still works
             if isinstance(self.connection, NB_IoT):
                 self.connection.disconnect()
 
+            print("** done\n")
             sleep_until_next_interval(start_time, self.interval)
 
 
 main = Main()
-try:  # todo
-    main.loop()
-except Exception as e:
-    main.error_handler.report(e, LED_RED, reset=True)
+main.loop()

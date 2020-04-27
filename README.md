@@ -106,9 +106,9 @@ It then packs the SHA 256 hash of the data into a signed and chained UPP (Ubirch
 
 ## Check Blockchain Anchoring
 1. While the Pycom is connected and running, and the IDE is open, check the Pymakr console and wait for the hash of 
-a measurement certificate to appear, e.g.:
+a data message to appear, e.g.:
     ```
-    ** hash: pmTIZoaIU0JURSbKqrAeZ6XtfCz5FfJmQIohoOX/38A=
+    ** data message hash: kk/3ZIvK4SOPZXYnSoaFRt1n7ncC+9RxWnFXPO9tzdk=
     ```
     Copy the hash.
 

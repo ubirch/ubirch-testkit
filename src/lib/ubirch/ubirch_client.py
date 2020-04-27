@@ -42,21 +42,23 @@ class UbirchClient:
         """
         # pack data message containing measurements, device UUID and timestamp to ensure unique hash
         message = pack_data_json(self.uuid, data)
-        print("** data message [json]: {}".format(message.decode()))
+        print("** data message [json]: {}\n".format(message.decode()))
 
         # send data message to data service
+        print("** sending data message ...\n")
         self.api.send_data(self.uuid, message)
 
         # seal the data message (data message will be hashed and inserted into UPP as payload by SIM card)
         upp = self.sim.message_chained(self.key_name, message, hash_before_sign=True)
-        print("** UPP [msgpack]: {}".format(binascii.hexlify(upp).decode()))
+        print("** UPP [msgpack]: {}\n".format(binascii.hexlify(upp).decode()))
 
         # send UPP to the ubirch authentication service to be anchored to the blockchain
+        print("** sending UPP ...\n")
         self.api.send_upp(self.uuid, upp)
 
         # retrieve data message hash from generated UPP for verification
         message_hash = get_upp_payload(upp)
-        print("** hash: {}".format(binascii.b2a_base64(message_hash).decode().rstrip("\n")))
+        print("** data message hash: {}".format(binascii.b2a_base64(message_hash).decode()))
 
         # OPTIONAL # verify that the hash was received and verifiable by the backend
         # print("** verifying hash in backend ...")
