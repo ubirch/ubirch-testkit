@@ -70,33 +70,33 @@ After upload, the program starts running on the device. On initial start, the de
  the x509 certificate from the SIM card's secure storage and use it to register the SIM card's public key at
  the UBIRCH backend. After that, it will frequently measure the following data...
 * pysense:
-    ```json
-            {
-                "AccPitch": "<accelerator Pitch in [deg]>",
-                "AccRoll": "<accelerator Roll in [deg]>",
-                "AccX": "<acceleration on x-axis in [G]>",
-                "AccY": "<acceleration on y-axis in [G]>",
-                "AccZ": "<acceleration on z-axis in [G]>",
-                "H": "<relative humidity in [%RH]>",
-                "L_blue": "<ambient light levels (violet-blue wavelength) in [lux]>",
-                "L_red": "<ambient light levels (red wavelength) in [lux]>",
-                "P": "<atmospheric pressure in [Pa]>",
-                "T": "<external temperature in [°C]>",
-                "V": "<supply voltage in [V]>"
-            }
+    ```
+    {
+        "AccPitch": <accelerator Pitch in [deg]>,
+        "AccRoll": <accelerator Roll in [deg]>,
+        "AccX": <acceleration on x-axis in [G]>,
+        "AccY": <acceleration on y-axis in [G]>,
+        "AccZ": <acceleration on z-axis in [G]>,
+        "H": <relative humidity in [%RH]>,
+        "L_blue": <ambient light levels (violet-blue wavelength) in [lux]>,
+        "L_red": <ambient light levels (red wavelength) in [lux]>,
+        "P": <atmospheric pressure in [Pa]>,
+        "T": <external temperature in [°C]>,
+        "V": <supply voltage in [V]>
+    }
     ```
 * pytrack:
-    ```json
-            {
-                "AccPitch": "<accelerator Pitch in [deg]>",
-                "AccRoll": "<accelerator Roll in [deg]>",
-                "AccX": "<acceleration on x-axis in [G]>",
-                "AccY": "<acceleration on y-axis in [G]>",
-                "AccZ": "<acceleration on z-axis in [G]>",
-                "GPS_lat": "<longitude in [deg]>",
-                "GPS_long": "<latitude in [deg]>",
-                "V": "<supply voltage in [V]>"
-            }
+    ```
+    {
+        "AccPitch": <accelerator Pitch in [deg]>,
+        "AccRoll": <accelerator Roll in [deg]>,
+        "AccX": <acceleration on x-axis in [G]>,
+        "AccY": <acceleration on y-axis in [G]>,
+        "AccZ": <acceleration on z-axis in [G]>,
+        "GPS_lat": <latitude in [deg]>,
+        "GPS_long": <longitude in [deg]>,
+        "V": <supply voltage in [V]>
+    }
     ```
 ...and send it to the UBIRCH data service. 
 
@@ -108,8 +108,7 @@ It then packs the SHA 256 hash of the data into a signed and chained UPP (Ubirch
 1. While the Pycom is connected and running, and the IDE is open, check the Pymakr console and wait for the hash of 
 a measurement certificate to appear, e.g.:
     ```
-    ** sending measurement certificate ...
-    hash: nU3Q1JbJ/q/U0nxbremiIbHtKwaHSD9N9qPHeSr0sXTh3ZaVLyTioZZ3wfiQL0gFONIpGQGKgcr0RyLj4gGO1w==
+    ** hash: pmTIZoaIU0JURSbKqrAeZ6XtfCz5FfJmQIohoOX/38A=
     ```
     Copy the hash.
 

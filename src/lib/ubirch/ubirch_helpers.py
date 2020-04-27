@@ -4,10 +4,9 @@ import os
 import time
 import ubinascii as binascii
 import ujson as json
-import umsgpack as msgpack
 from uuid import UUID
 from .ubirch_api import API
-from .ubirch_sim import SimProtocol, APP_UBIRCH_SIGNED, APP_UBIRCH_CHAINED
+from .ubirch_sim import SimProtocol
 
 
 def asn1tosig(data: bytes):
@@ -22,7 +21,10 @@ def asn1tosig(data: bytes):
 
 
 def get_certificate(uuid: UUID, sim: SimProtocol, key_name: str) -> bytes:
-    """Load or create new key certificate. The created certificates are stored in a binary file in the flash memory."""
+    """
+    Load or create new key certificate. The created certificates are stored in a binary file in the flash memory.
+    TODO this will be replaced by the X.509 certificate from the SIM card
+    """
     cert_file = str(uuid) + "_crt.bin"
     if cert_file in os.listdir():
         print("** loading existing key certificate for identity " + str(uuid))
@@ -38,7 +40,6 @@ def get_certificate(uuid: UUID, sim: SimProtocol, key_name: str) -> bytes:
 def _create_certificate(uuid: UUID, sim: SimProtocol, key_name: str) -> bytes:
     """
     Get a signed json with the key registration request until CSR handling is in place.
-    TODO this will be replaced by the X.509 certificate from the SIM card
     """
     TIME_FMT = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}.000Z'
     now = machine.RTC().now()
@@ -59,7 +60,7 @@ def get_pin(imsi: str, api: API) -> str:
     # load PIN or bootstrap if PIN unknown
     pin_file = imsi + ".bin"
     pin = ""
-    if pin_file in os.listdir('.'):
+    if pin_file in os.listdir():
         print("loading PIN for " + imsi + "\n")
         with open(pin_file, "rb") as f:
             pin = f.readline().decode()
@@ -77,9 +78,9 @@ def get_pin(imsi: str, api: API) -> str:
     return pin
 
 
-def pack_data_msgpack(uuid: UUID, data: dict) -> bytes:
+def pack_data_json(uuid: UUID, data: dict) -> bytes:
     """
-    Generate a msgpack formatted message for the ubirch data service.
+    Generate a JSON formatted message for the ubirch data service.
     The message contains the device UUID, timestamp and data to ensure unique hash.
     :param uuid: the device UUID
     :param data: the mapped data to be sent to the ubirch data service
@@ -89,22 +90,55 @@ def pack_data_msgpack(uuid: UUID, data: dict) -> bytes:
     MSG_TYPE = 1
 
     # pack the message
-    msg = [
-        uuid.bytes,
-        MSG_TYPE,
-        int(time.time()),
-        data
-    ]
+    msg_map = {
+        'uuid': str(uuid),
+        'msg_type': MSG_TYPE,
+        'timestamp': int(time.time()),
+        'data': data
+    }
 
-    # return serialized message
-    return msgpack.packb(msg)
+    # create a compact sorted rendering of the message to ensure determinism when creating the hash
+    # and return serialized message
+    return serialize_json(msg_map)
 
 
-def get_payload(upp: bytes) -> bytes:
-    unpacked = msgpack.unpackb(upp)
-    if unpacked[0] == APP_UBIRCH_SIGNED:
-        return unpacked[3]
-    elif unpacked[0] == APP_UBIRCH_CHAINED:
-        return unpacked[4]
+def serialize_json(msg: dict) -> bytes:
+    """
+    create a compact sorted rendering of a json object since micropython
+    implementation of ujson.dumps does not support sorted keys
+    :param msg: the json object (dict) to serialize
+    :return: the compact sorted rendering
+    """
+    serialized = "{"
+    for key in sorted(msg):
+        serialized += "\"{}\":".format(key)
+        value = msg[key]
+        value_type = type(value)
+        if value_type is str:
+            serialized += "\"{:s}\"".format(value)
+        elif value_type is int:
+            serialized += "{:d}".format(value)
+        elif isinstance(value, float):
+            serialized += "\"{:.2f}\"".format(value)
+        elif value_type is dict:
+            serialized += serialize_json(value).decode()
+        else:
+            raise Exception("unsupported data type {} for serialization in json message".format(value_type))
+        serialized += ","
+    serialized = serialized.rstrip(",") + "}"  # replace last comma with closing braces
+    return serialized.encode()
+
+
+def get_upp_payload(upp: bytes) -> bytes:
+    """
+    Get the payload of a Ubirch Protocol Message
+    """
+    if upp[0] == 0x95 and upp[1] == 0x22:  # signed UPP
+        payload_start_idx = 23
+    elif upp[0] == 0x96 and upp[1] == 0x23:  # chained UPP
+        payload_start_idx = 89
     else:
-        raise Exception("!! can't get payload from {} (not a UPP)")
+        raise Exception("!! can't get payload from {} (not a UPP)".format(binascii.hexlify(upp).decode()))
+
+    payload_len = upp[payload_start_idx - 1]
+    return upp[payload_start_idx:payload_start_idx + payload_len]

@@ -71,9 +71,9 @@ class API:
         :return: the response from the server
         """
         if self.debug:
-            print("** register public key at " + self.key_service_url.rstrip("/mpack"))
+            print("** register public key at " + self.key_service_url)
             print("** key registration message [json]: {}".format(key_registration.decode()))
-        return self._send_request(url=self.key_service_url.rstrip("/mpack"),
+        return self._send_request(url=self.key_service_url,
                                   data=key_registration,
                                   headers={'Content-Type': 'application/json'})
 
@@ -93,15 +93,41 @@ class API:
 
     def send_data(self, uuid: UUID, message: bytes) -> bytes:
         """
-        Send a message to the ubirch data service.
+        Send a data message to the ubirch data service. Requires encoding before sending.
         :param uuid: the sender's UUID
-        :param message: the message to send to the data service
+        :param message: the msgpack or JSON encoded message to send
+        :return: the response from the server
+        """
+        if message.startswith(b'{'):
+            return self._send_data_json(uuid, message)
+        else:
+            return self._send_data_mpack(uuid, message)
+
+    def _send_data_json(self, uuid: UUID, message: bytes) -> bytes:
+        """
+        Send a json formatted data message to the ubirch data service.
+        :param uuid: the sender's UUID
+        :param message: the json formatted message to send to the data service
         :return: the response from the server
         """
         if self.debug:
-            print("** sending data message to " + self.data_service_url)
+            print("** sending data message to " + self.data_service_url + "/json")
         self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
-        return self._send_request(url=self.data_service_url,
+        return self._send_request(url=self.data_service_url + "/json",
+                                  data=message,
+                                  headers=self._ubirch_headers)
+
+    def _send_data_mpack(self, uuid: UUID, message: bytes) -> bytes:
+        """
+        Send a msgpack formatted data message to the ubirch data service.
+        :param uuid: the sender's UUID
+        :param message: the msgpack formatted message to send to the data service
+        :return: the response from the server
+        """
+        if self.debug:
+            print("** sending data message to " + self.data_service_url + "/msgPack")
+        self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
+        return self._send_request(url=self.data_service_url + "/msgPack",
                                   data=binascii.hexlify(message),
                                   headers=self._ubirch_headers)
 
