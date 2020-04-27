@@ -39,24 +39,22 @@ def load_config(user_config: str = "config.json", sd_card_mounted: bool = False)
     with open(default_config, 'r') as c:
         cfg = json.load(c)
 
-    # overwrite default config with user config there is one
-    if user_config in os.listdir('.'):
+    # overwrite default config with user config if there is one
+    if user_config in os.listdir():
         with open(user_config, 'r') as c:
             user_cfg = json.load(c)
             cfg.update(user_cfg)
 
-    # if ubirch backend auth token is not set, look for it on SD card
+    # overwrite existing config with config from sd card if there is one
+    api_config_file = 'config.txt'
+    if sd_card_mounted and api_config_file in os.listdir('/sd'):
+        with open('/sd/' + api_config_file, 'r') as c:
+            api_config = json.load(c)
+            cfg.update(api_config)
+
+    # ensure that the ubirch backend auth token is set
     if cfg['password'] is None:
-        api_config_file = 'config.txt'
-        if not sd_card_mounted or api_config_file not in os.listdir('/sd'):
-            raise Exception("missing auth token")
-
-        # get config from SD card
-        with open('/sd/' + api_config_file, 'r') as f:
-            api_config = json.load(f)
-
-        # update existing config with API config from SD card
-        cfg.update(api_config)
+        raise Exception("missing auth token")
 
     # ensure that all necessary service URLs have been set and set default values if not
     if 'niomon' not in cfg:
