@@ -69,7 +69,7 @@ def get_pin(imsi: str, api: API) -> str:
         r = api.bootstrap_sim_identity(imsi)
         if r.status_code == 200:
             info = json.loads(r.content)
-            print("bootstrapping successful: " + repr(info) + "\n")
+            print("bootstrapping successful\n")
             pin = info['pin']
             with open(pin_file, "wb") as f:
                 f.write(pin.encode())
