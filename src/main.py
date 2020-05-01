@@ -49,7 +49,8 @@ class Main:
             while True:
                 machine.idle()
 
-        print("** configuration:\n{}\n".format(cfg))
+        print("** loaded configuration")
+        if cfg['debug']: print(repr(cfg))
 
         # set up error handling
         self.error_handler = ErrorHandler(file_logging_enabled=cfg['logfile'], sd_card_mounted=SD_CARD_MOUNTED)
