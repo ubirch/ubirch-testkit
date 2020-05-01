@@ -70,7 +70,12 @@ def get_pin(imsi: str, api: API) -> str:
         if r.status_code == 200:
             info = json.loads(r.content)
             print("bootstrapping successful\n")
-            pin = info['pin']
+            if info['encrypted']:  # not implemented yet
+                # decrypt PIN here
+                pass
+            else:
+                pin = info['pin']
+
             with open(pin_file, "wb") as f:
                 f.write(pin.encode())
         else:
