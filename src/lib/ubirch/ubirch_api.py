@@ -40,7 +40,7 @@ class API:
                     retries -= 1
                     if self.debug:
                         print("!! sending request failed: {}.\nRetry...\n".format(e))
-                    time.sleep(0.2)
+                    time.sleep(0.5)
                     continue
                 else:
                     raise Exception("!! request to {} failed: {}".format(url, e))
@@ -60,7 +60,7 @@ class API:
             r.close()
             return response
         else:
-            message = r.text
+            message = r.content
             r.close()
             raise Exception("({}): {}".format(status, message))
 
