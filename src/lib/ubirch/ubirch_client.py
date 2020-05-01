@@ -9,12 +9,9 @@ from .ubirch_sim import SimProtocol
 class UbirchClient:
 
     def __init__(self, cfg: dict, lte: LTE):
-        self.debug = cfg['debug']
         self.key_name = "ukey"
         self.api = API(cfg)
-        self.bootstrap_service_url = cfg['bootstrap']
-        self.auth = cfg['password']
-        self.sim = SimProtocol(lte=lte, at_debug=self.debug)
+        self.sim = SimProtocol(lte=lte, at_debug=cfg['debug'])
 
         # get IMSI from SIM
         imsi = self.sim.get_imsi()
@@ -50,7 +47,8 @@ class UbirchClient:
 
         # seal the data message (data message will be hashed and inserted into UPP as payload by SIM card)
         upp = self.sim.message_chained(self.key_name, message, hash_before_sign=True)
-        print("** UPP [msgpack]: {}\n".format(binascii.hexlify(upp).decode()))
+        print("** UPP [msgpack]: {} (base64: {})\n".format(binascii.hexlify(upp).decode(),
+                                                           binascii.b2a_base64(upp).decode().rstrip('\n')))
 
         # send UPP to the ubirch authentication service to be anchored to the blockchain
         print("** sending UPP ...\n")
@@ -60,8 +58,8 @@ class UbirchClient:
         message_hash = get_upp_payload(upp)
         print("** data message hash: {}".format(binascii.b2a_base64(message_hash).decode()))
 
-        # OPTIONAL # verify that the hash was received and verifiable by the backend
-        # print("** verifying hash in backend ...")
+        # # OPTIONAL # verify that the hash was received and verifiable by the backend
+        # print("** verifying hash in backend (quick check) ...")
         # time.sleep(0.2)  # wait for the backend to be ready
         # response = self.api.verify(message_hash, quick=True)
-        # if self.debug: print("** verification service response: " + response.decode())
+        # print("** verification successful! response: " + response.decode())
