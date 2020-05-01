@@ -59,13 +59,13 @@ class Main:
         try:
             self.connection = init_connection(cfg)
         except Exception as e:
-            self.error_handler.report(str(e) + " Resetting device...", LED_PURPLE, reset=True)
+            self.error_handler.report(e, LED_PURPLE, reset=True)
 
         # initialise ubirch client
         try:
             self.ubirch_client = UbirchClient(cfg, lte=self.connection.lte)
         except Exception as e:
-            self.error_handler.report(str(e) + " Resetting device...", LED_RED, reset=True)
+            self.error_handler.report(e, LED_RED, reset=True)
 
         # initialise the sensors
         self.sensors = init_pyboard(cfg['board'])
@@ -87,8 +87,7 @@ class Main:
 
             # make sure device is still connected or reconnect
             if not self.connection.is_connected() and not self.connection.connect():
-                self.error_handler.report("!! unable to connect to network. Resetting device...", LED_PURPLE,
-                                          reset=True)
+                self.error_handler.report("!! unable to connect to network", LED_PURPLE, reset=True)
 
             # send data to ubirch data service and certificate to ubirch auth service
             try:

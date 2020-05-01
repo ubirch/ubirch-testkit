@@ -37,6 +37,8 @@ class ErrorHandler:
         machine.idle()
         time.sleep(3)
         if reset:
+            print("Resetting device...")
+            time.sleep(1)
             machine.reset()
 
     def log_to_file(self, error):
