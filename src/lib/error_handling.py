@@ -12,11 +12,11 @@ LED_PURPLE = 0x220022
 
 
 def set_led(led_color):
-    pycom.heartbeat(False)
+    pycom.heartbeat(False)  # disable blue heartbeat blink
     pycom.rgbled(led_color)
 
 
-def print_to_console(error):
+def print_to_console(error: str or Exception):
     if isinstance(error, Exception):
         sys.print_exception(error)
     else:
@@ -25,44 +25,44 @@ def print_to_console(error):
 
 class ErrorHandler:
 
-    def __init__(self, file_logging_enabled: bool = False, sd_card_mounted: bool = False):
-        self.file_logging_enabled = file_logging_enabled
-        if self.file_logging_enabled:
-            self.logfile = FileLogger(sd_card_mounted)
+    def __init__(self, file_logging_enabled: bool = False, sd_card: bool = False):
+        self.logfile = None
+        if file_logging_enabled:
+            self.logfile = FileLogger(sd_card)
 
-    def report(self, error: str or Exception, led_color: int, reset: bool = False):
+    def log(self, error: str or Exception, led_color: int, reset: bool = False):
         set_led(led_color)
         print_to_console(error)
-        self.log_to_file(error)
+        if self.logfile is not None:
+            self.logfile.log(error)
         machine.idle()
         time.sleep(3)
         if reset:
-            print("Resetting device...")
+            print(">> Resetting device...")
             time.sleep(1)
             machine.reset()
 
-    def log_to_file(self, error):
-        if self.file_logging_enabled:
-            self.logfile.log(error)
-
 
 class FileLogger:
-    MAX_FILE_SIZE = 10000  # in bytes
+    MAX_FILE_SIZE = 20000  # in bytes
 
     def __init__(self, sd_card_mounted: bool = False):
         # set up error logging to log file
         self.rtc = machine.RTC()
-        self.path = '/sd/' if sd_card_mounted else ''
-        self.logfile_name = 'log.txt'
-        with open(self.path + self.logfile_name, 'a') as f:
+        self.logfile = ('/sd/' if sd_card_mounted else '') + 'log.txt'
+        with open(self.logfile, 'a') as f:
             self.file_position = f.tell()
-        print("** file logging enabled\n"
-              "-- file: {}\n"
-              "-- size: {:.1f} kb (free flash memory: {:d} kb)\n".format(
-            self.path + self.logfile_name, self.file_position / 1000.0, os.getfree('/flash')))
+        print(">> file logging enabled")
+        print("-- file: \"{}\"".format(self.logfile))
+        print("-- current size:     {: 6.2f} KB".format(self.file_position / 1000.0))
+        print("-- maximal size:     {: 6.2f} KB".format(self.MAX_FILE_SIZE / 1000.0))
+        print("-- free flash memory:{: 6d} KB".format(os.getfree('/flash')))
+        if sd_card_mounted:
+            print("-- free SD memory:   {: 6d} MB".format(int(os.getfree('/sd') / 1000)))
+        print("")
 
     def log(self, error: str or Exception):
-        with open(self.path + self.logfile_name, 'a') as f:
+        with open(self.logfile, 'a') as f:
             # start overwriting oldest logs once file reached its max size
             # known issue:
             #  once file reached its max size, file position will always be set to beginning after device reset
@@ -71,15 +71,13 @@ class FileLogger:
             # set file to recent position
             f.seek(self.file_position, 0)
 
-            # log error message
+            # log error message and traceback if error is an exception
             t = self.rtc.now()
-            f.write('{:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d} {}\n'.format(t[0], t[1], t[2], t[3], t[4], t[5], error))
-            # # log error message and traceback if error is an exception
-            # f.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
-            # if isinstance(error, Exception):
-            #     sys.print_exception(error, f)
-            # else:
-            #     f.write(error + "\n")
+            f.write('({:04d}.{:02d}.{:02d} {:02d}:{:02d}:{:02d}) '.format(t[0], t[1], t[2], t[3], t[4], t[5]))
+            if isinstance(error, Exception):
+                sys.print_exception(error, f)
+            else:
+                f.write(error + "\n")
 
             # remember current file position
             self.file_position = f.tell()
