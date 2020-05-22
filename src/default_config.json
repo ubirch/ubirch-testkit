@@ -3,7 +3,7 @@
   "apn": "iot.1nce.net",
   "board": "pysense",
   "password": null,
-  "env": "demo",
+  "env": "prod",
   "logfile": true,
   "debug": false,
   "interval": 60

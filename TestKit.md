@@ -14,21 +14,21 @@
 - micro SD card writer
 
 ### Quick Start
-  **(TODO: IMSI claiming not implemented yet)**
-1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.demo.ubirch.com):  (TODO: bootstrapping currently only deployed on dev stage -> go to **https://console.dev.ubirch.com** for now)
+1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.prod.ubirch.com):
     - Login or register if you don't have an account yet.
     - Go to **Things** (in the menu on the left) and click on `+ ADD NEW DEVICE`.
-    - Enter the IMSI of your SIM card to the **ID** field, add a description for your device (e.g. "TestKit") and click on `register`.
-    - Click on your device (IMSI) in the overview and copy the `apiConfig`.
+    - Select ID type **IMSI**, enter the IMSI of your SIM card to the **ID** field, 
+      add a description for your device (e.g. "TestKit") and click on `register`.
+    - Click on your device in the *Your Things* overview and copy the content of the `apiConfig` field.
     
 1. Configure your device:
     * Create a file `config.txt` on the SD card and paste the `apiConfig` from the previous step into it. It should look like this:
     ```json
     {
         "password": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx",
-        "keyService": "https://key.demo.ubirch.com/api/keyService/v1/pubkey/mpack",
-        "niomon": "https://niomon.demo.ubirch.com/",
-        "data": "https://data.demo.ubirch.com/v1/msgPack"
+        "keyService": "https://key.prod.ubirch.com/api/keyService/v1/pubkey/mpack",
+        "niomon": "https://niomon.prod.ubirch.com/",
+        "data": "https://data.prod.ubirch.com/v1/msgPack"
     }
     ```
     * Insert the SD card into the Pysense. [(1.)](#assembled-testkit)
@@ -81,7 +81,7 @@ The LED on the GPy flashes blue during the initialisation process. If anything g
 |--------|---------|------------|
 | yellow | couldn't get config from SD card | Make sure the SD card is inserted correctly and has a file named `config.txt` with the API config from the UBIRCH web UI. The content of the file should look like the example in the previous step including the braces (`{` `}`).
 | purple | couldn't connect to network (resets automatically) | Try to find a place with better signal or connect to WIFI instead. (see [here](#configuration) how to do that)
-| red | couldn't acquire PIN to unlock SIM from UBIRCH backend or other backend related issue | Make sure you have registered the correct IMSI at the [UBIRCH web UI](https://console.demo.ubirch.com) and you copied the `apiConfig` for your IMSI to the `config.txt` file on the SD card.
+| red | couldn't acquire PIN to unlock SIM from UBIRCH backend or other backend related issue | Make sure you have registered the correct IMSI at the [UBIRCH web UI](https://console.prod.ubirch.com) and you copied the `apiConfig` for your IMSI to the `config.txt` file on the SD card.
 | green | it's all good. device is measuring, sending data, sealing and sending data certificate to the UBIRCH backend| see next chapter |
 | orange | sending data or data certificate to the UBIRCH backend failed |  |
 | off | sleeping until the next measurement interval | 
@@ -104,7 +104,7 @@ You can configure your device by adding key-value pairs to the `config.txt`-file
     },
     "board": "<pycom expansion board type ('pysense' or 'pytrack'), defaults to 'pysense'>",
     "password": "<auth token for the ubirch backend>",
-    "env": "<ubirch backend environment ('dev', 'demo' or 'prod'), defaults to 'demo'>",
+    "env": "<ubirch backend environment ('dev', 'demo' or 'prod'), defaults to 'prod'>",
     "keyService": "<key registration service URL, defaults to 'https://key.<env>.ubirch.com/api/keyService/v1/pubkey/mpack'>",
     "niomon": "<authentication service URL, defaults to 'https://niomon.<env>.ubirch.com/'>",
     "data": "<data service URL, defaults to 'https://data.<env>.ubirch.com/v1/msgPack'>",

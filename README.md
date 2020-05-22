@@ -28,12 +28,12 @@ Before you start, you should get the latest firmware for your Pycom.
     - VS Code: `File` -> `Open Folder`
 
 ### Set up SIM card and device
-  **(TODO: IMSI claiming not implemented yet)**
-1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.demo.ubirch.com):  
+1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.prod.ubirch.com):
     - Login or register if you don't have an account yet.
     - Go to **Things** (in the menu on the left) and click on `+ ADD NEW DEVICE`.
-    - Enter the IMSI of your SIM card to the **ID** field, add a description for your device (e.g. "TestKit") and click on `register`.
-    - Click on your device (IMSI) in the overview and copy the `apiConfig`.
+    - Select ID type **IMSI**, enter the IMSI of your SIM card to the **ID** field, 
+      add a description for your device (e.g. "TestKit") and click on `register`.
+    - Click on your device in the *Your Things* overview and copy the content of the `apiConfig` field.
     
 1. Configure your device
     * Create a file `config.json` in the `src` directory of the project and paste the `apiConfig` into it.
@@ -42,9 +42,9 @@ Before you start, you should get the latest firmware for your Pycom.
         ```json
         {
           "password": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx",
-          "keyService": "https://key.demo.ubirch.com/api/keyService/v1/pubkey/mpack",
-          "niomon": "https://niomon.demo.ubirch.com/",
-          "data": "https://data.demo.ubirch.com/v1/msgPack",
+          "keyService": "https://key.prod.ubirch.com/api/keyService/v1/pubkey/mpack",
+          "niomon": "https://niomon.prod.ubirch.com/",
+          "data": "https://data.prod.ubirch.com/v1/msgPack",
           "board": "<'pysense' or 'pytrack'>"
         }
         ```
@@ -114,7 +114,7 @@ a data message to appear, e.g.:
 
 1. Send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests):
     ```
-    curl -s -X POST -H "accept: application/json" -H "Content-Type: text/plain" -d "$HASH" "https://verify.demo.ubirch.com/api/upp/verify/anchor"
+    curl -s -X POST -H "accept: application/json" -H "Content-Type: text/plain" -d "$HASH" "https://verify.prod.ubirch.com/api/upp/verify/anchor"
     ```
     > Replace `$HASH` with the hash copied in step 1
 
@@ -134,7 +134,7 @@ These are the configuration options:
     },
     "board": "<pycom expansion board type ('pysense' or 'pytrack'), defaults to 'pysense'>",
     "password": "<auth token for the ubirch backend>",
-    "env": "<ubirch backend environment ('dev', 'demo' or 'prod'), defaults to 'demo'>",
+    "env": "<ubirch backend environment ('dev', 'demo' or 'prod'), defaults to 'prod'>",
     "keyService": "<key registration service URL, defaults to 'https://key.<env>.ubirch.com/api/keyService/v1/pubkey/mpack'>",
     "niomon": "<authentication service URL, defaults to 'https://niomon.<env>.ubirch.com/'>",
     "data": "<data service URL, defaults to 'https://data.<env>.ubirch.com/v1/msgPack'>",
