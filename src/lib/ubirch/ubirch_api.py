@@ -29,21 +29,18 @@ class API:
         :param headers: the headers for the request
         :return: the response from the server
         """
-        retries = 2
-        while True:
+        err = ""
+        for _ in range(3):
             try:
                 r = requests.post(url=url, data=data, headers=headers)
                 return self._check_response(r)
             except Exception as e:
                 # Try again if sending failed.
-                if retries > 0:
-                    retries -= 1
-                    if self.debug:
-                        print("!! sending request failed: {}.\nRetry...\n".format(e))
-                    time.sleep(0.5)
-                    continue
-                else:
-                    raise Exception("!! request to {} failed: {}".format(url, e))
+                err = str(e)
+                if self.debug: print("!! sending request failed: {}\n".format(err))
+                time.sleep(0.5)
+
+        raise Exception("!! request to {} failed: {}".format(url, err))
 
     def _check_response(self, r: requests.Response) -> bytes:
         """
@@ -62,7 +59,7 @@ class API:
         else:
             message = r.content
             r.close()
-            raise Exception("({}): {}".format(status, message))
+            raise Exception("({}) {}".format(status, message))
 
     def register_identity(self, key_registration: bytes) -> bytes:
         """
