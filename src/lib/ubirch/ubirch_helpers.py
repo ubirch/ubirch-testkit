@@ -35,6 +35,7 @@ def get_certificate(uuid: UUID, sim: SimProtocol, key_name: str) -> bytes:
         cert = _create_certificate(uuid, sim, key_name)
         with open(cert_file, "wb") as cf:
             cf.write(cert)
+        return cert
 
 
 def _create_certificate(uuid: UUID, sim: SimProtocol, key_name: str) -> bytes:
