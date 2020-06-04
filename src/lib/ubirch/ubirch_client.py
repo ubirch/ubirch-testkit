@@ -8,14 +8,10 @@ from .ubirch_sim import SimProtocol
 
 class UbirchClient:
 
-    def __init__(self, cfg: dict, lte: LTE):
+    def __init__(self, cfg: dict, lte: LTE, imsi: str):
         self.key_name = "ukey"
         self.api = API(cfg)
         self.sim = SimProtocol(lte=lte, at_debug=cfg['debug'])
-
-        # get IMSI from SIM
-        imsi = self.sim.get_imsi()
-        print("** IMSI   : " + imsi)
 
         # unlock SIM
         pin = get_pin(imsi, self.api)
