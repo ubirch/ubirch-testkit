@@ -131,19 +131,20 @@ These are the configuration options:
 {
     "connection": "<'wifi' or 'nbiot', defaults to 'nbiot'>",
     "apn": "<APN for NB IoT connection, defaults to 'iot.1nce.net'>",
+    "band": <LTE frequency band (integer or 'null' to scan all bands), defaults to '8'>,
     "networks": {
         "<your WIFI SSID>": "<your WIFI password>"
     },
-    "board": "<pycom expansion board type ('pysense' or 'pytrack'), defaults to 'pysense'>",
+    "board": "<pycom expansion board type ['pysense' or 'pytrack'], defaults to 'pysense'>",
     "password": "<auth token for the ubirch backend>",
-    "env": "<ubirch backend environment ('dev', 'demo' or 'prod'), defaults to 'prod'>",
+    "env": "<ubirch backend environment ['demo' or 'prod'], defaults to 'prod'>",
     "keyService": "<key registration service URL, defaults to 'https://key.<env>.ubirch.com/api/keyService/v1/pubkey/mpack'>",
     "niomon": "<authentication service URL, defaults to 'https://niomon.<env>.ubirch.com/'>",
     "data": "<data service URL, defaults to 'https://data.<env>.ubirch.com/v1/msgPack'>",
     "verify": "<verification service URL, defaults to 'https://verify.<env>.ubirch.com/api/upp'>",
     "bootstrap": "<bootstrap service URL, defaults to 'https://api.console.<env>.ubirch.com/ubirch-web-ui/api/v1/devices/bootstrap'>",
-    "logfile": <flag to enable error logging to file (true or false), defaults to 'true'>,
-    "debug": <flag to enable extended debug console output (true or false), defaults to 'false'>,
+    "logfile": <flag to enable error logging to file [true or false], defaults to 'true'>,
+    "debug": <flag to enable extended debug console output [true or false], defaults to 'false'>,
     "interval": <measure interval in seconds, defaults to '60'>
 }
 ```

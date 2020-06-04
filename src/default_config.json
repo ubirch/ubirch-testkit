@@ -1,6 +1,7 @@
 {
   "connection": "nbiot",
   "apn": "iot.1nce.net",
+  "band": 8,
   "board": "pysense",
   "password": null,
   "env": "prod",

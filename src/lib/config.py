@@ -8,7 +8,7 @@ VERIFICATION_SERVICE = "https://verify.{}.ubirch.com/api/upp"
 BOOTSTRAP_SERVICE = "https://api.console.{}.ubirch.com/ubirch-web-ui/api/v1/devices/bootstrap"
 
 
-def load_config(user_config: str = "config.json", sd_card_mounted: bool = False) -> dict:
+def load_config(sd_card_mounted: bool = False) -> dict:
     """
     Load available configurations. First set default configuration (see "default_config.json"),
     then overwrite defaults with configuration from user config file ("config.json")
@@ -16,6 +16,7 @@ def load_config(user_config: str = "config.json", sd_card_mounted: bool = False)
     {
         "connection": "<'wifi' or 'nbiot'>",
         "apn": "<APN for NB IoT connection",
+        "band": <LTE frequency band (integer) or 'null' to scan all bands>,
         "networks": {
           "<WIFI SSID>": "<WIFI PASSWORD>"
         },
@@ -40,15 +41,16 @@ def load_config(user_config: str = "config.json", sd_card_mounted: bool = False)
         cfg = json.load(c)
 
     # overwrite default config with user config if there is one
+    user_config = "config.json"
     if user_config in os.listdir():
         with open(user_config, 'r') as c:
             user_cfg = json.load(c)
             cfg.update(user_cfg)
 
     # overwrite existing config with config from sd card if there is one
-    api_config_file = 'config.txt'
-    if sd_card_mounted and api_config_file in os.listdir('/sd'):
-        with open('/sd/' + api_config_file, 'r') as c:
+    sd_config = 'config.txt'
+    if sd_card_mounted and sd_config in os.listdir('/sd'):
+        with open('/sd/' + sd_config, 'r') as c:
             api_config = json.load(c)
             cfg.update(api_config)
 
