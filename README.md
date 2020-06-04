@@ -9,10 +9,10 @@ The micropython example code uses a SIM Card with SIGNiT applet for cryptographi
  
 ### Prepare your device
 Before you start, you should follow these instructions:
-    * [Pysense/Pytrack firmware update](https://docs.pycom.io/pytrackpysense/installation/firmware/)
-    * [device assembling](https://docs.pycom.io/gettingstarted/connection/gpy/)
-    * [GPy firmware update](https://docs.pycom.io/gettingstarted/installation/firmwaretool/)
-    * [modem firmware update](https://docs.pycom.io/tutorials/lte/firmware/) **Make sure you'll get the NB-IoT firmware for the modem!**
+* [Pysense/Pytrack firmware update](https://docs.pycom.io/pytrackpysense/installation/firmware/)
+* [device assembling](https://docs.pycom.io/gettingstarted/connection/gpy/)
+* [GPy firmware update](https://docs.pycom.io/gettingstarted/installation/firmwaretool/)
+* [modem firmware update](https://docs.pycom.io/tutorials/lte/firmware/) **Make sure you'll get the NB-IoT firmware for the modem!**
  
 ### Set up Environment
 1. Get Pymakr for *Atom* or *Visual Studio Code*
