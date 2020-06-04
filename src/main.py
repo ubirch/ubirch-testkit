@@ -2,9 +2,10 @@ import machine
 import os
 import time
 from config import load_config
-from connection import init_connection, NB_IoT
-from error_handling import ErrorHandler, set_led, print_to_console, LED_GREEN, LED_YELLOW, LED_ORANGE, LED_RED, \
-    LED_PURPLE
+from connection import init_connection
+from error_handling import *
+from modem import get_imsi
+from network import LTE
 
 # Pycom specifics
 from pyboard import init_pyboard, print_data
@@ -40,6 +41,14 @@ class Main:
     """ ubirch SIM TestKit """
 
     def __init__(self):
+        lte = LTE()
+
+        imsi = get_imsi(lte)
+
+        imsi_file = "imsi.txt"
+        if SD_CARD_MOUNTED and imsi_file not in os.listdir('/sd'):
+            with open('/sd/' + imsi_file, 'w') as f:
+                f.write(imsi)
 
         # load configuration
         try:
@@ -58,13 +67,13 @@ class Main:
 
         # connect to network
         try:
-            self.connection = init_connection(cfg)
+            self.connection = init_connection(lte, cfg)
         except Exception as e:
             self.error_handler.log(e, LED_PURPLE, reset=True)
 
         # initialise ubirch client
         try:
-            self.ubirch_client = UbirchClient(cfg, lte=self.connection.lte)
+            self.ubirch_client = UbirchClient(cfg, lte, imsi)
         except Exception as e:
             self.error_handler.log(e, LED_RED, reset=True)
 
@@ -93,11 +102,6 @@ class Main:
                 self.ubirch_client.send(data)
             except Exception as e:
                 self.error_handler.log(e, LED_ORANGE)
-
-            # LTE stops working after a while, so we disconnect after sending
-            # and reconnect again in the next interval to make sure it still works
-            if isinstance(self.connection, NB_IoT):
-                self.connection.disconnect()
 
             print("** done\n")
             sleep_until_next_interval(start_time, self.interval)

@@ -5,10 +5,6 @@ import time
 
 class Connection:
 
-    def __init__(self):
-        from network import LTE
-        self.lte = LTE()
-
     def set_time(self, ntp: str) -> bool:
         rtc = machine.RTC()
         i = 0
@@ -33,18 +29,19 @@ class Connection:
 
 class NB_IoT(Connection):
 
-    def __init__(self, apn: str):
-        super().__init__()
-        if not self.attach(apn):
+    def __init__(self, lte: LTE, apn: str, band: int or None):
+        self.lte = lte
+
+        if not self.attach(apn, band):
             raise OSError("!! unable to attach to NB-IoT network.")
         if not self.connect():
             raise OSError("!! unable to connect to NB-IoT network.")
         if not self.set_time('185.15.72.251'):
             raise OSError("!! unable to set time.")
 
-    def attach(self, apn: str) -> bool:
+    def attach(self, apn: str, band: int or None) -> bool:
         sys.stdout.write("++ attaching to the NB-IoT network")
-        self.lte.attach(band=8, apn=apn)
+        self.lte.attach(band=band, apn=apn)
         i = 0
         while not self.lte.isattached() and i < 60:
             i += 1
@@ -83,7 +80,6 @@ class NB_IoT(Connection):
 class WIFI(Connection):
 
     def __init__(self, networks: dict):
-        super().__init__()
         from network import WLAN
         self.wlan = WLAN(mode=WLAN.STA)
         self.networks = networks
@@ -121,11 +117,11 @@ class WIFI(Connection):
         self.wlan.disconnect()
 
 
-def init_connection(cfg: dict) -> Connection:
+def init_connection(lte: LTE, cfg: dict) -> Connection:
     if cfg['connection'] == "wifi":
         return WIFI(cfg['networks'])
     elif cfg['connection'] == "nbiot":
-        return NB_IoT(cfg['apn'])
+        return NB_IoT(lte, cfg['apn'], cfg['band'])
     else:
         raise Exception(
             "Connection type {} not supported. Supported types: 'wifi' and 'nbiot'".format(cfg['connection']))
