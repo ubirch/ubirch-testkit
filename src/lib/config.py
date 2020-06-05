@@ -64,6 +64,8 @@ def load_config(sd_card_mounted: bool = False) -> dict:
 
     # now make sure the env key has the actual environment value that is used in the URL
     cfg['env'] = cfg['niomon'].split(".")[1]
+    if cfg['env'] not in ["dev", "demo", "prod"]:
+        raise Exception("invalid ubirch backend environment \"{}\"".format(cfg['env']))
 
     # and set remaining URLs
     if 'keyService' not in cfg:
