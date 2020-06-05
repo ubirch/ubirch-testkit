@@ -5,6 +5,10 @@ class Pyboard(Pycoproc):
 
     def __init__(self):
         super().__init__(i2c=None, sda='P22', scl='P21')
+
+        from .LIS2HH12 import LIS2HH12
+
+        self.accelerometer = LIS2HH12(self)
         self.voltage = self.read_battery_voltage
 
     def get_data(self) -> dict:
@@ -12,7 +16,14 @@ class Pyboard(Pycoproc):
         Get data from the sensors
         :return: a dictionary (json) with the data
         """
-        return {"V": self.voltage()}
+        return {
+            "AccX": self.accelerometer.acceleration()[0],
+            "AccY": self.accelerometer.acceleration()[1],
+            "AccZ": self.accelerometer.acceleration()[2],
+            "AccRoll": self.accelerometer.roll(),
+            "AccPitch": self.accelerometer.pitch(),
+            "V": self.voltage()
+        }
 
 
 class Pysense(Pyboard):
@@ -21,31 +32,24 @@ class Pysense(Pyboard):
         """Initialized sensors on Pysense"""
         super().__init__()
 
-        from .LIS2HH12 import LIS2HH12
         from .LTR329ALS01 import LTR329ALS01
-        from .SI7006A20 import SI7006A20
         from .MPL3115A2 import MPL3115A2, ALTITUDE, PRESSURE
+        from .SI7006A20 import SI7006A20
 
-        self.accelerometer = LIS2HH12(self)
         self.light = LTR329ALS01(self).light
-        self.humidity = SI7006A20(self)
-        self.barometer = MPL3115A2(self, mode=PRESSURE)
         # self.altimeter = MPL3115A2(self, mode=ALTITUDE)
+        self.barometer = MPL3115A2(self, mode=PRESSURE)
+        self.humidity = SI7006A20(self)
 
     def get_data(self) -> dict:
         data = super().get_data()
         data.update({
-            "AccX": self.accelerometer.acceleration()[0],
-            "AccY": self.accelerometer.acceleration()[1],
-            "AccZ": self.accelerometer.acceleration()[2],
-            "AccRoll": self.accelerometer.roll(),
-            "AccPitch": self.accelerometer.pitch(),
+            "L_blue": self.light()[0],
+            "L_red": self.light()[1],
+            # "Alt": self.altimeter.altitude(),
             "T": self.barometer.temperature(),
             "P": self.barometer.pressure(),
-            # "Alt": self.altimeter.altitude(),
-            "H": self.humidity.humidity(),
-            "L_blue": self.light()[0],
-            "L_red": self.light()[1]
+            "H": self.humidity.humidity()
         })
         return data
 
@@ -56,20 +60,13 @@ class Pytrack(Pyboard):
         """Initialize sensors on Pytrack"""
         super().__init__()
 
-        from .LIS2HH12 import LIS2HH12
         from .L76GNSS import L76GNSS
 
-        self.accelerometer = LIS2HH12(self)
         self.location = L76GNSS(self, timeout=30)
 
     def get_data(self) -> dict:
         data = super().get_data()
         data.update({
-            "AccX": self.accelerometer.acceleration()[0],
-            "AccY": self.accelerometer.acceleration()[1],
-            "AccZ": self.accelerometer.acceleration()[2],
-            "AccRoll": self.accelerometer.roll(),
-            "AccPitch": self.accelerometer.pitch(),
             "GPS_long": self.location.coordinates()[0],
             "GPS_lat": self.location.coordinates()[1]
         })
