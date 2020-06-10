@@ -15,6 +15,7 @@ class API:
         self.auth_service_url = cfg['niomon']
         self.verification_service_url = cfg['verify']
         self.bootstrap_service_url = cfg['bootstrap']
+        self.identity_service_url = cfg['identity']
         self._ubirch_headers = {
             'X-Ubirch-Credential': binascii.b2a_base64(cfg['password']).decode().rstrip('\n'),
             'X-Ubirch-Auth-Type': 'ubirch'
@@ -62,9 +63,9 @@ class API:
             r.close()
             raise Exception("({}) {}".format(status, message))
 
-    def register_identity(self, key_registration: bytes) -> bytes:
+    def register_key(self, key_registration: bytes) -> bytes:
         """
-        Register an identity at the key service.
+        Register a public key at the key service.
         :param key_registration: the key registration data
         :return: the response from the server
         """
@@ -156,3 +157,14 @@ class API:
             print("** bootstrapping identity {} at {}".format(imsi, self.bootstrap_service_url))
         self._ubirch_headers['X-Ubirch-IMSI'] = imsi
         return requests.get(url=self.bootstrap_service_url, headers=self._ubirch_headers)
+
+    def send_csr(self, csr: bytes) -> bytes:
+        """
+        Register a public key at the key service.
+        :param key_registration: the key registration data
+        :return: the response from the server
+        """
+        if self.debug: print("** sending CSR to " + self.identity_service_url)
+        return self._send_request(url=self.identity_service_url,
+                                  data=csr,
+                                  headers={'Content-Type': 'application/octet-stream'})

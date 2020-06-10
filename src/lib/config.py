@@ -6,6 +6,7 @@ KEY_SERVICE = "https://key.{}.ubirch.com/api/keyService/v1/pubkey"
 DATA_SERVICE = "https://data.{}.ubirch.com/v1"
 VERIFICATION_SERVICE = "https://verify.{}.ubirch.com/api/upp"
 BOOTSTRAP_SERVICE = "https://api.console.{}.ubirch.com/ubirch-web-ui/api/v1/devices/bootstrap"
+IDENTITY_SERVICE = "https://identity.{}.ubirch.com/api/certs/v1/csr/register"
 
 
 def load_config(sd_card_mounted: bool = False) -> dict:
@@ -82,5 +83,7 @@ def load_config(sd_card_mounted: bool = False) -> dict:
         cfg['verify'] = VERIFICATION_SERVICE.format(cfg['env'])
     if 'bootstrap' not in cfg:
         cfg['bootstrap'] = BOOTSTRAP_SERVICE.format(cfg['env'])
+    if 'identity' not in cfg:
+        cfg['identity'] = IDENTITY_SERVICE.format(cfg['env'])
 
     return cfg
