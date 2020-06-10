@@ -20,27 +20,22 @@ def asn1tosig(data: bytes):
     return part1 + part2
 
 
-def get_certificate(uuid: UUID, sim: SimProtocol, key_name: str) -> bytes:
+def register_public_key(uuid: UUID, key_name: str, sim: SimProtocol, api: API):
     """
-    Load or create new key certificate. The created certificates are stored in a binary file in the flash memory.
-    TODO this will be replaced by the X.509 certificate from the SIM card
+    Register a public key at the ubirch key service
     """
-    cert_file = str(uuid) + "_crt.bin"
-    if cert_file in os.listdir():
-        print("** loading existing key certificate for identity " + str(uuid))
-        with open(cert_file, "rb") as cf:
-            return cf.read()
-    else:
-        print("** generating new key certificate for identity " + str(uuid))
-        cert = _create_certificate(uuid, sim, key_name)
-        with open(cert_file, "wb") as cf:
-            cf.write(cert)
-        return cert
+    cert_file = "cert_{}.bin".format(str(uuid))
+    if cert_file not in os.listdir():
+        print("** registering public key at key service ...")
+        cert = create_certificate(uuid, key_name, sim)
+        api.register_key(cert)
+        with open(cert_file, "wb") as f:
+            f.write(cert)
 
 
-def _create_certificate(uuid: UUID, sim: SimProtocol, key_name: str) -> bytes:
+def create_certificate(uuid: UUID, key_name: str, sim: SimProtocol) -> bytes:
     """
-    Get a signed json with the key registration request until CSR handling is in place.
+    Get a self-signed JSON formatted public key certificate
     """
     TIME_FMT = '{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}.000Z'
     now = machine.RTC().now()
@@ -57,7 +52,7 @@ def _create_certificate(uuid: UUID, sim: SimProtocol, key_name: str) -> bytes:
                                                          binascii.b2a_base64(signature).decode()[:-1]).encode()
 
 
-def get_pin(imsi: str, api: API) -> str:
+def bootstrap(imsi: str, api: API) -> str:
     # load PIN or bootstrap if PIN unknown
     pin_file = imsi + ".bin"
     pin = ""
@@ -82,6 +77,19 @@ def get_pin(imsi: str, api: API) -> str:
         else:
             raise Exception("bootstrapping failed with status code {}: {}".format(r.status_code, r.text))
     return pin
+
+
+def submit_csr(uuid: UUID, key_name: str, sim: SimProtocol, api: API):
+    """
+    Submit a X.509 Certificate Signing Request
+    """
+    csr_file = "csr_{}.der".format(str(uuid))
+    if csr_file not in os.listdir():
+        print("** submitting CSR to identity service ...")
+        csr = sim.generate_csr(key_name)
+        api.send_csr(csr)
+        with open(csr_file, "wb") as f:
+            f.write(csr)
 
 
 def pack_data_json(uuid: UUID, data: dict) -> bytes:

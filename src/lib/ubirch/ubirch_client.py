@@ -1,9 +1,10 @@
+import os
 import time
 from network import LTE
 from ubinascii import b2a_base64, a2b_base64, hexlify, unhexlify
 from uuid import UUID
 from .ubirch_api import API
-from .ubirch_helpers import get_certificate, get_pin, pack_data_json, get_upp_payload
+from .ubirch_helpers import *
 from .ubirch_sim import SimProtocol
 
 
@@ -26,7 +27,7 @@ class UbirchClient:
         self.sim = SimProtocol(lte=lte, at_debug=cfg['debug'])
 
         # unlock SIM
-        pin = get_pin(imsi, self.api)
+        pin = bootstrap(imsi, self.api)
         if not self.sim.sim_auth(pin):
             raise Exception("PIN not accepted")
 
@@ -39,10 +40,11 @@ class UbirchClient:
         self.uuid = self.sim.get_uuid(self.key_name)
         print("** UUID   : " + str(self.uuid) + "\n")
 
-        # after boot or restart try to register public key at ubirch key service
-        print("** registering public key at key service ...")
-        key_registration = get_certificate(self.uuid, self.sim, self.key_name)
-        self.api.register_identity(key_registration)
+        # send a X.509 Certificate Signing Request for the public key to the ubirch identity service
+        submit_csr(self.uuid, self.key_name, self.sim, self.api)
+
+        # register public key at ubirch key service todo will be replaced by X.509 cert
+        register_public_key(self.uuid, self.key_name, self.sim, self.api)
 
     def send(self, data: dict):
         """
