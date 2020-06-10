@@ -9,6 +9,7 @@ class API:
 
     def __init__(self, cfg: dict):
         self.debug = cfg['debug']
+        self.env = cfg['env']
         self.key_service_url = cfg['keyService']
         self.data_service_url = cfg['data']
         self.auth_service_url = cfg['niomon']

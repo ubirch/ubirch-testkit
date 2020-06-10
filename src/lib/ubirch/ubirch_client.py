@@ -1,6 +1,7 @@
 import time
-import ubinascii as binascii
 from network import LTE
+from ubinascii import b2a_base64, a2b_base64, hexlify, unhexlify
+from uuid import UUID
 from .ubirch_api import API
 from .ubirch_helpers import get_certificate, get_pin, pack_data_json, get_upp_payload
 from .ubirch_sim import SimProtocol
@@ -9,6 +10,17 @@ from .ubirch_sim import SimProtocol
 class UbirchClient:
 
     def __init__(self, cfg: dict, lte: LTE, imsi: str):
+        vks = {
+            "dev": a2b_base64(
+                "LnU8BkvGcZQPy5gWVUL+PHA0DP9dU61H8DBO8hZvTyI7lXIlG1/oruVMT7gS2nlZDK9QG+ugkRt/zTrdLrAYDA=="),
+            "demo": a2b_base64(
+                "LnU8BkvGcZQPy5gWVUL+PHA0DP9dU61H8DBO8hZvTyI7lXIlG1/oruVMT7gS2nlZDK9QG+ugkRt/zTrdLrAYDA==")
+        }
+        uuids = {
+            "dev": UUID(unhexlify("9d3c78ff22f34441a5d185c636d486ff")),
+            "demo": UUID(unhexlify("9d3c78ff22f34441a5d185c636d486ff"))
+        }
+
         self.key_name = "ukey"
         self.api = API(cfg)
         self.sim = SimProtocol(lte=lte, at_debug=cfg['debug'])
@@ -17,6 +29,11 @@ class UbirchClient:
         pin = get_pin(imsi, self.api)
         if not self.sim.sim_auth(pin):
             raise Exception("PIN not accepted")
+
+        # store public key of ubirch backend on the SIM card
+        env = self.api.env
+        if not self.sim.entry_exists(env):
+            self.sim.store_public_key(env, uuids[env], vks[env])
 
         # get UUID from SIM
         self.uuid = self.sim.get_uuid(self.key_name)
@@ -43,16 +60,22 @@ class UbirchClient:
 
         # seal the data message (data message will be hashed and inserted into UPP as payload by SIM card)
         upp = self.sim.message_chained(self.key_name, message, hash_before_sign=True)
-        print("** UPP [msgpack]: {} (base64: {})\n".format(binascii.hexlify(upp).decode(),
-                                                           binascii.b2a_base64(upp).decode().rstrip('\n')))
+        print("** UPP [msgpack]: {} (base64: {})\n".format(hexlify(upp).decode(),
+                                                           b2a_base64(upp).decode().rstrip('\n')))
 
         # send UPP to the ubirch authentication service to be anchored to the blockchain
         print("** sending UPP ...\n")
-        self.api.send_upp(self.uuid, upp)
+        response = self.api.send_upp(self.uuid, upp)
+        # verify the signature of the backend response with its public key
+        try:
+            if not self.sim.message_verify(self.api.env, response):
+                raise Exception("signature verification failed")
+        except Exception as e:
+            raise Exception("!! couldn't verify backend response: {} ({}) ".format(e, hexlify(response).decode()))
 
         # retrieve data message hash from generated UPP for verification
         message_hash = get_upp_payload(upp)
-        print("** data message hash: {}".format(binascii.b2a_base64(message_hash).decode()))
+        print("** data message hash: {}".format(b2a_base64(message_hash).decode()))
 
         # # OPTIONAL # verify that the hash was received and verifiable by the backend
         # print("** verifying hash in backend (quick check) ...")
