@@ -512,7 +512,7 @@ class SimProtocol:
                 return data
 
         self.lte.pppresume()
-        raise Exception("signing failed: {}".format(code))
+        raise Exception(code)
 
     def verify(self, entry_id: str, value: bytes, protocol_version: int) -> bool:
         """
@@ -536,7 +536,7 @@ class SimProtocol:
                 return False
 
         self.lte.pppresume()
-        raise Exception("verification failed: {}".format(code))
+        raise Exception(code)
 
     def message_signed(self, name: str, payload: bytes, hash_before_sign: bool = False) -> bytes:
         """
