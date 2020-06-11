@@ -24,7 +24,7 @@ def register_public_key(uuid: UUID, key_name: str, sim: SimProtocol, api: API):
     """
     Register a public key at the ubirch key service
     """
-    cert_file = "cert_{}.bin".format(str(uuid))
+    cert_file = "cert_{}_{}.bin".format(str(uuid), api.env)
     if cert_file not in os.listdir():
         print("** registering public key at key service ...")
         cert = create_certificate(uuid, key_name, sim)
@@ -83,7 +83,7 @@ def submit_csr(uuid: UUID, key_name: str, sim: SimProtocol, api: API):
     """
     Submit a X.509 Certificate Signing Request
     """
-    csr_file = "csr_{}.der".format(str(uuid))
+    csr_file = "csr_{}_{}.der".format(str(uuid), api.env)
     if csr_file not in os.listdir():
         print("** submitting CSR to identity service ...")
         csr = sim.generate_csr(key_name)
@@ -159,25 +159,3 @@ def get_upp_payload(upp: bytes) -> bytes:
 
     payload_len = upp[payload_start_idx - 1]
     return upp[payload_start_idx:payload_start_idx + payload_len]
-
-
-# todo this is a workaround until backend uses correct signature format
-def fix_upp_signature_format(upp: bytes) -> bytes:
-    if upp[0] == 0x95 and upp[1] == 0x22:  # signed UPP
-        payload_header_start_idx = 21
-    elif upp[0] == 0x96 and upp[1] == 0x23:  # chained UPP
-        payload_header_start_idx = 87
-    else:
-        raise Exception("input {} is not a valid UPP".format(binascii.hexlify(upp).decode()))
-
-    if upp[payload_header_start_idx] == 0xC4:
-        payload_len = upp[payload_header_start_idx + 1]
-        payload_start_idx = payload_header_start_idx + 2
-    else:
-        raise Exception("unexpected payload type: %X".format(upp[payload_header_start_idx]))
-
-    sign_header_start_idx = payload_start_idx + payload_len
-    sign_header = bytes([0xC4, 0x40])
-    asn1_sign = upp[sign_header_start_idx + 2:]
-
-    return upp[:sign_header_start_idx] + sign_header + asn1tosig(asn1_sign)
