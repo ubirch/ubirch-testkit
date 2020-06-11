@@ -154,5 +154,30 @@ def get_upp_payload(upp: bytes) -> bytes:
     else:
         raise Exception("!! can't get payload from {} (not a UPP)".format(binascii.hexlify(upp).decode()))
 
+    if upp[payload_start_idx - 2] != 0xC4:
+        raise Exception("unexpected payload type: %X".format(upp[payload_start_idx - 2]))
+
     payload_len = upp[payload_start_idx - 1]
     return upp[payload_start_idx:payload_start_idx + payload_len]
+
+
+# todo this is a workaround until backend uses correct signature format
+def fix_upp_signature_format(upp: bytes) -> bytes:
+    if upp[0] == 0x95 and upp[1] == 0x22:  # signed UPP
+        payload_header_start_idx = 21
+    elif upp[0] == 0x96 and upp[1] == 0x23:  # chained UPP
+        payload_header_start_idx = 87
+    else:
+        raise Exception("input {} is not a valid UPP".format(binascii.hexlify(upp).decode()))
+
+    if upp[payload_header_start_idx] == 0xC4:
+        payload_len = upp[payload_header_start_idx + 1]
+        payload_start_idx = payload_header_start_idx + 2
+    else:
+        raise Exception("unexpected payload type: %X".format(upp[payload_header_start_idx]))
+
+    sign_header_start_idx = payload_start_idx + payload_len
+    sign_header = bytes([0xC4, 0x40])
+    asn1_sign = upp[sign_header_start_idx + 2:]
+
+    return upp[:sign_header_start_idx] + sign_header + asn1tosig(asn1_sign)

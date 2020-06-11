@@ -43,8 +43,8 @@ class UbirchClient:
         # send a X.509 Certificate Signing Request for the public key to the ubirch identity service
         submit_csr(self.uuid, self.key_name, self.sim, self.api)
 
-        # register public key at ubirch key service todo will be replaced by X.509 cert
-        register_public_key(self.uuid, self.key_name, self.sim, self.api)
+        # # register public key at ubirch key service todo will be replaced by X.509 cert
+        # register_public_key(self.uuid, self.key_name, self.sim, self.api)
 
     def send(self, data: dict):
         """
@@ -68,9 +68,12 @@ class UbirchClient:
         # send UPP to the ubirch authentication service to be anchored to the blockchain
         print("** sending UPP ...\n")
         response = self.api.send_upp(self.uuid, upp)
+        print("response: " + hexlify(response).decode())
         # verify the signature of the backend response with its public key
         try:
-            if not self.sim.message_verify(self.api.env, response):
+            fixed_upp = fix_upp_signature_format(response)
+            print("fixed response: " + hexlify(fixed_upp).decode())
+            if not self.sim.message_verify(self.api.env, fixed_upp):
                 raise Exception("signature verification failed")
         except Exception as e:
             raise Exception("!! couldn't verify backend response: {} ({}) ".format(e, hexlify(response).decode()))
