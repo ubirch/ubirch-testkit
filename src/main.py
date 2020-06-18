@@ -22,6 +22,9 @@ def wake_up():
 #remember wake-up time
 start_time = wake_up()
 
+#check reset cause
+COMING_FROM_DEEPSLEEP = (machine.reset_cause() == machine.DEEPSLEEP_RESET)
+
 # mount SD card if there is one
 try:
     sd = machine.SD()
@@ -30,25 +33,28 @@ try:
 except OSError:
     SD_CARD_MOUNTED = False
 
-#intialization, TODO: make dependent on power-on reset or return from deepsleep
+#intialization, 
 lte = LTE()
 
-print("Resetting modem...")
-lte.reset()
-lte.init()
-print("Done")
-
-_send_at_cmd(lte,"AT+CFUN?")
-_send_at_cmd(lte,"AT+CFUN=1")
-time.sleep(5)
-_send_at_cmd(lte,"AT+CFUN?")
+if not COMING_FROM_DEEPSLEEP:
+    #if we are not coming from deepsleep, modem might be in a strange state (errors/poweron) -> reset
+    print("Resetting modem...")
+    lte.reset()
+    lte.init()
+    print("Done")
+    _send_at_cmd(lte,"AT+CFUN?")
+    _send_at_cmd(lte,"AT+CFUN=1")
+    time.sleep(5)
+    _send_at_cmd(lte,"AT+CFUN?")
 
 imsi = get_imsi(lte)
 
-imsi_file = "imsi.txt"
-if SD_CARD_MOUNTED and imsi_file not in os.listdir('/sd'):
-    with open('/sd/' + imsi_file, 'w') as f:
-        f.write(imsi)
+if not COMING_FROM_DEEPSLEEP:
+    #if not in normal loop operation: save imsi to file
+    imsi_file = "imsi.txt"
+    if SD_CARD_MOUNTED and imsi_file not in os.listdir('/sd'):
+        with open('/sd/' + imsi_file, 'w') as f:
+            f.write(imsi)
 
 # load configuration
 try:
@@ -102,6 +108,7 @@ print("** done\n")
 
 #prepare hardware for sleep
 print("** preparing hardware for sleep\n")
+connection.disconnect()
 ubirch_client.sim.deinit()
 #TODO: prepare LTE for sleep here
 
