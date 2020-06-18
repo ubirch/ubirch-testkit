@@ -4,7 +4,7 @@ import time
 from config import load_config
 from connection import init_connection
 from error_handling import *
-from modem import get_imsi
+from modem import get_imsi, _send_at_cmd
 from network import LTE
 
 # Pycom specifics
@@ -42,6 +42,15 @@ class Main:
 
     def __init__(self):
         lte = LTE()
+
+        print("Resetting modem...")
+        lte.reset()
+        lte.init()
+        print("Done")
+
+        _send_at_cmd(lte,"AT+CFUN=1")
+        time.sleep(5)
+        _send_at_cmd(lte,"AT+CFUN?")
 
         imsi = get_imsi(lte)
 
