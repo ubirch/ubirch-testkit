@@ -1,3 +1,4 @@
+print("*** UBIRCH SIM Testkit ***")
 import machine
 import os
 import time
@@ -17,6 +18,16 @@ def wake_up():
     set_led(LED_GREEN)
     return time.time()
 
+def reset_modem():
+    print("Resetting modem")
+    lte.reset()
+    lte.init()
+    print("Setting function level")
+    _send_at_cmd(lte,"AT+CFUN?")
+    _send_at_cmd(lte,"AT+CFUN=1")
+    time.sleep(5)
+    _send_at_cmd(lte,"AT+CFUN?")
+
 #begin of main code
 
 #remember wake-up time
@@ -33,19 +44,11 @@ try:
 except OSError:
     SD_CARD_MOUNTED = False
 
-#intialization, 
+#intialization
 lte = LTE()
 
-if not COMING_FROM_DEEPSLEEP:
-    #if we are not coming from deepsleep, modem might be in a strange state (errors/poweron) -> reset
-    print("Resetting modem...")
-    lte.reset()
-    lte.init()
-    print("Done")
-    _send_at_cmd(lte,"AT+CFUN?")
-    _send_at_cmd(lte,"AT+CFUN=1")
-    time.sleep(5)
-    _send_at_cmd(lte,"AT+CFUN?")
+#if we are not coming from deepsleep, modem might be in a strange state (errors/poweron) -> reset
+if not COMING_FROM_DEEPSLEEP: reset_modem()
 
 imsi = get_imsi(lte)
 
@@ -74,11 +77,20 @@ interval = cfg['interval']
 # set up error handling
 error_handler = ErrorHandler(file_logging_enabled=cfg['logfile'], sd_card=SD_CARD_MOUNTED)
 
-# connect to network
-try:
-    connection = init_connection(lte, cfg)
-except Exception as e:
-    error_handler.log(e, LED_PURPLE, reset=True)
+#check if the RTC has a time set, if not synchronize it
+rtc = machine.RTC()
+#debug:
+print("RTC time:")
+print(rtc.now())
+rtc_year = rtc.now()[0]
+connection= None
+if rtc_year < 2020: #rtc can't be correct -> connect to sync time
+    # connect to network to set time (done implicitly), disconnect afterwards to speed up SIM communication
+    try:
+        connection = init_connection(lte, cfg)
+    except Exception as e:
+        error_handler.log(e, LED_PURPLE, reset=True)
+    connection.disconnect()
 
 # initialise ubirch client
 try:
@@ -94,6 +106,12 @@ print("** getting measurements:")
 data = sensors.get_data()
 print_data(data)
 
+#if there was no previous connection, create it
+if connection == None:
+    try:
+        connection = init_connection(lte, cfg)
+    except Exception as e:
+        error_handler.log(e, LED_PURPLE, reset=True)
 # make sure device is still connected or reconnect
 if not connection.is_connected() and not connection.connect():
     error_handler.log("!! unable to reconnect to network", LED_PURPLE, reset=True)
