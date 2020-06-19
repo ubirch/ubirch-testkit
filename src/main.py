@@ -124,11 +124,14 @@ except Exception as e:
 
 print("** done\n")
 
-#prepare hardware for sleep
+#prepare hardware for sleep (needed for low current draw and
+#freeing of ressources for after the reset, as the modem stays on)
 print("** preparing hardware for sleep\n")
 connection.disconnect()
 ubirch_client.sim.deinit()
-#TODO: prepare LTE for sleep here
+#detaching causes smaller/no re-attach time on next but but somewhat higher sleep current
+#needs to be balanced based on your specific interval
+lte.deinit(detach=False)
 
 #go to deepsleep
 sleep_time = interval - int(time.time() - start_time)
