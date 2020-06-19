@@ -5,19 +5,6 @@ import time
 
 class Connection:
 
-    def set_time(self, ntp: str) -> bool:
-        rtc = machine.RTC()
-        i = 0
-        sys.stdout.write("\tsyncing time")
-        rtc.ntp_sync(ntp, 3600)
-        while not rtc.synced() and i < 60:
-            sys.stdout.write(".")
-            time.sleep(1.0)
-            i += 1
-        print("")
-        #print("\n\t\tcurrent time: {}\n".format(rtc.now()))
-        return rtc.synced()
-
     def connect(self) -> bool:
         raise NotImplementedError
 
@@ -37,8 +24,6 @@ class NB_IoT(Connection):
             raise OSError("!! unable to attach to NB-IoT network.")
         if not self.connect():
             raise OSError("!! unable to connect to NB-IoT network.")
-        if not self.set_time('185.15.72.251'):
-            raise OSError("!! unable to set time.")
 
     def attach(self, apn: str, band: int or None) -> bool:
         sys.stdout.write("\tattaching to the NB-IoT network")
@@ -84,8 +69,6 @@ class WIFI(Connection):
         self.networks = networks
         if not self.connect():
             raise OSError("!! unable to connect to WIFI network.")
-        if not self.set_time('pool.ntp.org'):
-            raise OSError("!! unable to set time.")
 
     def connect(self) -> bool:
         for _ in range(4):

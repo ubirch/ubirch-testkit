@@ -6,8 +6,9 @@ print("\ttime")
 import time
 
 #set watchdog: if execution hangs/takes longer than 'timeout' an automatic reset is triggered
+#we need to do this as early as possible in case an import cause a freeze for some reason
 print("++ enabling watchdog")
-wdt = machine.WDT(timeout= 5 * 60 * 1000)  # enable it
+wdt = machine.WDT(timeout= 5 * 60 * 1000)  # set it
 wdt.feed()# we only feed it once since this code hopefully finishes with deepsleep (=no WDT) before reset_after_ms
 
 #remember wake-up time
@@ -25,6 +26,8 @@ print("\terror handling")
 from error_handling import *
 print("\tmodem")
 from modem import get_imsi, reset_modem
+print("\trealtimeclock")
+from realtimeclock import *
 print("\tnetwork")
 from network import LTE
 print("\tubirch_helpers")
@@ -57,6 +60,7 @@ except OSError:
 
 #intialization section
 lte = LTE()
+connection = None
 
 #if we are not coming from deepsleep, modem might be in a strange state (errors/poweron) -> reset
 if not COMING_FROM_DEEPSLEEP: 
@@ -94,17 +98,16 @@ interval = cfg['interval']
 # set up error handling
 error_handler = ErrorHandler(file_logging_enabled=cfg['logfile'], sd_card=SD_CARD_MOUNTED)
 
-#check if the RTC has a time set, if not synchronize it
-rtc = machine.RTC()
-board_time = rtc.now()
-print("++ checking board time\n\ttime is: ",board_time)
-board_time_year = board_time[0]
-connection= None
-if board_time_year < 2020: #time can't be correct -> connect to sync time
-    print("\ttime invalid, syncing...")
-    # connect to network to set time (done implicitly), disconnect afterwards to speed up SIM communication
+#check if the board has a time set, if not synchronize it
+print("++ checking board time\n\ttime is: ", board_time())
+if not board_time_valid(): #time can't be correct -> connect to sync time
+    print("\ttime invalid, syncing")
+    # connect to network, set time, disconnect afterwards to speed up SIM communication
     try:
         connection = init_connection(lte, cfg)
+        enable_time_sync()
+        print("\twaiting for time sync")
+        wait_for_sync(print_dots=False)
     except Exception as e:
         error_handler.log(e, LED_PURPLE, reset=True)
     print("\tdisconnecting")
@@ -126,7 +129,7 @@ print("++ getting measurements")
 data = sensors.get_data()
 #print_data(data)
 
-#' pack data and create UPP ##
+## pack data and create UPP ##
 
 # pack data message containing measurements, device UUID and timestamp to ensure unique hash
 print("++ packing data")
@@ -147,6 +150,7 @@ print("++ checking/establishing connection")
 if connection == None:
     try:
         connection = init_connection(lte, cfg)
+        enable_time_sync()
     except Exception as e:
         error_handler.log(e, LED_PURPLE, reset=True)
 # make sure device is still connected or reconnect
@@ -154,6 +158,7 @@ if not connection.is_connected() and not connection.connect():
     error_handler.log("!! unable to reconnect to network", LED_PURPLE, reset=True)
 
 # send data to ubirch data service and certificate to ubirch auth service
+# TODO: add retrying to send/handling of already created UPP in case of failure
 try:
     # send data message to data service
     print("++ sending data message ...")
@@ -164,6 +169,9 @@ try:
     ubirch_client.api.send_upp(ubirch_client.uuid, upp)
 except Exception as e:
     error_handler.log(e, LED_ORANGE)
+
+print("++ waiting for time sync")
+wait_for_sync(print_dots=True)
 
 # prepare hardware for sleep (needed for low current draw and
 # freeing of ressources for after the reset, as the modem stays on)
