@@ -7,6 +7,8 @@ from connection import init_connection
 from error_handling import *
 from modem import get_imsi, _send_at_cmd
 from network import LTE
+from lib.ubirch.ubirch_helpers import *
+from ubinascii import b2a_base64, a2b_base64, hexlify, unhexlify
 
 # Pycom specifics
 from pyboard import init_pyboard, print_data
@@ -44,7 +46,7 @@ try:
 except OSError:
     SD_CARD_MOUNTED = False
 
-#intialization
+#intialization section
 lte = LTE()
 
 #if we are not coming from deepsleep, modem might be in a strange state (errors/poweron) -> reset
@@ -79,26 +81,29 @@ error_handler = ErrorHandler(file_logging_enabled=cfg['logfile'], sd_card=SD_CAR
 
 #check if the RTC has a time set, if not synchronize it
 rtc = machine.RTC()
-#debug:
-print("RTC time:")
-print(rtc.now())
-rtc_year = rtc.now()[0]
+board_time = rtc.now()
+print("++ current board time: ",board_time)
+board_time_year = board_time[0]
 connection= None
-if rtc_year < 2020: #rtc can't be correct -> connect to sync time
+if board_time_year < 2020: #time can't be correct -> connect to sync time
+    print("-- time invalid, syncing...")
     # connect to network to set time (done implicitly), disconnect afterwards to speed up SIM communication
     try:
         connection = init_connection(lte, cfg)
     except Exception as e:
         error_handler.log(e, LED_PURPLE, reset=True)
+    print("-- disconnecting")
     connection.disconnect()
 
 # initialise ubirch client
+print("++ intializing ubirch client")
 try:
     ubirch_client = UbirchClient(cfg, lte, imsi)
 except Exception as e:
     error_handler.log(e, LED_RED, reset=True)
 
 # initialise the sensors
+print("++ intializing sensors")
 sensors = init_pyboard(cfg['board'])
 
 # get data
@@ -118,22 +123,41 @@ if not connection.is_connected() and not connection.connect():
 
 # send data to ubirch data service and certificate to ubirch auth service
 try:
-    ubirch_client.send(data)
+    # pack data message containing measurements, device UUID and timestamp to ensure unique hash
+    message = pack_data_json(ubirch_client.uuid, data)
+    print("** data message [json]: {}\n".format(message.decode()))
+
+    # send data message to data service
+    print("** sending data message ...\n")
+    ubirch_client.api.send_data(ubirch_client.uuid, message)
+
+    # seal the data message (data message will be hashed and inserted into UPP as payload by SIM card)
+    upp = ubirch_client.sim.message_chained(ubirch_client.key_name, message, hash_before_sign=True)
+    print("** UPP [msgpack]: {} (base64: {})\n".format(hexlify(upp).decode(),
+                                                        b2a_base64(upp).decode().rstrip('\n')))
+
+    # send UPP to the ubirch authentication service to be anchored to the blockchain
+    print("** sending UPP ...\n")
+    ubirch_client.api.send_upp(ubirch_client.uuid, upp)
+
+    # retrieve data message hash from generated UPP for verification
+    message_hash = get_upp_payload(upp)
+    print("** data message hash: {}".format(b2a_base64(message_hash).decode()))
 except Exception as e:
     error_handler.log(e, LED_ORANGE)
 
 print("** done\n")
 
-#prepare hardware for sleep (needed for low current draw and
-#freeing of ressources for after the reset, as the modem stays on)
+# prepare hardware for sleep (needed for low current draw and
+# freeing of ressources for after the reset, as the modem stays on)
 print("** preparing hardware for sleep\n")
 connection.disconnect()
 ubirch_client.sim.deinit()
-#detaching causes smaller/no re-attach time on next but but somewhat higher sleep current
-#needs to be balanced based on your specific interval
+# detaching causes smaller/no re-attach time on next reset but but 
+# somewhat higher sleep current needs to be balanced based on your specific interval
 lte.deinit(detach=False)
 
-#go to deepsleep
+# go to deepsleep
 sleep_time = interval - int(time.time() - start_time)
 if sleep_time < 0:
     sleep_time = 0
