@@ -17,6 +17,33 @@ def _send_at_cmd(lte: LTE, cmd: str, debug_print=True) -> []:
 
     return result
 
+def reset_modem(lte: LTE, debug_print=False):    
+    function_level = "1"
+    
+    if debug_print: print("\twaiting for reset to finish")
+    lte.reset()
+    lte.init()
+    
+    if debug_print: print("\tsetting function level")
+    tries = 0
+    while True:
+        tries += 1
+        _send_at_cmd(lte,"AT+CFUN="+function_level,debug_print=debug_print)
+        result = _send_at_cmd(lte,"AT+CFUN?",debug_print=debug_print)
+        if result[0] == '+CFUN: '+function_level:
+            break
+        if tries >= 5:
+            raise Exception("could not set modem funtion level")
+    
+    if debug_print: print("\twaiting for SIM to be responsive")
+    tries = 0
+    while True:
+        tries += 1
+        result = _send_at_cmd(lte,"AT+CIMI",debug_print=debug_print)
+        if result[-1] == 'OK':
+            break
+        if tries >= 10:
+            raise Exception("SIM does not seem to respond after reset")
 
 def get_imsi(lte: LTE, debug_print = False) -> str:
     """

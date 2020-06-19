@@ -2,10 +2,21 @@ print("*** UBIRCH SIM Testkit ***")
 print("++ importing:")
 print("\tmachine")
 import machine
-print("\tOS")
-import os
 print("\ttime")
 import time
+
+#set watchdog: if execution hangs/takes longer than 'timeout' an automatic reset is triggered
+print("++ enabling watchdog")
+wdt = machine.WDT(timeout= 5 * 60 * 1000)  # enable it
+wdt.feed()# we only feed it once since this code hopefully finishes with deepsleep (=no WDT) before reset_after_ms
+
+#remember wake-up time
+print("++ saving boot time")
+start_time = time.time()
+
+print("++ continue with importing:")
+print("\tOS")
+import os
 print("\tconfig")
 from config import load_config
 print("\tconnection")
@@ -13,7 +24,7 @@ from connection import init_connection
 print("\terror handling")
 from error_handling import *
 print("\tmodem")
-from modem import get_imsi, _send_at_cmd
+from modem import get_imsi, reset_modem
 print("\tnetwork")
 from network import LTE
 print("\tubirch_helpers")
@@ -27,31 +38,8 @@ print("\tUbirchClient")
 # ubirch client
 from ubirch import UbirchClient
 
-def wake_up():
-    set_led(LED_GREEN)
-    return time.time()
-
-def reset_modem():
-    print("++ not coming from sleep, resetting modem")
-    print("\twaiting for reset to finish")
-    lte.reset()
-    lte.init()
-    print("\tsetting function level")
-    _send_at_cmd(lte,"AT+CFUN?",debug_print=False)
-    _send_at_cmd(lte,"AT+CFUN=1",debug_print=False)
-    time.sleep(5)
-    _send_at_cmd(lte,"AT+CFUN?",debug_print=False)
-
 #begin of main code
-
-#remember wake-up time
-start_time = wake_up()
-
-#set watchdog: if execution hangs/takes longer than reset_after_ms an automatic reset is triggered
-print("++ enabling watchdog")
-reset_after_ms =  5 * 60 * 1000
-wdt = machine.WDT(timeout=reset_after_ms)  # enable it
-wdt.feed()# we only feed it once since this code hopefully finishes with deepsleep (=no WDT) before reset_after_ms
+set_led(LED_GREEN)
 
 #check reset cause
 COMING_FROM_DEEPSLEEP = (machine.reset_cause() == machine.DEEPSLEEP_RESET)
@@ -71,7 +59,9 @@ except OSError:
 lte = LTE()
 
 #if we are not coming from deepsleep, modem might be in a strange state (errors/poweron) -> reset
-if not COMING_FROM_DEEPSLEEP: reset_modem()
+if not COMING_FROM_DEEPSLEEP: 
+    print("++ not coming from sleep, resetting modem")
+    reset_modem(lte)
 
 print("++ getting IMSI")
 imsi = get_imsi(lte)
@@ -132,7 +122,7 @@ print("++ intializing sensors")
 sensors = init_pyboard(cfg['board'])
 
 # get data from sensors
-print("++ getting measurements:")
+print("++ getting measurements")
 data = sensors.get_data()
 #print_data(data)
 
