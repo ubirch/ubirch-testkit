@@ -171,7 +171,10 @@ except Exception as e:
     error_handler.log(e, LED_ORANGE)
 
 print("++ waiting for time sync")
-wait_for_sync(print_dots=True)
+try:
+    wait_for_sync(print_dots=True)
+except Exception as e:
+    error_handler.log(e, LED_PURPLE)
 
 # prepare hardware for sleep (needed for low current draw and
 # freeing of ressources for after the reset, as the modem stays on)
