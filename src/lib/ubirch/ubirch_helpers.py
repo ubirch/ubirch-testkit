@@ -14,15 +14,15 @@ def bootstrap(imsi: str, api: API) -> str:
     pin_file = imsi + ".bin"
     pin = ""
     if pin_file in os.listdir():
-        print("loading PIN for " + imsi + "\n")
+        print("\tloading PIN for " + imsi )
         with open(pin_file, "rb") as f:
             pin = f.readline().decode()
     else:
-        print("bootstrapping SIM identity " + imsi)
+        print("\tbootstrapping SIM identity " + imsi)
         r = api.bootstrap_sim_identity(imsi)
         if r.status_code == 200:
             info = json.loads(r.content)
-            print("bootstrapping successful\n")
+            print("\tbootstrapping successful")
             if info['encrypted']:  # not implemented yet
                 # decrypt PIN here
                 pass

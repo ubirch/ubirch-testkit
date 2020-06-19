@@ -52,13 +52,13 @@ class FileLogger:
         self.logfile = ('/sd/' if sd_card_mounted else '') + 'log.txt'
         with open(self.logfile, 'a') as f:
             self.file_position = f.tell()
-        print(">> file logging enabled")
-        print("-- file: \"{}\"".format(self.logfile))
-        print("-- current size:     {: 6.2f} KB".format(self.file_position / 1000.0))
-        print("-- maximal size:     {: 6.2f} KB".format(self.MAX_FILE_SIZE / 1000.0))
-        print("-- free flash memory:{: 6d} KB".format(os.getfree('/flash')))
+        print("++ file logging enabled")
+        print("\tfile: \"{}\"".format(self.logfile))
+        print("\tcurrent size:     {: 6.2f} KB".format(self.file_position / 1000.0))
+        print("\tmaximal size:     {: 6.2f} KB".format(self.MAX_FILE_SIZE / 1000.0))
+        print("\tfree flash memory:{: 6d} KB".format(os.getfree('/flash')))
         if sd_card_mounted:
-            print("-- free SD memory:   {: 6d} MB".format(int(os.getfree('/sd') / 1000)))
+            print("\tfree SD memory:   {: 6d} MB".format(int(os.getfree('/sd') / 1000)))
         print("")
 
     def log(self, error: str or Exception):

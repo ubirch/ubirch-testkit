@@ -8,13 +8,14 @@ class Connection:
     def set_time(self, ntp: str) -> bool:
         rtc = machine.RTC()
         i = 0
-        sys.stdout.write("++ setting time")
+        sys.stdout.write("\tsyncing time")
         rtc.ntp_sync(ntp, 3600)
         while not rtc.synced() and i < 60:
             sys.stdout.write(".")
             time.sleep(1.0)
             i += 1
-        print("\n-- current time: {}\n".format(rtc.now()))
+        print("")
+        #print("\n\t\tcurrent time: {}\n".format(rtc.now()))
         return rtc.synced()
 
     def connect(self) -> bool:
@@ -40,7 +41,7 @@ class NB_IoT(Connection):
             raise OSError("!! unable to set time.")
 
     def attach(self, apn: str, band: int or None) -> bool:
-        sys.stdout.write("++ attaching to the NB-IoT network")
+        sys.stdout.write("\tattaching to the NB-IoT network")
         self.lte.attach(band=band, apn=apn)
         i = 0
         while not self.lte.isattached() and i < 60:
@@ -48,14 +49,13 @@ class NB_IoT(Connection):
             machine.idle()
             time.sleep(1.0)
             sys.stdout.write(".")
-        print("")
         if self.lte.isattached():
-            print("-- attached: {} s".format(i))
+            print("\n\t\tattached: {} s".format(i))
             return True
         return False
 
     def connect(self) -> bool:
-        sys.stdout.write("++ connecting to the NB-IoT network")
+        sys.stdout.write("\tconnecting to the NB-IoT network")
         self.lte.connect()  # start a data session and obtain an IP address
         i = 0
         while not self.lte.isconnected() and i < 60:
@@ -63,9 +63,8 @@ class NB_IoT(Connection):
             machine.idle()
             time.sleep(1.0)
             sys.stdout.write(".")
-        print("")
         if self.lte.isconnected():
-            print("-- connected: {} s\n".format(i))
+            print("\n\t\tconnected: {} s".format(i))
             # print('-- IP address: ' + str(lte.ifconfig()))
             return True
         return False
@@ -91,17 +90,17 @@ class WIFI(Connection):
     def connect(self) -> bool:
         for _ in range(4):
             nets = self.wlan.scan()
-            print("++ searching for wifi networks...")
+            print("\tsearching for wifi networks...")
             for net in nets:
                 if net.ssid in self.networks:
                     ssid = net.ssid
                     password = self.networks[ssid]
-                    print('-- wifi network ' + ssid + ' found, connecting ...')
+                    print('\twifi network ' + ssid + ' found, connecting ...')
                     self.wlan.connect(ssid, auth=(net.sec, password), timeout=5000)
                     while not self.wlan.isconnected():
                         machine.idle()  # save power while waiting
-                    print('-- wifi network connected')
-                    print('-- IP address: {}\n'.format(self.wlan.ifconfig()))
+                    print('\twifi network connected')
+                    print('\tIP address: {}\n'.format(self.wlan.ifconfig()))
                     return True
             print("!! no usable networks found, trying again in 30s")
             print("!! available networks:")
