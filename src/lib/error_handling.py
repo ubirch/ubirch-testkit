@@ -25,10 +25,10 @@ def print_to_console(error: str or Exception):
 
 class ErrorHandler:
 
-    def __init__(self, file_logging_enabled: bool = False, sd_card: bool = False):
+    def __init__(self, file_logging_enabled: bool = False, max_file_size_kb: int = 10, sd_card: bool = False):
         self.logfile = None
         if file_logging_enabled:
-            self.logfile = FileLogger(sd_card)
+            self.logfile = FileLogger(max_file_size_kb=max_file_size_kb, log_to_sd_card=sd_card)
 
     def log(self, error: str or Exception, led_color: int, reset: bool = False):
         set_led(led_color)
@@ -45,11 +45,11 @@ class ErrorHandler:
 
 class FileLogger:
 
-    def __init__(self, max_file_size_bytes: int = 20000, sd_card_mounted: bool = False):
+    def __init__(self, max_file_size_kb: int = 10, log_to_sd_card: bool = False):
         # set up error logging to log file
-        self.MAX_FILE_SIZE = max_file_size_bytes  # in bytes
         self.rtc = machine.RTC()
-        self.logfile = ('/sd/' if sd_card_mounted else '') + 'log.txt'
+        self.MAX_FILE_SIZE = max_file_size_kb * 1000  # in bytes
+        self.logfile = ('/sd/' if log_to_sd_card else '') + 'log.txt'
         with open(self.logfile, 'a') as f:
             self.file_position = f.tell()
         print("++ file logging enabled")
@@ -57,17 +57,17 @@ class FileLogger:
         print("\tcurrent size:     {: 6.2f} KB".format(self.file_position / 1000.0))
         print("\tmaximal size:     {: 6.2f} KB".format(self.MAX_FILE_SIZE / 1000.0))
         print("\tfree flash memory:{: 6d} KB".format(os.getfree('/flash')))
-        if sd_card_mounted:
+        if log_to_sd_card:
             print("\tfree SD memory:   {: 6d} MB".format(int(os.getfree('/sd') / 1000)))
         print("")
 
     def log(self, error: str or Exception):
+        # stop logging to file once file reached its max size
+        if self.file_position >= self.MAX_FILE_SIZE:
+            return
+
+        # log error message to file
         with open(self.logfile, 'a') as f:
-            # start overwriting oldest logs once file reached its max size
-            # known issue:
-            #  once file reached its max size, file position will always be set to beginning after device reset
-            if self.file_position > self.MAX_FILE_SIZE:
-                self.file_position = 0
             # set file to recent position
             f.seek(self.file_position, 0)
 
