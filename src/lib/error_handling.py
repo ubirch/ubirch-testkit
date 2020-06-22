@@ -44,10 +44,10 @@ class ErrorHandler:
 
 
 class FileLogger:
-    MAX_FILE_SIZE = 20000  # in bytes
 
-    def __init__(self, sd_card_mounted: bool = False):
+    def __init__(self, max_file_size_bytes: int = 20000, sd_card_mounted: bool = False):
         # set up error logging to log file
+        self.MAX_FILE_SIZE = max_file_size_bytes  # in bytes
         self.rtc = machine.RTC()
         self.logfile = ('/sd/' if sd_card_mounted else '') + 'log.txt'
         with open(self.logfile, 'a') as f:
