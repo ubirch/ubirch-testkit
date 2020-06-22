@@ -21,53 +21,22 @@ class API:
             'X-Ubirch-Auth-Type': 'ubirch'
         }
 
-    def _send_request(self, url: str, data: bytes, headers: dict) -> bytes:
+    def _send_request(self, url: str, data: bytes, headers: dict) -> (int, bytes):
         """
-        Send a http post request to the ubirch backend.
-        This method accounts for the possibility of an uncritical fail and simply tries again, if sending failed.
-        Throws an exception if sending failed several times
+        Send a http post request to the backend.
         :param url: the backend service URL
         :param data: the data to send to the backend
         :param headers: the headers for the request
-        :return: the response from the server
+        :return: the backend response status code, the backend response content (body)
         """
-        err = ""
-        for _ in range(3):
-            try:
-                r = requests.post(url=url, data=data, headers=headers)
-                return self._check_response(r)
-            except Exception as e:
-                # Try again if sending failed.
-                err = str(e)
-                if self.debug: print("!! sending request failed: {}\n".format(err))
-                time.sleep(0.5)
+        r = requests.post(url=url, data=data, headers=headers)
+        return r.status_code, r.content
 
-        raise Exception("!! request to {} failed: {}".format(url, err))
-
-    def _check_response(self, r: requests.Response) -> bytes:
-        """
-        Check the response of a http request to determine if sending was successful.
-        Throws an exception if sending failed.
-        :param r: the request response
-        :return: the response content 
-        """
-        status = r.status_code
-        if status == 200:
-            if self.debug:
-                print("** request successful\n")
-            response = r.content
-            r.close()
-            return response
-        else:
-            message = r.content
-            r.close()
-            raise Exception("({}) {}".format(status, message))
-
-    def register_key(self, key_registration: bytes) -> bytes:
+    def register_key(self, key_registration: bytes) -> (int, bytes):
         """
         Register a public key at the key service.
         :param key_registration: the key registration data
-        :return: the response from the server
+        :return: the server response
         """
         if self.debug:
             print("** register public key at " + self.key_service_url)
@@ -76,12 +45,12 @@ class API:
                                   data=key_registration,
                                   headers={'Content-Type': 'application/json'})
 
-    def send_upp(self, uuid: UUID, upp: bytes) -> bytes:
+    def send_upp(self, uuid: UUID, upp: bytes) -> (int, bytes):
         """
         Send data to the authentication service. Requires encoding before sending.
         :param uuid: the sender's UUID
         :param upp: the msgpack encoded data to send (UPP)
-        :return: the response from the server
+        :return: the server response
         """
         if self.debug:
             print("** sending UPP to " + self.auth_service_url)
@@ -90,24 +59,24 @@ class API:
                                   data=upp,
                                   headers=self._ubirch_headers)
 
-    def send_data(self, uuid: UUID, message: bytes) -> bytes:
+    def send_data(self, uuid: UUID, message: bytes) -> (int, bytes):
         """
         Send a data message to the ubirch data service. Requires encoding before sending.
         :param uuid: the sender's UUID
         :param message: the msgpack or JSON encoded message to send
-        :return: the response from the server
+        :return: the server response
         """
         if message.startswith(b'{'):
             return self._send_data_json(uuid, message)
         else:
             return self._send_data_mpack(uuid, message)
 
-    def _send_data_json(self, uuid: UUID, message: bytes) -> bytes:
+    def _send_data_json(self, uuid: UUID, message: bytes) -> (int, bytes):
         """
         Send a json formatted data message to the ubirch data service.
         :param uuid: the sender's UUID
         :param message: the json formatted message to send to the data service
-        :return: the response from the server
+        :return: the server response
         """
         if self.debug:
             print("** sending data message to " + self.data_service_url + "/json")
@@ -116,12 +85,12 @@ class API:
                                   data=message,
                                   headers=self._ubirch_headers)
 
-    def _send_data_mpack(self, uuid: UUID, message: bytes) -> bytes:
+    def _send_data_mpack(self, uuid: UUID, message: bytes) -> (int, bytes):
         """
         Send a msgpack formatted data message to the ubirch data service.
         :param uuid: the sender's UUID
         :param message: the msgpack formatted message to send to the data service
-        :return: the response from the server
+        :return: the server response
         """
         if self.debug:
             print("** sending data message to " + self.data_service_url + "/msgPack")
@@ -130,12 +99,12 @@ class API:
                                   data=binascii.hexlify(message),
                                   headers=self._ubirch_headers)
 
-    def verify(self, data: bytes, quick=False) -> bytes:
+    def verify(self, data: bytes, quick=False) -> (int, bytes):
         """
         Verify a given hash at the verification service. Returns all available verification data.
         :param data: the message hash to verify
         :param quick: only run quick check to verify that the hash has been stored in backend
-        :return: the response from the server (if the verification was successful and the data related to it)
+        :return: the server response (if the verification was successful and the data related to it)
         """
         url = self.verification_service_url
         if not quick:
@@ -151,18 +120,18 @@ class API:
         Claim SIM identity at the ubirch backend.
         The response contains the SIM applet PIN to unlock crypto functionality.
         :param imsi: the SIM international mobile subscriber identity (IMSI)
-        :return: the response from the server
+        :return: the server response
         """
         if self.debug:
             print("** bootstrapping identity {} at {}".format(imsi, self.bootstrap_service_url))
         self._ubirch_headers['X-Ubirch-IMSI'] = imsi
         return requests.get(url=self.bootstrap_service_url, headers=self._ubirch_headers)
 
-    def send_csr(self, csr: bytes) -> bytes:
+    def send_csr(self, csr: bytes) -> (int, bytes):
         """
-        Register a public key at the key service.
-        :param key_registration: the key registration data
-        :return: the response from the server
+        Send a X.509 Certificate Signing Request to the ubirch identity service
+        :param csr: the CSR in der format (binary)
+        :return: the server response
         """
         if self.debug: print("** sending CSR to " + self.identity_service_url)
         return self._send_request(url=self.identity_service_url,
