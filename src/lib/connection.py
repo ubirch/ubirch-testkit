@@ -39,10 +39,10 @@ class NB_IoT(Connection):
         return False
 
     def connect(self) -> bool:
-        if lte.isconnected():
+        if self.lte.isconnected():
             return True
 
-        if not lte.isattached() and not self.attach():
+        if not self.lte.isattached() and not self.attach():
             raise OSError("!! unable to attach to NB-IoT network.")
 
         sys.stdout.write("\tconnecting to the NB-IoT network")
