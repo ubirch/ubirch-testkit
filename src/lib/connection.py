@@ -42,8 +42,7 @@ class NB_IoT(Connection):
         if self.lte.isconnected():
             return
 
-        if not self.lte.isattached() and not self.attach():
-            raise OSError("!! unable to attach to NB-IoT network.")
+        if not self.lte.isattached(): self.attach()
 
         sys.stdout.write("\tconnecting to the NB-IoT network")
         self.lte.connect()  # start a data session and obtain an IP address
