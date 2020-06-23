@@ -41,51 +41,65 @@ print("\tUbirchClient")
 # ubirch client
 from ubirch import UbirchClient
 
-#begin of main code
-set_led(LED_GREEN)
+#### Function Definitions ###
+def mount_sd():
+    try:
+        sd = machine.SD()
+        os.mount(sd, '/sd')
+        return True
+    except OSError:
+        return False
 
-#check reset cause
-COMING_FROM_DEEPSLEEP = (machine.reset_cause() == machine.DEEPSLEEP_RESET)
-
-# mount SD card if there is one
-print("++ trying to mount SD")
-try:
-    sd = machine.SD()
-    os.mount(sd, '/sd')
-    SD_CARD_MOUNTED = True
-    print("\tOK")
-except OSError:
-    SD_CARD_MOUNTED = False
-    print("\tfailed")
-
-#intialization section
-lte = LTE()
-connection = None
-
-#if we are not coming from deepsleep, modem might be in a strange state (errors/poweron) -> reset
-if not COMING_FROM_DEEPSLEEP: 
-    print("++ not coming from sleep, resetting modem")
-    reset_modem(lte)
-
-print("++ getting IMSI")
-imsi = get_imsi(lte)
-
-if not COMING_FROM_DEEPSLEEP:
-    #if not in normal loop operation: save imsi to file
+def store_imsi(imsi):
+    #save imsi to file on SD, SD needs to be mounted
     imsi_file = "imsi.txt"
-    if SD_CARD_MOUNTED and imsi_file not in os.listdir('/sd'):
+    if imsi_file not in os.listdir('/sd'):
         print("\twriting IMSI to SD")
         with open('/sd/' + imsi_file, 'w') as f:
             f.write(imsi)
 
-# load configuration
+    
+
+### Main Code ###
+#error color codes
+COLOR_INET_FAIL = LED_PURPLE
+COLOR_BACKEND_FAIL = LED_ORANGE
+COLOR_SIM_FAIL = LED_RED
+COLOR_CONFIG_FAIL = LED_RED
+
+#signal beginning of main code
+set_led(LED_GREEN)
+
+#intialize globals
+lte = LTE()
+connection = None
+
+#check reset cause
+COMING_FROM_DEEPSLEEP = (machine.reset_cause() == machine.DEEPSLEEP_RESET)
+
+#do modem reset on any non-normal loop (modem might be in a strange state)
+if not COMING_FROM_DEEPSLEEP: 
+    print("++ not coming from sleep, resetting modem")
+    reset_modem(lte)
+
+# mount SD card if there is one
+print("++ trying to mount SD")
+SD_CARD_MOUNTED = mount_sd()
+
+print("++ getting IMSI")
+imsi = get_imsi(lte)
+
+if not COMING_FROM_DEEPSLEEP and SD_CARD_MOUNTED: store_imsi(imsi)
+
+
+# load configuration, blocks in case of failure
 print("++ trying to load config")
 try:
     cfg = load_config(sd_card_mounted=SD_CARD_MOUNTED)
     print("\tOK")
 except Exception as e:
     print("\tError")
-    set_led(LED_YELLOW)
+    set_led(COLOR_CONFIG_FAIL)
     print_to_console(e)
     while True:
         machine.idle()
@@ -109,7 +123,7 @@ if not board_time_valid(): #time can't be correct -> connect to sync time
         print("\twaiting for time sync")
         wait_for_sync(print_dots=False)
     except Exception as e:
-        error_handler.log(e, LED_PURPLE, reset=True)
+        error_handler.log(e, COLOR_INET_FAIL, reset=True)
     print("\tdisconnecting")
     connection.disconnect()
 
