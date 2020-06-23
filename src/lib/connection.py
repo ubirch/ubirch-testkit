@@ -19,19 +19,18 @@ class NB_IoT(Connection):
 
     def __init__(self, lte: LTE, apn: str, band: int or None):
         self.lte = lte
+        self.apn = apn
+        self.band = band
 
-        if not self.attach(apn, band):
-            raise OSError("!! unable to attach to NB-IoT network.")
-        if not self.connect():
-            raise OSError("!! unable to connect to NB-IoT network.")
+    def attach(self) -> bool:
+        if self.lte.isattached():
+            return True
 
-    def attach(self, apn: str, band: int or None) -> bool:
         sys.stdout.write("\tattaching to the NB-IoT network")
-        self.lte.attach(band=band, apn=apn)
+        self.lte.attach(band=self.band, apn=self.apn)
         i = 0
         while not self.lte.isattached() and i < 60:
             i += 1
-            machine.idle()
             time.sleep(1.0)
             sys.stdout.write(".")
         if self.lte.isattached():
@@ -40,12 +39,17 @@ class NB_IoT(Connection):
         return False
 
     def connect(self) -> bool:
+        if lte.isconnected():
+            return True
+
+        if not lte.isattached() and not self.attach():
+            raise OSError("!! unable to attach to NB-IoT network.")
+
         sys.stdout.write("\tconnecting to the NB-IoT network")
         self.lte.connect()  # start a data session and obtain an IP address
         i = 0
         while not self.lte.isconnected() and i < 60:
             i += 1
-            machine.idle()
             time.sleep(1.0)
             sys.stdout.write(".")
         if self.lte.isconnected():
@@ -67,10 +71,11 @@ class WIFI(Connection):
         from network import WLAN
         self.wlan = WLAN(mode=WLAN.STA)
         self.networks = networks
-        if not self.connect():
-            raise OSError("!! unable to connect to WIFI network.")
 
     def connect(self) -> bool:
+        if self.wlan.isconnected():
+            return True
+
         for _ in range(4):
             nets = self.wlan.scan()
             print("\tsearching for wifi networks...")
@@ -99,11 +104,19 @@ class WIFI(Connection):
         self.wlan.disconnect()
 
 
+connectionInstance = None
+
+
 def init_connection(lte: LTE, cfg: dict) -> Connection:
+    global connectionInstance
+    if connectionInstance is not None:
+        return connectionInstance
     if cfg['connection'] == "wifi":
-        return WIFI(cfg['networks'])
+        connectionInstance = WIFI(cfg['networks'])
+        return connectionInstance
     elif cfg['connection'] == "nbiot":
-        return NB_IoT(lte, cfg['apn'], cfg['band'])
+        connectionInstance = NB_IoT(lte, cfg['apn'], cfg['band'])
+        return connectionInstance
     else:
         raise Exception(
             "Connection type {} not supported. Supported types: 'wifi' and 'nbiot'".format(cfg['connection']))

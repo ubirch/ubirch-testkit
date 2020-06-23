@@ -2,44 +2,52 @@ print("*** UBIRCH SIM Testkit ***")
 print("++ importing:")
 print("\tmachine")
 import machine
+
 print("\ttime")
 import time
 
-#set watchdog: if execution hangs/takes longer than 'timeout' an automatic reset is triggered
-#we need to do this as early as possible in case an import cause a freeze for some reason
+# set watchdog: if execution hangs/takes longer than 'timeout' an automatic reset is triggered
+# we need to do this as early as possible in case an import cause a freeze for some reason
 print("++ enabling watchdog")
-wdt = machine.WDT(timeout= 5 * 60 * 1000)  # set it
-wdt.feed()# we only feed it once since this code hopefully finishes with deepsleep (=no WDT) before reset_after_ms
+wdt = machine.WDT(timeout=5 * 60 * 1000)  # set it
+wdt.feed()  # we only feed it once since this code hopefully finishes with deepsleep (=no WDT) before reset_after_ms
 
-#remember wake-up time
+# remember wake-up time
 print("++ saving boot time")
 start_time = time.time()
 
 print("++ continue with importing:")
 print("\tOS")
 import os
+
 print("\tconfig")
 from config import load_config
+
 print("\tconnection")
 from connection import init_connection
+
 print("\terror handling")
 from error_handling import *
+
 print("\tmodem")
 from modem import get_imsi, reset_modem
+
 print("\trealtimeclock")
 from realtimeclock import *
+
 print("\tnetwork")
 from network import LTE
+
 print("\tubirch_helpers")
 from lib.ubirch.ubirch_helpers import *
+
 print("\tubinascii")
 from ubinascii import b2a_base64, a2b_base64, hexlify, unhexlify
+
 print("\tpyboard")
 # Pycom specifics
 from pyboard import init_pyboard, print_data
-print("\tUbirchClient")
-# ubirch client
-from ubirch import UbirchClient
+
 
 #### Function Definitions ###
 def mount_sd():
@@ -50,35 +58,43 @@ def mount_sd():
     except OSError:
         return False
 
+
 def store_imsi(imsi):
-    #save imsi to file on SD, SD needs to be mounted
+    # save imsi to file on SD, SD needs to be mounted
     imsi_file = "imsi.txt"
     if imsi_file not in os.listdir('/sd'):
         print("\twriting IMSI to SD")
         with open('/sd/' + imsi_file, 'w') as f:
             f.write(imsi)
 
-    
+
+def get_pin_from_flash(pin_file) -> str or None:
+    if pin_file in os.listdir():
+        print("\tloading PIN for " + imsi)
+        with open(pin_file, "rb") as f:
+            return f.readline().decode()
+    else:
+        return None
+
 
 ### Main Code ###
-#error color codes
+# error color codes
 COLOR_INET_FAIL = LED_PURPLE
 COLOR_BACKEND_FAIL = LED_ORANGE
 COLOR_SIM_FAIL = LED_RED
 COLOR_CONFIG_FAIL = LED_RED
 
-#signal beginning of main code
+# signal beginning of main code
 set_led(LED_GREEN)
 
-#intialize globals
+# intialize globals
 lte = LTE()
-connection = None
 
-#check reset cause
+# check reset cause
 COMING_FROM_DEEPSLEEP = (machine.reset_cause() == machine.DEEPSLEEP_RESET)
 
-#do modem reset on any non-normal loop (modem might be in a strange state)
-if not COMING_FROM_DEEPSLEEP: 
+# do modem reset on any non-normal loop (modem might be in a strange state)
+if not COMING_FROM_DEEPSLEEP:
     print("++ not coming from sleep, resetting modem")
     reset_modem(lte)
 
@@ -90,7 +106,6 @@ print("++ getting IMSI")
 imsi = get_imsi(lte)
 
 if not COMING_FROM_DEEPSLEEP and SD_CARD_MOUNTED: store_imsi(imsi)
-
 
 # load configuration, blocks in case of failure
 print("++ trying to load config")
@@ -104,7 +119,10 @@ except Exception as e:
     while True:
         machine.idle()
 
-if cfg['debug']: print("\t"+repr(cfg))
+if cfg['debug']: print("\t" + repr(cfg))
+
+# create connection object depending on config
+connection = init_connection(lte, cfg)
 
 # set measurement interval
 interval = cfg['interval']
@@ -112,13 +130,64 @@ interval = cfg['interval']
 # set up error handling
 error_handler = ErrorHandler(file_logging_enabled=cfg['logfile'], sd_card=SD_CARD_MOUNTED)
 
-#check if the board has a time set, if not synchronize it
+# set up API for backend communication
+api = API(cfg)
+key_name = "ukey"
+
+# get pin from flash, or bootstrap from backend and save
+pin_file = imsi + ".bin"
+pin = get_pin_from_flash(pin_file)
+if pin is not None:
+    try:
+        connection.connect()
+        pin = bootstrap(imsi, api)
+        connection.disconnect()
+        with open(pin_file, "wb") as f:
+            f.write(pin.encode())
+    except Exception as e:
+        error_handler.log(e, COLOR_BACKEND_FAIL, reset=True)
+
+# initialise ubirch SIM protocol
+print("++ intializing ubirch SIM protocol")
+try:
+    sim = SimProtocol(lte=lte, at_debug=cfg['debug'])
+except Exception as e:
+    error_handler.log(e, COLOR_SIM_FAIL, reset=True)
+
+# unlock SIM
+if not sim.sim_auth(pin):
+    # if pin is invalid, there is nothing we can do -> block
+    while True:
+        wdt.feed()  # avert reset from watchdog
+        print("PIN is invalid, can't continue")
+        set_led(COLOR_SIM_FAIL)
+        time.sleep(0.5)
+        set_led(0)
+        time.sleep(0.5)
+
+# get UUID from SIM
+uuid = sim.get_uuid(key_name)
+print("\tUUID: " + str(uuid))
+
+# # send a X.509 Certificate Signing Request for the public key to the ubirch identity service
+csr_file = "csr_{}_{}.der".format(uuid, api.env)
+if csr_file not in os.listdir():
+    try:
+        connection.connect()
+        csr = submit_csr(key_name, sim, api)
+        connection.disconnect()
+        with open(csr_file, "wb") as f:
+            f.write(csr)
+    except Exception as e:
+        error_handler.log(e, COLOR_BACKEND_FAIL, reset=True)
+
+# check if the board has a time set, if not synchronize it
 print("++ checking board time\n\ttime is: ", board_time())
-if not board_time_valid(): #time can't be correct -> connect to sync time
+if not board_time_valid():  # time can't be correct -> connect to sync time
     print("\ttime invalid, syncing")
     # connect to network, set time, disconnect afterwards to speed up SIM communication
     try:
-        connection = init_connection(lte, cfg)
+        connection.connect()
         enable_time_sync()
         print("\twaiting for time sync")
         wait_for_sync(print_dots=False)
@@ -127,13 +196,6 @@ if not board_time_valid(): #time can't be correct -> connect to sync time
     print("\tdisconnecting")
     connection.disconnect()
 
-# initialise ubirch client
-print("++ intializing ubirch client")
-try:
-    ubirch_client = UbirchClient(cfg, lte, imsi)
-except Exception as e:
-    error_handler.log(e, LED_RED, reset=True)
-
 # initialise the sensors
 print("++ intializing sensors")
 sensors = init_pyboard(cfg['board'])
@@ -141,29 +203,29 @@ sensors = init_pyboard(cfg['board'])
 # get data from sensors
 print("++ getting measurements")
 data = sensors.get_data()
-#print_data(data)
+# print_data(data)
 
 ## pack data and create UPP ##
 
 # pack data message containing measurements, device UUID and timestamp to ensure unique hash
 print("++ packing data")
-message = pack_data_json(ubirch_client.uuid, data)
-#print("\tdata message [json]: {}\n".format(message.decode()))
+message = pack_data_json(uuid, data)
+# print("\tdata message [json]: {}\n".format(message.decode()))
 
 # seal the data message (data message will be hashed and inserted into UPP as payload by SIM card)
 print("++ creating UPP")
-upp = ubirch_client.sim.message_chained(ubirch_client.key_name, message, hash_before_sign=True)
-#print("\tUPP [msgpack]: {} (base64: {})\n".format(hexlify(upp).decode(),
+upp = sim.message_chained(key_name, message, hash_before_sign=True)
+# print("\tUPP [msgpack]: {} (base64: {})\n".format(hexlify(upp).decode(),
 #                                                    b2a_base64(upp).decode().rstrip('\n')))
 # retrieve data message hash from generated UPP for verification
-#message_hash = get_upp_payload(upp)
-#print("\tdata message hash: {}".format(b2a_base64(message_hash).decode()))                                                    
+# message_hash = get_upp_payload(upp)
+# print("\tdata message hash: {}".format(b2a_base64(message_hash).decode()))
 
 print("++ checking/establishing connection")
-#if there was no previous connection, create it
+# if there was no previous connection, create it
 if connection == None:
     try:
-        connection = init_connection(lte, cfg)
+        connection.connect()
         enable_time_sync()
     except Exception as e:
         error_handler.log(e, LED_PURPLE, reset=True)
@@ -176,11 +238,11 @@ if not connection.is_connected() and not connection.connect():
 try:
     # send data message to data service
     print("++ sending data message ...")
-    ubirch_client.api.send_data(ubirch_client.uuid, message)
+    api.send_data(uuid, message)
 
     # send UPP to the ubirch authentication service to be anchored to the blockchain
     print("++ sending UPP ...")
-    ubirch_client.api.send_upp(ubirch_client.uuid, upp)
+    api.send_upp(uuid, upp)
 except Exception as e:
     error_handler.log(e, LED_ORANGE)
 
@@ -196,7 +258,7 @@ print("++ preparing hardware for sleep")
 print("\tclose connection")
 connection.disconnect()
 print("\tdeinit ubirch client")
-ubirch_client.sim.deinit()
+sim.deinit()
 # not detaching causes smaller/no re-attach time on next reset but but 
 # somewhat higher sleep current needs to be balanced based on your specific interval
 print("\tdeinit LTE")
@@ -208,8 +270,4 @@ if sleep_time < 0:
     sleep_time = 0
 print(">> going to deepsleep for {} seconds".format(sleep_time))
 set_led(0)  # LED off
-machine.deepsleep(1000*sleep_time)#sleep, execution will resume from main.py entry point
-
-
-
-
+machine.deepsleep(1000 * sleep_time)  # sleep, execution will resume from main.py entry point

@@ -9,50 +9,37 @@ from .ubirch_sim import SimProtocol
 
 def bootstrap(imsi: str, api: API) -> str:
     """
-    Load PIN or bootstrap if PIN unknown
+    Load bootstrap PIN, returns PIN
     """
-    pin_file = imsi + ".bin"
-    if pin_file in os.listdir():
-        print("\tloading PIN for " + imsi)
-        with open(pin_file, "rb") as f:
-            return f.readline().decode()
-    else:
-        print("\tbootstrapping SIM identity " + imsi)
-        status_code, content = api.bootstrap_sim_identity(imsi)
-        if status_code != 200:
-            raise Exception("bootstrapping failed: ({}) {}".format(status_code, str(content)))
+    print("\tbootstrapping SIM identity " + imsi)
+    status_code, content = api.bootstrap_sim_identity(imsi)
+    if status_code != 200:
+        raise Exception("bootstrapping failed: ({}) {}".format(status_code, str(content)))
 
-        info = json.loads(content)
-        print("\tbootstrapping successful")
-        pin = info['pin']
+    info = json.loads(content)
+    print("\tbootstrapping successful")
+    pin = info['pin']
 
-        # sanity check
-        try:
-            if len(pin) != 4: raise ValueError("len = {}".format(len(pin)))
-            int(pin)  # throws ValueError if pin has invalid syntax for integer with base 10
-        except ValueError as e:
-            raise Exception("bootstrapping returned invalid PIN: ".format(e))
+    # sanity check
+    try:
+        if len(pin) != 4: raise ValueError("len = {}".format(len(pin)))
+        int(pin)  # throws ValueError if pin has invalid syntax for integer with base 10
+    except ValueError as e:
+        raise Exception("bootstrapping returned invalid PIN: ".format(e))
 
-        with open(pin_file, "wb") as f:
-            f.write(pin.encode())
-
-        return pin
+    return pin
 
 
-def submit_csr(key_name: str, sim: SimProtocol, api: API):
+def submit_csr(key_name: str, sim: SimProtocol, api: API) -> bytes:
     """
     Submit a X.509 Certificate Signing Request
     """
-    csr_file = "csr_{}_{}.der".format(key_name, api.env)
-    if csr_file not in os.listdir():
-        print("** submitting CSR to identity service ...")
-        csr = sim.generate_csr(key_name)
-        status_code, content = api.send_csr(csr)
-        if status_code != 200:
-            raise Exception("submitting CSR failed: ({}) {}".format(status_code, str(content)))
-
-        with open(csr_file, "wb") as f:
-            f.write(csr)
+    print("** submitting CSR to identity service ...")
+    csr = sim.generate_csr(key_name)
+    status_code, content = api.send_csr(csr)
+    if status_code != 200:
+        raise Exception("submitting CSR failed: ({}) {}".format(status_code, str(content)))
+    return csr
 
 
 def pack_data_json(uuid: UUID, data: dict) -> bytes:
