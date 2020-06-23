@@ -76,6 +76,50 @@ def get_pin_from_flash(pin_file) -> str or None:
     else:
         return None
 
+def send_backend_data(sim:SimProtocol,lte:LTE, api_function,uuid, data) -> (int, bytes) :
+    MAX_MODEM_RESETS = 1 #number of retries with modem reset before giving up
+    MAX_RECONNECTS = 1 #number of retries with reconnect before trying a modem reset
+
+    for reset_attempts in range(MAX_MODEM_RESETS+1):
+        #check if this is a retry for reset_attempts
+        if reset_attempts > 0:
+            print("\tretrying with modem reset")
+            sim.deinit()
+            reset_modem(lte)#TODO: should probably be connection.reset_hardware()
+            connection.connect()
+        
+        #try to send multiple times (with reconnect)
+        try:
+            for send_attempts in range(MAX_RECONNECTS+1):
+                #check if this is a retry for send_attempts
+                if send_attempts > 0:
+                        print("\tretrying with disconnect/reconnect")
+                        connection.disconnect()
+                        connection.connect()
+                try:
+                    print("\tsending...")     
+                    status_code, content = api_function(uuid, data)
+                except:
+                    #TODO: log/print exception?
+                    print("\tsending failed")
+                    #(continues to top of send_attempts loop)
+                else:
+                    #everything worked fine, leave send_attempts loop
+                    break
+            else:
+                #all send attempts used up
+                raise Exception("all send attempts failed")
+        except:
+            print("\tall send attempts failed")
+            #(continues to top of reset_attempts loop)
+        else:
+            #everything worked, break from reset_attempts loop
+            break
+    else:
+        #all modem resets used up
+        raise Exception("could not establish connection to backend")
+    return (status_code, content)
+
 
 ### Main Code ###
 # error color codes
@@ -229,34 +273,40 @@ except Exception as e:
     error_handler.log(e, COLOR_INET_FAIL, reset=True)
 
 # send data to ubirch data service and certificate to ubirch auth service
-# TODO: add retrying to send/handling of already created UPP in case of failure
+# TODO: add retrying to send/handling of already created UPP in case of final failure
+
 try:
-    # send data message to data service
-    print("++ sending data message ...")
-    status_code, content = api.send_data(uuid, message)
+    # send data message to data service, with reconnects/modem resets if necessary
+    print("++ sending data")
+    status_code, content = send_backend_data(sim,lte,api.send_data,uuid,message) 
+   
+    #communication worked in general, now check server response
     if status_code != 200:
         raise Exception("backend (data) returned error: ({}) {}".format(status_code, str(content)))
 
     # send UPP to the ubirch authentication service to be anchored to the blockchain
-    print("++ sending UPP ...")
-    status_code, content = api.send_upp(uuid, upp)
+    print("++ sending UPP")
+    status_code, content = send_backend_data(sim,lte,api.send_upp,uuid, upp)
+
+    #communication worked in general, now check server response
     if status_code != 200:
         raise Exception("backend (UPP) returned error:: ({}) {}".format(status_code, str(content)))
+
 except Exception as e:
-    error_handler.log(e, LED_ORANGE)
+    error_handler.log(e, COLOR_BACKEND_FAIL)
 
 print("++ waiting for time sync")
 try:
     wait_for_sync(print_dots=True, timeout=10)
 except Exception as e:
-    print("Warning: Could not sync time before timeout")
+    print("\nWarning: Could not sync time before timeout")
 
 # prepare hardware for sleep (needed for low current draw and
 # freeing of ressources for after the reset, as the modem stays on)
 print("++ preparing hardware for sleep")
 print("\tclose connection")
 connection.disconnect()
-print("\tdeinit ubirch client")
+print("\tdeinit SIM")
 sim.deinit()
 # not detaching causes smaller/no re-attach time on next reset but but 
 # somewhat higher sleep current needs to be balanced based on your specific interval
