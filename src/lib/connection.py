@@ -5,7 +5,7 @@ import time
 
 class Connection:
 
-    def connect(self) -> bool:
+    def connect(self):
         raise NotImplementedError
 
     def is_connected(self) -> bool:
@@ -22,9 +22,9 @@ class NB_IoT(Connection):
         self.apn = apn
         self.band = band
 
-    def attach(self) -> bool:
+    def attach(self):
         if self.lte.isattached():
-            return True
+            return
 
         sys.stdout.write("\tattaching to the NB-IoT network")
         self.lte.attach(band=self.band, apn=self.apn)
@@ -33,14 +33,14 @@ class NB_IoT(Connection):
             i += 1
             time.sleep(1.0)
             sys.stdout.write(".")
-        if self.lte.isattached():
-            print("\n\t\tattached: {} s".format(i))
-            return True
-        return False
+        if not self.lte.isattached():
+            raise OSError("!! unable to attach to NB-IoT network.")
 
-    def connect(self) -> bool:
+        print("\n\t\tattached: {} s".format(i))
+
+    def connect(self):
         if self.lte.isconnected():
-            return True
+            return
 
         if not self.lte.isattached() and not self.attach():
             raise OSError("!! unable to attach to NB-IoT network.")
@@ -52,11 +52,11 @@ class NB_IoT(Connection):
             i += 1
             time.sleep(1.0)
             sys.stdout.write(".")
-        if self.lte.isconnected():
-            print("\n\t\tconnected: {} s".format(i))
-            # print('-- IP address: ' + str(lte.ifconfig()))
-            return True
-        return False
+        if not self.lte.isconnected():
+            raise OSError("!! unable to connect to NB-IoT network.")
+
+        print("\n\t\tconnected: {} s".format(i))
+        # print('-- IP address: ' + str(lte.ifconfig()))
 
     def is_connected(self) -> bool:
         return self.lte.isconnected()
@@ -72,9 +72,9 @@ class WIFI(Connection):
         self.wlan = WLAN(mode=WLAN.STA)
         self.networks = networks
 
-    def connect(self) -> bool:
-        if self.wlan.isconnected():
-            return True
+    def connect(self):
+        if self.is_connected():
+            return
 
         for _ in range(4):
             nets = self.wlan.scan()
@@ -89,13 +89,14 @@ class WIFI(Connection):
                         machine.idle()  # save power while waiting
                     print('\twifi network connected')
                     print('\tIP address: {}\n'.format(self.wlan.ifconfig()))
-                    return True
+                    return
             print("!! no usable networks found, trying again in 30s")
             print("!! available networks:")
             print("!! " + repr([net.ssid for net in nets]))
             machine.idle()
             time.sleep(30)
-        return False
+
+        raise OSError("!! unable to connect to WIFI network.")
 
     def is_connected(self) -> bool:
         return self.wlan.isconnected()

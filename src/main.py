@@ -137,7 +137,7 @@ key_name = "ukey"
 # get pin from flash, or bootstrap from backend and save
 pin_file = imsi + ".bin"
 pin = get_pin_from_flash(pin_file)
-if pin is not None:
+if pin is None:
     try:
         connection.connect()
         pin = bootstrap(imsi, api)
@@ -222,35 +222,34 @@ upp = sim.message_chained(key_name, message, hash_before_sign=True)
 # print("\tdata message hash: {}".format(b2a_base64(message_hash).decode()))
 
 print("++ checking/establishing connection")
-# if there was no previous connection, create it
-if connection == None:
-    try:
-        connection.connect()
-        enable_time_sync()
-    except Exception as e:
-        error_handler.log(e, LED_PURPLE, reset=True)
-# make sure device is still connected or reconnect
-if not connection.is_connected() and not connection.connect():
-    error_handler.log("!! unable to reconnect to network", LED_PURPLE, reset=True)
+try:
+    connection.connect()
+    enable_time_sync()
+except Exception as e:
+    error_handler.log(e, COLOR_INET_FAIL, reset=True)
 
 # send data to ubirch data service and certificate to ubirch auth service
 # TODO: add retrying to send/handling of already created UPP in case of failure
 try:
     # send data message to data service
     print("++ sending data message ...")
-    api.send_data(uuid, message)
+    status_code, content = api.send_data(uuid, message)
+    if status_code != 200:
+        raise Exception("backend (data) returned error: ({}) {}".format(status_code, str(content)))
 
     # send UPP to the ubirch authentication service to be anchored to the blockchain
     print("++ sending UPP ...")
-    api.send_upp(uuid, upp)
+    status_code, content = api.send_upp(uuid, upp)
+    if status_code != 200:
+        raise Exception("backend (UPP) returned error:: ({}) {}".format(status_code, str(content)))
 except Exception as e:
     error_handler.log(e, LED_ORANGE)
 
 print("++ waiting for time sync")
 try:
-    wait_for_sync(print_dots=True)
+    wait_for_sync(print_dots=True, timeout=10)
 except Exception as e:
-    error_handler.log(e, LED_PURPLE)
+    print("Warning: Could not sync time before timeout")
 
 # prepare hardware for sleep (needed for low current draw and
 # freeing of ressources for after the reset, as the modem stays on)
