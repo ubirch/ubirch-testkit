@@ -24,8 +24,9 @@ class UbirchClient:
         self.uuid = self.sim.get_uuid(self.key_name)
         print("\tUUID: " + str(self.uuid))
 
-        # send a X.509 Certificate Signing Request for the public key to the ubirch identity service
-        submit_csr(self.uuid, self.key_name, self.sim, self.api)
+        # fixme later
+        # # send a X.509 Certificate Signing Request for the public key to the ubirch identity service
+        # submit_csr(self.key_name, self.sim, self.api)
 
     def send(self, data: dict):
         """

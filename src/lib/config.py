@@ -2,9 +2,7 @@ import os
 import ujson as json
 
 NIOMON_SERVICE = "https://niomon.{}.ubirch.com"
-KEY_SERVICE = "https://key.{}.ubirch.com/api/keyService/v1/pubkey"
 DATA_SERVICE = "https://data.{}.ubirch.com/v1"
-VERIFICATION_SERVICE = "https://verify.{}.ubirch.com/api/upp"
 BOOTSTRAP_SERVICE = "https://api.console.{}.ubirch.com/ubirch-web-ui/api/v1/devices/bootstrap"
 IDENTITY_SERVICE = "https://identity.{}.ubirch.com/api/certs/v1/csr/register"
 
@@ -59,7 +57,7 @@ def load_config(sd_card_mounted: bool = False) -> dict:
     if cfg['password'] is None:
         raise Exception("missing auth token")
 
-    # ensure that all necessary service URLs have been set and set default values if not
+    # set default values for unset service URLs
     if 'niomon' not in cfg:
         cfg['niomon'] = NIOMON_SERVICE.format(cfg['env'])
 
@@ -69,20 +67,14 @@ def load_config(sd_card_mounted: bool = False) -> dict:
         raise Exception("invalid ubirch backend environment \"{}\"".format(cfg['env']))
 
     # and set remaining URLs
-    if 'keyService' not in cfg:
-        cfg['keyService'] = KEY_SERVICE.format(cfg['env'])
-    else:
-        cfg['keyService'] = cfg['keyService'].rstrip("/mpack")
-
     if 'data' not in cfg:
         cfg['data'] = DATA_SERVICE.format(cfg['env'])
     else:
         cfg['data'] = cfg['data'].rstrip("/msgPack")
 
-    if 'verify' not in cfg:
-        cfg['verify'] = VERIFICATION_SERVICE.format(cfg['env'])
     if 'bootstrap' not in cfg:
         cfg['bootstrap'] = BOOTSTRAP_SERVICE.format(cfg['env'])
+
     if 'identity' not in cfg:
         cfg['identity'] = IDENTITY_SERVICE.format(cfg['env'])
 
