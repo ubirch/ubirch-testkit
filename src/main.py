@@ -24,7 +24,7 @@ print("\tconfig")
 from config import load_config
 
 print("\tconnection")
-from connection import init_connection
+from connection import get_connection
 
 print("\terror handling")
 from error_handling import *
@@ -38,15 +38,18 @@ from realtimeclock import *
 print("\tnetwork")
 from network import LTE
 
-print("\tubirch_helpers")
-from lib.ubirch.ubirch_helpers import *
+print("\tubirch")
+import ubirch
 
-print("\tubinascii")
-from ubinascii import b2a_base64, a2b_base64, hexlify, unhexlify
+print("\thelpers")
+from helpers import *
+
+# print("\tubinascii")
+# from ubinascii import b2a_base64, a2b_base64, hexlify, unhexlify
 
 print("\tpyboard")
 # Pycom specifics
-from pyboard import init_pyboard, print_data
+from pyboard import init_pyboard
 
 
 #### Function Definitions ###
@@ -76,49 +79,43 @@ def get_pin_from_flash(pin_file) -> str or None:
     else:
         return None
 
-def send_backend_data(sim:SimProtocol,lte:LTE, api_function,uuid, data) -> (int, bytes) :
-    MAX_MODEM_RESETS = 1 #number of retries with modem reset before giving up
-    MAX_RECONNECTS = 1 #number of retries with reconnect before trying a modem reset
 
-    for reset_attempts in range(MAX_MODEM_RESETS+1):
-        #check if this is a retry for reset_attempts
+def send_backend_data(sim: ubirch.SimProtocol, lte: LTE, api_function, uuid, data) -> (int, bytes):
+    MAX_MODEM_RESETS = 1  # number of retries with modem reset before giving up
+    MAX_RECONNECTS = 1  # number of retries with reconnect before trying a modem reset
+
+    for reset_attempts in range(MAX_MODEM_RESETS + 1):
+        # check if this is a retry for reset_attempts
         if reset_attempts > 0:
             print("\tretrying with modem reset")
             sim.deinit()
-            reset_modem(lte)#TODO: should probably be connection.reset_hardware()
+            reset_modem(lte)  # TODO: should probably be connection.reset_hardware()
             connection.connect()
-        
-        #try to send multiple times (with reconnect)
+
+        # try to send multiple times (with reconnect)
         try:
-            for send_attempts in range(MAX_RECONNECTS+1):
-                #check if this is a retry for send_attempts
+            for send_attempts in range(MAX_RECONNECTS + 1):
+                # check if this is a retry for send_attempts
                 if send_attempts > 0:
-                        print("\tretrying with disconnect/reconnect")
-                        connection.disconnect()
-                        connection.connect()
+                    print("\tretrying with disconnect/reconnect")
+                    connection.disconnect()
+                    connection.connect()
                 try:
-                    print("\tsending...")     
-                    status_code, content = api_function(uuid, data)
-                except:
-                    #TODO: log/print exception?
-                    print("\tsending failed")
-                    #(continues to top of send_attempts loop)
-                else:
-                    #everything worked fine, leave send_attempts loop
-                    break
+                    print("\tsending...")
+                    return api_function(uuid, data)
+                except Exception as e:
+                    # TODO: log/print exception?
+                    print("\tsending failed: {}".format(e))
+                    # (continues to top of send_attempts loop)
             else:
-                #all send attempts used up
+                # all send attempts used up
                 raise Exception("all send attempts failed")
-        except:
-            print("\tall send attempts failed")
-            #(continues to top of reset_attempts loop)
-        else:
-            #everything worked, break from reset_attempts loop
-            break
+        except Exception as e:
+            print(repr(e))
+            # (continues to top of reset_attempts loop)
     else:
-        #all modem resets used up
+        # all modem resets used up
         raise Exception("could not establish connection to backend")
-    return (status_code, content)
 
 
 ### Main Code ###
@@ -166,7 +163,7 @@ except Exception as e:
 if cfg['debug']: print("\t" + repr(cfg))
 
 # create connection object depending on config
-connection = init_connection(lte, cfg)
+connection = get_connection(lte, cfg)
 
 # set measurement interval
 interval = cfg['interval']
@@ -175,7 +172,7 @@ interval = cfg['interval']
 error_handler = ErrorHandler(file_logging_enabled=cfg['logfile'], sd_card=SD_CARD_MOUNTED)
 
 # set up API for backend communication
-api = API(cfg)
+api = ubirch.API(cfg)
 key_name = "ukey"
 
 # get pin from flash, or bootstrap from backend and save
@@ -194,7 +191,7 @@ if pin is None:
 # initialise ubirch SIM protocol
 print("++ intializing ubirch SIM protocol")
 try:
-    sim = SimProtocol(lte=lte, at_debug=cfg['debug'])
+    sim = ubirch.SimProtocol(lte=lte, at_debug=cfg['debug'])
 except Exception as e:
     error_handler.log(e, COLOR_SIM_FAIL, reset=True)
 
@@ -278,17 +275,17 @@ except Exception as e:
 try:
     # send data message to data service, with reconnects/modem resets if necessary
     print("++ sending data")
-    status_code, content = send_backend_data(sim,lte,api.send_data,uuid,message) 
-   
-    #communication worked in general, now check server response
+    status_code, content = send_backend_data(sim, lte, api.send_data, uuid, message)
+
+    # communication worked in general, now check server response
     if status_code != 200:
         raise Exception("backend (data) returned error: ({}) {}".format(status_code, str(content)))
 
     # send UPP to the ubirch authentication service to be anchored to the blockchain
     print("++ sending UPP")
-    status_code, content = send_backend_data(sim,lte,api.send_upp,uuid, upp)
+    status_code, content = send_backend_data(sim, lte, api.send_upp, uuid, upp)
 
-    #communication worked in general, now check server response
+    # communication worked in general, now check server response
     if status_code != 200:
         raise Exception("backend (UPP) returned error:: ({}) {}".format(status_code, str(content)))
 

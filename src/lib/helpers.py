@@ -1,13 +1,10 @@
-import os
 import time
-import ubinascii as binascii
-import ujson as json
 from uuid import UUID
-from .ubirch_api import API
-from .ubirch_sim import SimProtocol
+
+import ubirch
 
 
-def bootstrap(imsi: str, api: API) -> str:
+def bootstrap(imsi: str, api: ubirch.API) -> str:
     """
     Load bootstrap PIN, returns PIN
     """
@@ -16,8 +13,8 @@ def bootstrap(imsi: str, api: API) -> str:
     if status_code != 200:
         raise Exception("bootstrapping failed: ({}) {}".format(status_code, str(content)))
 
-    info = json.loads(content)
-    print("\tbootstrapping successful")
+    from json import loads
+    info = loads(content)
     pin = info['pin']
 
     # sanity check
@@ -30,9 +27,9 @@ def bootstrap(imsi: str, api: API) -> str:
     return pin
 
 
-def submit_csr(key_name: str, sim: SimProtocol, api: API) -> bytes:
+def submit_csr(key_name: str, sim: ubirch.SimProtocol, api: ubirch.API) -> bytes:
     """
-    Submit a X.509 Certificate Signing Request
+    Submit a X.509 Certificate Signing Request. Returns CSR in der format.
     """
     print("** submitting CSR to identity service ...")
     csr = sim.generate_csr(key_name)
@@ -102,7 +99,8 @@ def get_upp_payload(upp: bytes) -> bytes:
     elif upp[0] == 0x96 and upp[1] == 0x23:  # chained UPP
         payload_start_idx = 89
     else:
-        raise Exception("!! can't get payload from {} (not a UPP)".format(binascii.hexlify(upp).decode()))
+        from binascii import hexlify
+        raise Exception("!! can't get payload from {} (not a UPP)".format(hexlify(upp).decode()))
 
     if upp[payload_start_idx - 2] != 0xC4:
         raise Exception("unexpected payload type: %X".format(upp[payload_start_idx - 2]))

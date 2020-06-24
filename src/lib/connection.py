@@ -8,7 +8,7 @@ class Connection:
     def connect(self):
         raise NotImplementedError
 
-    def is_connected(self) -> bool:
+    def isconnected(self) -> bool:
         raise NotImplementedError
 
     def disconnect(self):
@@ -57,7 +57,7 @@ class NB_IoT(Connection):
         print("\n\t\tconnected: {} s".format(i))
         # print('-- IP address: ' + str(lte.ifconfig()))
 
-    def is_connected(self) -> bool:
+    def isconnected(self) -> bool:
         return self.lte.isconnected()
 
     def disconnect(self):
@@ -72,7 +72,7 @@ class WIFI(Connection):
         self.networks = networks
 
     def connect(self):
-        if self.is_connected():
+        if self.wlan.isconnected():
             return
 
         for _ in range(4):
@@ -97,7 +97,7 @@ class WIFI(Connection):
 
         raise OSError("!! unable to connect to WIFI network.")
 
-    def is_connected(self) -> bool:
+    def isconnected(self) -> bool:
         return self.wlan.isconnected()
 
     def disconnect(self):
@@ -107,7 +107,7 @@ class WIFI(Connection):
 connectionInstance = None
 
 
-def init_connection(lte: LTE, cfg: dict) -> Connection:
+def get_connection(lte: LTE, cfg: dict) -> Connection:
     global connectionInstance
     if connectionInstance is not None:
         return connectionInstance
