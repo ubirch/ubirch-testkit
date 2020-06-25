@@ -189,14 +189,16 @@ if pin is None:
         error_handler.log(e, COLOR_BACKEND_FAIL, reset=True)
 
 # initialise ubirch SIM protocol
-print("++ intializing ubirch SIM protocol")
+print("++ initializing ubirch SIM protocol")
 try:
     sim = ubirch.SimProtocol(lte=lte, at_debug=cfg['debug'])
 except Exception as e:
     error_handler.log(e, COLOR_SIM_FAIL, reset=True)
 
 # unlock SIM
-if not sim.sim_auth(pin):
+try:
+    sim.sim_auth(pin)
+except:
     # if pin is invalid, there is nothing we can do -> block
     while True:
         wdt.feed()  # avert reset from watchdog
