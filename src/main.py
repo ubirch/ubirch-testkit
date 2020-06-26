@@ -169,7 +169,9 @@ connection = get_connection(lte, cfg)
 interval = cfg['interval']
 
 # set up error handling
-error_handler = ErrorHandler(file_logging_enabled=cfg['logfile'], sd_card=SD_CARD_MOUNTED)
+max_file_size_kb = 1000 if SD_CARD_MOUNTED else 20
+error_handler = ErrorHandler(file_logging_enabled=cfg['logfile'], max_file_size_kb=max_file_size_kb,
+                             sd_card=SD_CARD_MOUNTED)
 
 # set up API for backend communication
 api = ubirch.API(cfg)
