@@ -222,7 +222,7 @@ if csr_file not in os.listdir():
         with open(csr_file, "wb") as f:
             f.write(csr)
     except Exception as e:
-        error_handler.log(e, COLOR_BACKEND_FAIL, reset=True)
+        error_handler.log(e, COLOR_BACKEND_FAIL)
 
 # check if the board has a time set, if not synchronize it
 print("++ checking board time\n\ttime is: ", board_time())
@@ -280,7 +280,7 @@ try:
     status_code, content = send_backend_data(sim, lte, api.send_data, uuid, message)
 
     # communication worked in general, now check server response
-    if status_code != 200:
+    if not 200 <= status_code < 300:
         raise Exception("backend (data) returned error: ({}) {}".format(status_code, str(content)))
 
     # send UPP to the ubirch authentication service to be anchored to the blockchain
@@ -288,7 +288,7 @@ try:
     status_code, content = send_backend_data(sim, lte, api.send_upp, uuid, upp)
 
     # communication worked in general, now check server response
-    if status_code != 200:
+    if not 200 <= status_code < 300:
         raise Exception("backend (UPP) returned error:: ({}) {}".format(status_code, str(content)))
 
 except Exception as e:

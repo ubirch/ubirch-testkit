@@ -10,7 +10,7 @@ def bootstrap(imsi: str, api: ubirch.API) -> str:
     """
     print("\tbootstrapping SIM identity " + imsi)
     status_code, content = api.bootstrap_sim_identity(imsi)
-    if status_code != 200:
+    if not 200 <= status_code < 300:
         raise Exception("bootstrapping failed: ({}) {}".format(status_code, str(content)))
 
     from json import loads
@@ -34,7 +34,7 @@ def submit_csr(key_name: str, sim: ubirch.SimProtocol, api: ubirch.API) -> bytes
     print("** submitting CSR to identity service ...")
     csr = sim.generate_csr(key_name)
     status_code, content = api.send_csr(csr)
-    if status_code != 200:
+    if not 200 <= status_code < 300:
         raise Exception("submitting CSR failed: ({}) {}".format(status_code, str(content)))
     return csr
 
