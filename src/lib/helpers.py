@@ -27,12 +27,13 @@ def bootstrap(imsi: str, api: ubirch.API) -> str:
     return pin
 
 
-def submit_csr(key_name: str, sim: ubirch.SimProtocol, api: ubirch.API) -> bytes:
+def submit_csr(key_name: str, csr_country: str, csr_organization: str, sim: ubirch.SimProtocol,
+               api: ubirch.API) -> bytes:
     """
     Submit a X.509 Certificate Signing Request. Returns CSR in der format.
     """
     print("** submitting CSR to identity service ...")
-    csr = sim.generate_csr(key_name)
+    csr = sim.generate_csr(key_name, csr_country, csr_organization)
     status_code, content = api.send_csr(csr)
     if not 200 <= status_code < 300:
         raise Exception("submitting CSR failed: ({}) {}".format(status_code, str(content)))

@@ -219,7 +219,7 @@ csr_file = "csr_{}_{}.der".format(uuid, api.env)
 if csr_file not in os.listdir():
     try:
         connection.connect()
-        csr = submit_csr(key_name, sim, api)
+        csr = submit_csr(key_name, cfg["CSR_country"], cfg["CSR_organization"], sim, api)
         connection.disconnect()
         with open(csr_file, "wb") as f:
             f.write(csr)

@@ -307,7 +307,7 @@ class SimProtocol:
         if code[0:2] == '61':
             return self._execute(STK_GET_RESPONSE.format(int(code[2:4], 16)))
         else:
-            return b'', "NO RESPONSE DATA ({})".format(code)
+            raise Exception("no response data ({})".format(code))
 
     def _get_more_data(self, code: str, data: bytes, cmd: str) -> (bytes, str):
         """
@@ -539,7 +539,7 @@ class SimProtocol:
         """
         return UUID(self.get_entry_title(entry_id))
 
-    def generate_csr(self, entry_id: str) -> bytes:
+    def generate_csr(self, entry_id: str, csr_country: str, csr_organization: str) -> bytes:
         """
         Request a CSR for the selected key.
         :param entry_id: the entry ID of the SS key entry
@@ -549,8 +549,8 @@ class SimProtocol:
         uuid = self.get_uuid(entry_id)
 
         cert_attr = _encode_tag([
-            (0xD4, "DE".encode()),
-            (0xD7, "ubirch GmbH".encode()),
+            (0xD4, csr_country.encode()),
+            (0xD7, csr_organization.encode()),
             (0xD9, str(uuid).encode()),
         ])
         cert_args = _encode_tag([

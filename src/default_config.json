@@ -6,6 +6,8 @@
   "password": null,
   "env": "prod",
   "logfile": true,
-  "debug": false,
-  "interval": 60
+  "CSR_country": "DE",
+  "CSR_organization": "ubirch GmbH",
+  "interval": 60,
+  "debug": false
 }

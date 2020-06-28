@@ -27,8 +27,10 @@ def load_config(sd_card_mounted: bool = False) -> dict:
         "verify": "<URL of verification service>",
         "bootstrap": "<URL of bootstrap service>",
         "logfile": <true or false>,
-        "debug": <true or false>,
-        "interval": <measure interval in seconds>
+        "CSR_country": "DE",
+        "CSR_organization": "ubirch GmbH",
+        "interval": <measure interval in seconds>,
+        "debug": <true or false>
     }
     :param user_config: the user config file
     :return: a dict with the available configurations
