@@ -73,7 +73,7 @@ class Pytrack(Pyboard):
         return data
 
 
-def init_pyboard(type: str) -> Pyboard:
+def get_pyboard(type: str) -> Pyboard:
     if type == "pysense":
         return Pysense()
     elif type == "pytrack":

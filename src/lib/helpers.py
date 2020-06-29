@@ -1,7 +1,79 @@
+import machine
+import os
 import time
+
+from connection import Connection
+from modem import reset_modem
+from network import LTE
 from uuid import UUID
 
 import ubirch
+
+
+def mount_sd():
+    try:
+        sd = machine.SD()
+        os.mount(sd, '/sd')
+        return True
+    except OSError:
+        return False
+
+
+def store_imsi(imsi: str):
+    # save imsi to file on SD, SD needs to be mounted
+    imsi_file = "imsi.txt"
+    if imsi_file not in os.listdir('/sd'):
+        print("\twriting IMSI to SD")
+        with open('/sd/' + imsi_file, 'w') as f:
+            f.write(imsi)
+
+
+def get_pin_from_flash(pin_file: str, imsi: str) -> str or None:
+    if pin_file in os.listdir():
+        print("\tloading PIN for " + imsi)
+        with open(pin_file, "rb") as f:
+            return f.readline().decode()
+    else:
+        print("\tno PIN found for " + imsi)
+        return None
+
+
+def send_backend_data(sim: ubirch.SimProtocol, lte: LTE, conn: Connection, api_function, uuid, data) -> (int, bytes):
+    MAX_MODEM_RESETS = 1  # number of retries with modem reset before giving up
+    MAX_RECONNECTS = 1  # number of retries with reconnect before trying a modem reset
+
+    for reset_attempts in range(MAX_MODEM_RESETS + 1):
+        # check if this is a retry for reset_attempts
+        if reset_attempts > 0:
+            print("\tretrying with modem reset")
+            sim.deinit()
+            reset_modem(lte)  # TODO: should probably be connection.reset_hardware()
+            conn.connect()
+
+        # try to send multiple times (with reconnect)
+        try:
+            for send_attempts in range(MAX_RECONNECTS + 1):
+                # check if this is a retry for send_attempts
+                if send_attempts > 0:
+                    print("\tretrying with disconnect/reconnect")
+                    conn.disconnect()
+                    conn.connect()
+                try:
+                    print("\tsending...")
+                    return api_function(uuid, data)
+                except Exception as e:
+                    # TODO: log/print exception?
+                    print("\tsending failed: {}".format(e))
+                    # (continues to top of send_attempts loop)
+            else:
+                # all send attempts used up
+                raise Exception("all send attempts failed")
+        except Exception as e:
+            print(repr(e))
+            # (continues to top of reset_attempts loop)
+    else:
+        # all modem resets used up
+        raise Exception("could not establish connection to backend")
 
 
 def bootstrap(imsi: str, api: ubirch.API) -> str:

@@ -4,11 +4,13 @@ import pycom
 import sys
 import time
 
+LED_OFF = 0x000000
 LED_GREEN = 0x000200
 LED_YELLOW = 0x020200
 LED_ORANGE = 0x040200
 LED_RED = 0x020000
 LED_PURPLE = 0x020002
+LED_BLUE = 0x000042
 
 
 def set_led(led_color):

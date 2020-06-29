@@ -1,6 +1,5 @@
 # https://github.com/pfalcon/micropython-lib/blob/master/uuid/uuid.py
 
-import os
 import ubinascii
 
 
@@ -21,10 +20,3 @@ class UUID:
     def __repr__(self):
         return "<UUID: %s>" % str(self)
 
-
-def uuid4():
-    """Generates a random UUID compliant to RFC 4122 pg.14"""
-    random = bytearray(os.urandom(16))
-    random[6] = (random[6] & 0x0F) | 0x40
-    random[8] = (random[8] & 0x3F) | 0x80
-    return UUID(bytes=random)
