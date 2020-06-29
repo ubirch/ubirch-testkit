@@ -143,7 +143,6 @@ These are the configuration options:
     "data": "<data service URL, defaults to 'https://data.<env>.ubirch.com/v1/msgPack'>",
     "verify": "<verification service URL, defaults to 'https://verify.<env>.ubirch.com/api/upp'>",
     "bootstrap": "<bootstrap service URL, defaults to 'https://api.console.<env>.ubirch.com/ubirch-web-ui/api/v1/devices/bootstrap'>",
-    "logfile": <flag to enable error logging to file [true or false], defaults to 'true'>,
     "debug": <flag to enable extended debug console output [true or false], defaults to 'false'>,
     "interval": <measure interval in seconds, defaults to '60'>
 }
@@ -160,7 +159,7 @@ The default connection type is NB-IoT, but if you can not connect to a NB-IoT ne
 ```
 ...to your config file and replacing `<WIFI_SSID>` with your SSID and `<WIFI_PASSWORD>` with your password.
 
-Per default, the device will write an error log to a file. If a SD card is present, the device will create
+The device will write an error log to a file. If a SD card is present, the device will create
  a `log.txt`-file on the card and write the log to it. If there is no SD card, the device will store the 
  log-file to the Pycom's flash memory. You can read it by downloading the project files from your board's
  flash memory using the Pymakr `DOWNLOAD` button.

@@ -111,7 +111,6 @@ You can configure your device by adding key-value pairs to the `config.txt`-file
     "data": "<data service URL, defaults to 'https://data.<env>.ubirch.com/v1/msgPack'>",
     "verify": "<verification service URL, defaults to 'https://verify.<env>.ubirch.com/api/upp'>",
     "bootstrap": "<bootstrap service URL, defaults to 'https://api.console.<env>.ubirch.com/ubirch-web-ui/api/v1/devices/bootstrap'>",
-    "logfile": <flag to enable error logging to file [true or false], defaults to 'true'>,
     "debug": <flag to enable extended debug console output [true or false], defaults to 'false'>,
     "interval": <measure interval in seconds, defaults to '60'>
 }

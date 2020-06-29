@@ -5,7 +5,6 @@
   "board": "pysense",
   "password": null,
   "env": "prod",
-  "logfile": true,
   "CSR_country": "DE",
   "CSR_organization": "ubirch GmbH",
   "interval": 60,

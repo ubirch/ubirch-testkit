@@ -26,7 +26,6 @@ def load_config(sd_card_mounted: bool = False) -> dict:
         "data": "<URL of data service>",
         "verify": "<URL of verification service>",
         "bootstrap": "<URL of bootstrap service>",
-        "logfile": <true or false>,
         "CSR_country": "DE",
         "CSR_organization": "ubirch GmbH",
         "interval": <measure interval in seconds>,
