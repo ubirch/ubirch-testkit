@@ -147,6 +147,7 @@ class SimProtocol:
         self.deinit()
 
     def init(self):
+        if self.DEBUG: print("\n>> init SIM")
         self._prepare_AT_session()
         try:
             # make sure we can access the SIM
@@ -169,6 +170,7 @@ class SimProtocol:
         in preparation for events like low-power sleep or a board reset without a SIM/modem
         reset. Does not deinitialize/disconnect the LTE.
         """
+        if self.DEBUG: print("\n>> deinit SIM")
         self._prepare_AT_session()
         try:
             # Close logical channel to SIM if open
