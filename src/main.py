@@ -174,7 +174,7 @@ if csr_file not in os.listdir():
         error_handler.log(e, COLOR_INET_FAIL, reset=True)
 
     try:
-        csr = submit_csr(key_name, cfg["CSR_country"], cfg["CSR_organization"], sim, api)  # todo csr attributes struct
+        csr = submit_csr(key_name, cfg["CSR_country"], cfg["CSR_organization"], sim, api)
         with open(csr_file, "wb") as f:
             f.write(csr)
     except Exception as e:
