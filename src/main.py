@@ -24,7 +24,7 @@ print("\tconfig")
 from config import load_config
 
 print("\tconnection")
-from connection import get_connection
+from connection import get_connection, NB_IoT
 
 print("\terror handling")
 from error_handling import *
@@ -125,12 +125,20 @@ pin = get_pin_from_flash(pin_file, imsi)
 if pin is None:
     try:
         connection.connect()
+    except Exception as e:
+        error_handler.log(e, COLOR_INET_FAIL, reset=True)
+
+    try:
         pin = bootstrap(imsi, api)
-        connection.disconnect()
         with open(pin_file, "wb") as f:
             f.write(pin.encode())
     except Exception as e:
         error_handler.log(e, COLOR_BACKEND_FAIL, reset=True)
+
+# disconnect from LTE connection before accessing SIM application
+if isinstance(connection, NB_IoT):
+    print("\tdisconnecting")
+    connection.disconnect()
 
 # initialise ubirch SIM protocol
 print("++ initializing ubirch SIM protocol")
@@ -162,8 +170,11 @@ csr_file = "csr_{}_{}.der".format(uuid, api.env)
 if csr_file not in os.listdir():
     try:
         connection.connect()
+    except Exception as e:
+        error_handler.log(e, COLOR_INET_FAIL, reset=True)
+
+    try:
         csr = submit_csr(key_name, cfg["CSR_country"], cfg["CSR_organization"], sim, api)  # todo csr attributes struct
-        connection.disconnect()
         with open(csr_file, "wb") as f:
             f.write(csr)
     except Exception as e:
@@ -181,8 +192,10 @@ if not board_time_valid():  # time can't be correct -> connect to sync time
         wait_for_sync(print_dots=False)
     except Exception as e:
         error_handler.log(e, COLOR_INET_FAIL, reset=True)
+
+if isinstance(connection, NB_IoT):
     print("\tdisconnecting")
-    connection.disconnect()  # todo disconnect once and only if nbiot connection
+    connection.disconnect()
 
 ############
 #   DATA   #
@@ -253,7 +266,7 @@ except Exception as e:
 ###################
 
 # prepare hardware for sleep (needed for low current draw and
-# freeing of ressources for after the reset, as the modem stays on)
+# freeing of resources for after the reset, as the modem stays on)
 print("++ preparing hardware for deepsleep")
 print("\tclose connection")
 connection.disconnect()
