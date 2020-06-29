@@ -61,7 +61,8 @@ class NB_IoT(Connection):
         return self.lte.isconnected()
 
     def disconnect(self):
-        self.lte.disconnect()
+        if self.lte.isconnected():
+            self.lte.disconnect()
 
 
 class WIFI(Connection):
@@ -101,7 +102,8 @@ class WIFI(Connection):
         return self.wlan.isconnected()
 
     def disconnect(self):
-        self.wlan.disconnect()
+        if self.wlan.isconnected():
+            self.wlan.disconnect()
 
 
 connectionInstance = None
