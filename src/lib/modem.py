@@ -18,8 +18,9 @@ def _send_at_cmd(lte: LTE, cmd: str, debug_print=True) -> []:
     return result
 
 
-def reset_modem(lte: LTE, debug_print=False):
+def reset_modem(lte: LTE, debug_print=True):
     function_level = "1"
+    cereg_level = "0"
 
     if debug_print: print("\twaiting for reset to finish")
     lte.reset()
@@ -41,6 +42,15 @@ def reset_modem(lte: LTE, debug_print=False):
             break
     else:
         raise Exception("SIM does not seem to respond after reset")
+
+    if debug_print: print("\tdisabling CEREG messages")
+    for tries in range(5):
+        _send_at_cmd(lte, "AT+CEREG=" + cereg_level, debug_print=debug_print)
+        result = _send_at_cmd(lte, "AT+CEREG?", debug_print=debug_print)
+        if result[0][0:9] == '+CEREG: ' + cereg_level:
+            break
+    else:
+        raise Exception("could not set CEREG level")
 
 
 def get_imsi(lte: LTE, debug_print=False) -> str:

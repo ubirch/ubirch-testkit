@@ -27,7 +27,7 @@ class NB_IoT(Connection):
             return
 
         sys.stdout.write("\tattaching to the NB-IoT network")
-        self.lte.attach(band=self.band, apn=self.apn)
+        self.lte.attach(band=self.band, apn=self.apn,legacyattach=False)
         i = 0
         while not self.lte.isattached() and i < 60:
             i += 1
