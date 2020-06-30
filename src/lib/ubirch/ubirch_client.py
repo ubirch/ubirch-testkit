@@ -17,15 +17,11 @@ class UbirchClient:
 
         # unlock SIM
         pin = bootstrap(imsi, self.api)
-        if not self.sim.sim_auth(pin):
-            raise Exception("PIN not accepted")
+        self.sim.sim_auth(pin)
 
         # get UUID from SIM
         self.uuid = self.sim.get_uuid(self.key_name)
         print("** UUID   : " + str(self.uuid) + "\n")
-
-        # send a X.509 Certificate Signing Request for the public key to the ubirch identity service
-        submit_csr(self.uuid, self.key_name, self.sim, self.api)
 
     def send(self, data: dict):
         """
@@ -37,14 +33,14 @@ class UbirchClient:
         message = pack_data_json(self.uuid, data)
         print("** data message [json]: {}\n".format(message.decode()))
 
-        # send data message to data service
-        print("** sending data message ...\n")
-        self.api.send_data(self.uuid, message)
-
         # seal the data message (data message will be hashed and inserted into UPP as payload by SIM card)
         upp = self.sim.message_chained(self.key_name, message, hash_before_sign=True)
         print("** UPP [msgpack]: {} (base64: {})\n".format(hexlify(upp).decode(),
                                                            b2a_base64(upp).decode().rstrip('\n')))
+
+        # send data message to data service
+        print("** sending data message ...\n")
+        self.api.send_data(self.uuid, message)
 
         # send UPP to the ubirch authentication service to be anchored to the blockchain
         print("** sending UPP ...\n")

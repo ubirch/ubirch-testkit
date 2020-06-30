@@ -8,7 +8,7 @@ from modem import get_imsi
 from network import LTE
 
 # Pycom specifics
-from pyboard import init_pyboard, print_data
+from pyboard import init_pyboard
 
 # ubirch client
 from ubirch import UbirchClient
@@ -20,21 +20,6 @@ try:
     SD_CARD_MOUNTED = True
 except OSError:
     SD_CARD_MOUNTED = False
-
-
-def wake_up():
-    set_led(LED_GREEN)
-    return time.time()
-
-
-def sleep_until_next_interval(start_time, interval):
-    # wait for next interval
-    sleep_time = interval - int(time.time() - start_time)
-    if sleep_time > 0:
-        print(">> sleep for {} seconds".format(sleep_time))
-        set_led(0)  # LED off
-        machine.idle()
-        time.sleep(sleep_time)
 
 
 class Main:
@@ -52,7 +37,7 @@ class Main:
 
         # load configuration
         try:
-            cfg = load_config(sd_card_mounted=SD_CARD_MOUNTED)
+            self.cfg = load_config(sd_card_mounted=SD_CARD_MOUNTED)
         except Exception as e:
             set_led(LED_YELLOW)
             print_to_console(e)
@@ -60,51 +45,90 @@ class Main:
                 machine.idle()
 
         print("** loaded configuration")
-        if cfg['debug']: print(repr(cfg))
+        if self.cfg['debug']: print(repr(self.cfg))
 
         # set up error handling
-        self.error_handler = ErrorHandler(file_logging_enabled=cfg['logfile'], sd_card=SD_CARD_MOUNTED)
+        self.error_handler = ErrorHandler(file_logging_enabled=self.cfg['logfile'], sd_card=SD_CARD_MOUNTED)
 
         # connect to network
         try:
-            self.connection = init_connection(lte, cfg)
+            self.connection = init_connection(lte, self.cfg)
         except Exception as e:
             self.error_handler.log(e, LED_PURPLE, reset=True)
 
         # initialise ubirch client
         try:
-            self.ubirch_client = UbirchClient(cfg, lte, imsi)
+            self.ubirch_client = UbirchClient(self.cfg, lte, imsi)
         except Exception as e:
-            self.error_handler.log(e, LED_RED, reset=True)
+            self.error_handler.log(e, LED_RED)
+            # if pin is invalid, there is nothing we can do -> block
+            if isinstance(e, ValueError):
+                print("invalid PIN, can't continue")
+                while True:
+                    set_led(LED_RED)
+                    time.sleep(0.5)
+                    set_led(LED_OFF)
+                    time.sleep(0.5)
+            else:
+                machine.reset()
 
         # initialise the sensors
-        self.sensors = init_pyboard(cfg['board'])
+        self.sensors = init_pyboard(self.cfg['board'])
 
-        # set measurement interval
-        self.interval = cfg['interval']
+        # taken from LIS2HH12.py
+        #   ARG => threshold
+        #   3 => max 8G; resolution: 125   micro G
+        #   2 => max 4G; resolution: 62.5  micro G
+        #   0 => max 2G; resolution: 31.25 micro G
+        self.sensors.accelerometer.set_full_scale(3)
+
+        # taken from LIS2HH12.py
+        #   ARG => duration
+        #   0 => POWER DOWN
+        #   1 => 10  Hz; resolution: 800 milli seconds; max duration: 204000 ms
+        #   2 => 50  Hz; resolution: 160 milli seconds; max duration: 40800  ms
+        #   3 => 100 Hz; resolution: 80  milli seconds; max duration: 20400  ms
+        #   4 => 200 Hz; resolution: 40  milli seconds; max duration: 10200  ms
+        #   5 => 400 Hz; resolution: 20  milli seconds; max duration: 5100   ms
+        #   6 => 500 Hz; resolution: 10  milli seconds; max duration: 2550   ms
+        self.sensors.accelerometer.set_odr(4)
+
+        # enable activity interrupt
+        self.sensors.accelerometer.enable_activity_interrupt(self.cfg['interrupt_threshold_mg'],
+                                                             self.cfg['threshold_duration_ms'], self.interrup_cb)
+
+        set_led(LED_OFF)
 
     def loop(self):
-        print("\n** starting loop (interval = {} seconds)\n".format(self.interval))
         while True:
-            start_time = wake_up()
+            machine.idle()
 
-            # get data
-            print("** getting measurements:")
-            data = self.sensors.get_data()
-            print_data(data)
+    def interrup_cb(self, pin):
+        set_led(LED_BLUE)
 
-            # make sure device is still connected or reconnect
-            if not self.connection.is_connected() and not self.connection.connect():
-                self.error_handler.log("!! unable to reconnect to network", LED_PURPLE, reset=True)
+        # disable interrupt
+        self.sensors.accelerometer.enable_activity_interrupt(self.cfg['interrupt_threshold_mg'],
+                                                             self.cfg['threshold_duration_ms'], None)
 
-            # send data to ubirch data service and certificate to ubirch auth service
-            try:
-                self.ubirch_client.send(data)
-            except Exception as e:
-                self.error_handler.log(e, LED_ORANGE)
+        # make sure device is still connected or reconnect
+        if not self.connection.is_connected() and not self.connection.connect():
+            self.error_handler.log("!! unable to reconnect to network", LED_PURPLE, reset=True)
 
-            print("** done\n")
-            sleep_until_next_interval(start_time, self.interval)
+        set_led(LED_GREEN)
+        # send data to ubirch data service and certificate to ubirch auth service
+        try:
+            self.ubirch_client.send({
+                "threshold_mg": self.cfg['interrupt_threshold_mg'],
+                "duration_ms": self.cfg['threshold_duration_ms']
+            })
+        except Exception as e:
+            self.error_handler.log(e, LED_ORANGE)
+
+        # re-enable interrupt
+        self.sensors.accelerometer.enable_activity_interrupt(self.cfg['interrupt_threshold_mg'],
+                                                             self.cfg['threshold_duration_ms'], self.interrup_cb)
+
+        set_led(LED_OFF)
 
 
 main = Main()
