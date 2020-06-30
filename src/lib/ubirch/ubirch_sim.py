@@ -283,8 +283,8 @@ class SimProtocol:
             if len(response) > 4:
                 data = binascii.unhexlify(response[0:-4])
             return data, code
-        else:
-            return b'', result[-1]
+
+        raise Exception(result[-1])
 
     def _send_cmd_in_chunks(self, cmd, args) -> (bytes, str):
         """
