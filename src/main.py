@@ -154,12 +154,16 @@ try:
     except Exception as e:
         error_handler.log(e, COLOR_SIM_FAIL)
         # if pin is invalid, there is nothing we can do -> block
-        while True:
+        if isinstance(e, ValueError):
             print("PIN is invalid, can't continue")
-            set_led(COLOR_SIM_FAIL)
-            time.sleep(0.5)
-            set_led(0)
-            time.sleep(0.5)
+            while True:
+                wdt.feed()  # avert reset from watchdog
+                set_led(COLOR_SIM_FAIL)
+                time.sleep(0.5)
+                set_led(LED_OFF)
+                time.sleep(0.5)
+        else:
+            machine.reset()
 
     # get UUID from SIM
     key_name = "ukey"
