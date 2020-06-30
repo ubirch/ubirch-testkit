@@ -373,12 +373,16 @@ class SimProtocol:
         :param pin: the pin to use for authentication
         """
         if self.DEBUG: print("\n>> unlocking SIM")
+        # temporarily disable debug output to avoid printing PIN
+        debug_ = self.DEBUG
+        self.DEBUG = False
+
         self._prepare_AT_session()
         try:
-            # FIXME do not print PIN authentication AT command
             data, code = self._execute(STK_AUTH_PIN.format(len(pin), binascii.hexlify(pin).decode()))
         finally:
             self._finish_AT_session()
+            self.DEBUG = debug_
 
         if code != STK_OK:
             raise Exception("PIN not accepted: {}".format(code))
