@@ -151,10 +151,10 @@ try:
     # unlock SIM
     try:
         sim.sim_auth(pin)
-    except:
+    except Exception as e:
+        error_handler.log(e, COLOR_SIM_FAIL)
         # if pin is invalid, there is nothing we can do -> block
         while True:
-            wdt.feed()  # avert reset from watchdog
             print("PIN is invalid, can't continue")
             set_led(COLOR_SIM_FAIL)
             time.sleep(0.5)
