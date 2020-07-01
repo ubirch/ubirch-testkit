@@ -13,6 +13,11 @@ import ubirch
 def mount_sd():
     try:
         sd = machine.SD()
+        try:#check if sd is already mounted
+            os.stat('/sd')
+            return True
+        except:#not mounted: continue
+            pass
         os.mount(sd, '/sd')
         return True
     except OSError:
