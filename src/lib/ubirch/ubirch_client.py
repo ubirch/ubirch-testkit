@@ -23,7 +23,7 @@ class UbirchClient:
         self.uuid = self.sim.get_uuid(self.key_name)
         print("** UUID   : " + str(self.uuid) + "\n")
 
-    def send(self, data: dict):
+    def send(self, data: dict, callback=print, args="data sent"):
         """
         Send data message to ubirch data service and certificate of the message to ubirch authentication service.
         Throws exception if operation failed.
@@ -41,6 +41,7 @@ class UbirchClient:
         # send data message to data service
         print("** sending data message ...\n")
         self.api.send_data(self.uuid, message)
+        callback(args)
 
         # send UPP to the ubirch authentication service to be anchored to the blockchain
         print("** sending UPP ...\n")

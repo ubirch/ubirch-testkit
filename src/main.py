@@ -2,7 +2,7 @@ import machine
 import os
 import time
 from config import load_config
-from connection import init_connection
+from connection import get_connection
 from error_handling import *
 from modem import get_imsi
 from network import LTE
@@ -29,11 +29,7 @@ class Main:
         lte = LTE()
 
         imsi = get_imsi(lte)
-
-        imsi_file = "imsi.txt"
-        if SD_CARD_MOUNTED and imsi_file not in os.listdir('/sd'):
-            with open('/sd/' + imsi_file, 'w') as f:
-                f.write(imsi)
+        print("IMSI: {}\n".format(imsi))
 
         # load configuration
         try:
@@ -52,7 +48,7 @@ class Main:
 
         # connect to network
         try:
-            self.connection = init_connection(lte, self.cfg)
+            self.connection = get_connection(lte, self.cfg)
         except Exception as e:
             self.error_handler.log(e, LED_PURPLE, reset=True)
 
@@ -111,16 +107,17 @@ class Main:
                                                              self.cfg['threshold_duration_ms'], None)
 
         # make sure device is still connected or reconnect
-        if not self.connection.is_connected() and not self.connection.connect():
-            self.error_handler.log("!! unable to reconnect to network", LED_PURPLE, reset=True)
+        try:
+            self.connection.connect()
+        except Exception as e:
+            self.error_handler.log(e, LED_PURPLE, reset=True)
 
-        set_led(LED_GREEN)
         # send data to ubirch data service and certificate to ubirch auth service
         try:
             self.ubirch_client.send({
                 "threshold_mg": self.cfg['interrupt_threshold_mg'],
                 "duration_ms": self.cfg['threshold_duration_ms']
-            })
+            }, callback=set_led, args=LED_GREEN)
         except Exception as e:
             self.error_handler.log(e, LED_ORANGE)
 

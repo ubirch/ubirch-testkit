@@ -10,12 +10,9 @@ class API:
     def __init__(self, cfg: dict):
         self.debug = cfg['debug']
         self.env = cfg['env']
-        self.key_service_url = cfg['keyService']
         self.data_service_url = cfg['data']
         self.auth_service_url = cfg['niomon']
-        self.verification_service_url = cfg['verify']
         self.bootstrap_service_url = cfg['bootstrap']
-        self.identity_service_url = cfg['identity']
         self._ubirch_headers = {
             'X-Ubirch-Credential': binascii.b2a_base64(cfg['password']).decode().rstrip('\n'),
             'X-Ubirch-Auth-Type': 'ubirch'
@@ -63,19 +60,6 @@ class API:
             r.close()
             raise Exception("({}) {}".format(status, message))
 
-    def register_key(self, key_registration: bytes) -> bytes:
-        """
-        Register a public key at the key service.
-        :param key_registration: the key registration data
-        :return: the response from the server
-        """
-        if self.debug:
-            print("** register public key at " + self.key_service_url)
-            print("** key registration message [json]: {}".format(key_registration.decode()))
-        return self._send_request(url=self.key_service_url,
-                                  data=key_registration,
-                                  headers={'Content-Type': 'application/json'})
-
     def send_upp(self, uuid: UUID, upp: bytes) -> bytes:
         """
         Send data to the authentication service. Requires encoding before sending.
@@ -92,18 +76,6 @@ class API:
 
     def send_data(self, uuid: UUID, message: bytes) -> bytes:
         """
-        Send a data message to the ubirch data service. Requires encoding before sending.
-        :param uuid: the sender's UUID
-        :param message: the msgpack or JSON encoded message to send
-        :return: the response from the server
-        """
-        if message.startswith(b'{'):
-            return self._send_data_json(uuid, message)
-        else:
-            return self._send_data_mpack(uuid, message)
-
-    def _send_data_json(self, uuid: UUID, message: bytes) -> bytes:
-        """
         Send a json formatted data message to the ubirch data service.
         :param uuid: the sender's UUID
         :param message: the json formatted message to send to the data service
@@ -116,36 +88,6 @@ class API:
                                   data=message,
                                   headers=self._ubirch_headers)
 
-    def _send_data_mpack(self, uuid: UUID, message: bytes) -> bytes:
-        """
-        Send a msgpack formatted data message to the ubirch data service.
-        :param uuid: the sender's UUID
-        :param message: the msgpack formatted message to send to the data service
-        :return: the response from the server
-        """
-        if self.debug:
-            print("** sending data message to " + self.data_service_url + "/msgPack")
-        self._ubirch_headers['X-Ubirch-Hardware-Id'] = str(uuid)
-        return self._send_request(url=self.data_service_url + "/msgPack",
-                                  data=binascii.hexlify(message),
-                                  headers=self._ubirch_headers)
-
-    def verify(self, data: bytes, quick=False) -> bytes:
-        """
-        Verify a given hash at the verification service. Returns all available verification data.
-        :param data: the message hash to verify
-        :param quick: only run quick check to verify that the hash has been stored in backend
-        :return: the response from the server (if the verification was successful and the data related to it)
-        """
-        url = self.verification_service_url
-        if not quick:
-            url = url + '/verify'
-        if self.debug:
-            print("** verifying hash: {} ({})".format(binascii.b2a_base64(data).decode().rstrip('\n'), url))
-        return self._send_request(url=url,
-                                  data=binascii.b2a_base64(data).decode().rstrip('\n'),
-                                  headers={'Accept': 'application/json', 'Content-Type': 'text/plain'})
-
     def bootstrap_sim_identity(self, imsi: str) -> requests.Response:
         """
         Claim SIM identity at the ubirch backend.
@@ -157,14 +99,3 @@ class API:
             print("** bootstrapping identity {} at {}".format(imsi, self.bootstrap_service_url))
         self._ubirch_headers['X-Ubirch-IMSI'] = imsi
         return requests.get(url=self.bootstrap_service_url, headers=self._ubirch_headers)
-
-    def send_csr(self, csr: bytes) -> bytes:
-        """
-        Register a public key at the key service.
-        :param key_registration: the key registration data
-        :return: the response from the server
-        """
-        if self.debug: print("** sending CSR to " + self.identity_service_url)
-        return self._send_request(url=self.identity_service_url,
-                                  data=csr,
-                                  headers={'Content-Type': 'application/octet-stream'})

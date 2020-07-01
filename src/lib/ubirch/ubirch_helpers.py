@@ -1,10 +1,8 @@
 import os
 import time
-import ubinascii as binascii
-import ujson as json
+
 from uuid import UUID
 from .ubirch_api import API
-from .ubirch_sim import SimProtocol
 
 
 def bootstrap(imsi: str, api: API) -> str:
@@ -12,41 +10,32 @@ def bootstrap(imsi: str, api: API) -> str:
     Load PIN or bootstrap if PIN unknown
     """
     pin_file = imsi + ".bin"
-    pin = ""
     if pin_file in os.listdir():
         print("loading PIN for " + imsi + "\n")
         with open(pin_file, "rb") as f:
-            pin = f.readline().decode()
+            return f.readline().decode()
     else:
         print("bootstrapping SIM identity " + imsi)
+        from connection import get_connection
+        c = get_connection(None, {})
+        c.connect()
         r = api.bootstrap_sim_identity(imsi)
-        if r.status_code == 200:
-            info = json.loads(r.content)
-            print("bootstrapping successful\n")
-            if info['encrypted']:  # not implemented yet
-                # decrypt PIN here
-                pass
-            else:
-                pin = info['pin']
+        c.disconnect()
+        if not 200 <= r.status_code < 300:
+            raise Exception("bootstrapping failed: ({}) {}".format(r.status_code, str(r.content)))
 
-            with open(pin_file, "wb") as f:
-                f.write(pin.encode())
-        else:
-            raise Exception("bootstrapping failed with status code {}: {}".format(r.status_code, r.text))
-    return pin
+        from json import loads
+        info = loads(r.content)
+        pin = info['pin']
 
+        # sanity check
+        try:
+            if len(pin) != 4: raise ValueError("len = {}".format(len(pin)))
+            int(pin)  # throws ValueError if pin has invalid syntax for integer with base 10
+        except ValueError as e:
+            raise Exception("bootstrapping returned invalid PIN: ".format(e))
 
-def submit_csr(uuid: UUID, key_name: str, sim: SimProtocol, api: API):
-    """
-    Submit a X.509 Certificate Signing Request
-    """
-    csr_file = "csr_{}_{}.der".format(str(uuid), api.env)
-    if csr_file not in os.listdir():
-        print("** submitting CSR to identity service ...")
-        csr = sim.generate_csr(key_name)
-        api.send_csr(csr)
-        with open(csr_file, "wb") as f:
-            f.write(csr)
+        return pin
 
 
 def pack_data_json(uuid: UUID, data: dict) -> bytes:
@@ -109,7 +98,8 @@ def get_upp_payload(upp: bytes) -> bytes:
     elif upp[0] == 0x96 and upp[1] == 0x23:  # chained UPP
         payload_start_idx = 89
     else:
-        raise Exception("!! can't get payload from {} (not a UPP)".format(binascii.hexlify(upp).decode()))
+        from binascii import hexlify
+        raise Exception("!! can't get payload from {} (not a UPP)".format(hexlify(upp).decode()))
 
     if upp[payload_start_idx - 2] != 0xC4:
         raise Exception("unexpected payload type: %X".format(upp[payload_start_idx - 2]))
