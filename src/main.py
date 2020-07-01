@@ -49,6 +49,7 @@ class Main:
         # connect to network
         try:
             self.connection = get_connection(lte, self.cfg)
+            self.connection.connect()
         except Exception as e:
             self.error_handler.log(e, LED_PURPLE, reset=True)
 

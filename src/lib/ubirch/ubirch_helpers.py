@@ -16,11 +16,7 @@ def bootstrap(imsi: str, api: API) -> str:
             return f.readline().decode()
     else:
         print("bootstrapping SIM identity " + imsi)
-        from connection import get_connection
-        c = get_connection(None, {})
-        c.connect()
         r = api.bootstrap_sim_identity(imsi)
-        c.disconnect()
         if not 200 <= r.status_code < 300:
             raise Exception("bootstrapping failed: ({}) {}".format(r.status_code, str(r.content)))
 
