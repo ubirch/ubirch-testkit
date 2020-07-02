@@ -13,6 +13,9 @@ LED_RED = 0x020000
 LED_PURPLE = 0x020002
 LED_BLUE = 0x000042
 
+LED_TURQUOISE = 0x40E0D0
+LED_PINK = 0xFF1493
+
 
 def set_led(led_color):
     pycom.heartbeat(False)  # disable blue heartbeat blink

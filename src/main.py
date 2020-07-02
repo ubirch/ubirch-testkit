@@ -55,12 +55,15 @@ from pyboard import get_pyboard
 COLOR_INET_FAIL = LED_PURPLE
 COLOR_BACKEND_FAIL = LED_ORANGE
 COLOR_SIM_FAIL = LED_RED
-COLOR_CONFIG_FAIL = LED_YELLOW
-COLOR_MODEM_FAIL = LED_BLUE
+COLOR_CONFIG_FAIL = LED_ORANGE
+COLOR_MODEM_FAIL = LED_PURPLE
 COLOR_UNKNOWN_FAIL = LED_WHITE
 
+#############
+#   SETUP   #
+#############
 # signal beginning of main code
-set_led(LED_GREEN)
+set_led(LED_PINK)
 
 # check reset cause
 COMING_FROM_DEEPSLEEP = (machine.reset_cause() == machine.DEEPSLEEP_RESET)
@@ -72,10 +75,6 @@ if SD_CARD_MOUNTED:
     print("\tSD card mounted")
 else:
     print("\tno SD card found")
-
-#############
-#   SETUP   #
-#############
 
 # set up error handling
 max_file_size_kb = 2000 if SD_CARD_MOUNTED else 20
@@ -101,6 +100,8 @@ try:
             machine.idle()
 
     if not COMING_FROM_DEEPSLEEP and SD_CARD_MOUNTED: store_imsi(imsi)
+
+    set_led(LED_TURQUOISE)
 
     # load configuration, blocks in case of failure
     print("++ loading config")
@@ -205,6 +206,7 @@ try:
     ############
     #   DATA   #
     ############
+    set_led(LED_BLUE)
 
     # get data from sensors
     print("++ getting measurements")
@@ -228,6 +230,7 @@ try:
     ###############
     #   SENDING   #
     ###############
+    set_led(LED_GREEN)
 
     print("++ checking/establishing connection")
     try:
@@ -269,6 +272,7 @@ try:
     ###################
     #   GO TO SLEEP   #
     ###################
+    set_led(LED_YELLOW)
 
     # prepare hardware for sleep (needed for low current draw and
     # freeing of resources for after the reset, as the modem stays on)
