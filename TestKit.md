@@ -14,6 +14,11 @@
 - micro SD card writer
 
 ### Quick Start
+1. In order to activate your SIM card in the UBIRCH backend, you'll need to *claim* it by registering the **IMSI**, 
+a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com). If you already know the IMSI of your SIM 
+card, you can skip to the next step. If the IMSI is unknown, you can find a file `imsi.txt` on the SD card [(1.)](#assembled-testkit)
+in the TestKit which contains the IMSI of your SIM card.
+    
 1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.prod.ubirch.com):
     - Login or register if you don't have an account yet.
     - Go to **Things** (in the menu on the left) and click on `+ ADD NEW DEVICE`.

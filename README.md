@@ -29,7 +29,33 @@ Before you start, you should follow these instructions:
     - Atom: `File` -> `Add Project Folder`
     - VS Code: `File` -> `Open Folder`
 
+### Assemble your device:
+1. Insert SIM card to the underside of the GPy.
+2. Mount the GPy on the expansion board (pysense or pytrack). The LED on the GPy goes over the micro USB port on the expansion board.
+3. Attach the cellular antenna to the Gpy next to LED on the GPy.
+    > Using LTE/NB-IoT connectivity without the antenna being attached could damage your device!
+
 ### Set up SIM card and device
+1. In order to activate your SIM card in the UBIRCH backend, you'll need to *claim* it by registering the **IMSI**, 
+a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com). If you already know the IMSI of your SIM 
+card, you can skip to the next step. 
+
+    If the IMSI is unknown:
+    - connect your assembled Pycom device with the inserted SIM card to your computer via USB 
+    and watch Pymakr console in your IDE. If it worked, you should see the following output:
+      ```
+      Connecting to /dev/ttyACM0...
+      
+      >>> 
+      ```
+    - Press the Pymakr `UPLOAD` button.
+    - Wait for the IMSI to be printed to the console
+        ```
+        >> getting IMSI
+        IMSI: 987654321098765
+        ```
+    - Copy the IMSI (`ctrl` + `shift` + `C`)
+
 1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.prod.ubirch.com):
     - Login or register if you don't have an account yet.
     - Go to **Things** (in the menu on the left) and click on `+ ADD NEW DEVICE`.
@@ -53,11 +79,6 @@ Before you start, you should follow these instructions:
         > Per default the device will try to establish a `NB-IoT` (LTE) connection. The default APN is `"iot.1nce.net"`. For more configuration options, see [here](#configuration).
 
 1. Upload the program to your device
-    - Assemble your device:
-        - insert SIM card to GPy
-        - mount the GPy on the expansion board (LED on the GPy goes over the micro USB port on the expansion board)
-        - attach the cellular antenna to the Gpy (next to LED on the GPy)
-            > Using LTE/NB-IoT connectivity without the antenna being attached could damage your device!
     - Connect the Pycom device to your computer via USB and watch Pymakr console in your IDE. If it worked, you should see the following output:
       ```
       Connecting to /dev/ttyACM0...
