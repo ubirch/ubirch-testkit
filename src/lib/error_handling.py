@@ -5,17 +5,28 @@ import sys
 import time
 
 LED_OFF = 0x000000
-LED_WHITE = 0x111111
-LED_GREEN = 0x000200
-LED_YELLOW = 0x020200
-LED_ORANGE = 0x040200
-LED_RED = 0x020000
-LED_PURPLE = 0x020002
-LED_BLUE = 0x000042
 
-LED_TURQUOISE = 0x40E0D0
-LED_PINK = 0xFF1493
+#standard brightness: 1% (low-power)
+LED_WHITE     = 0x030303
+LED_GREEN     = 0x000600
+LED_YELLOW    = 0x060600
+LED_ORANGE    = 0x060200
+LED_RED       = 0x060000
+LED_PURPLE    = 0x030006
+LED_BLUE      = 0x000006
+LED_TURQUOISE = 0x010605
+LED_PINK      = 0x060002
 
+#full brightness (for errors etc)
+LED_WHITE_BRIGHT     = 0xffffff
+LED_GREEN_BRIGHT     = 0x00ff00
+LED_YELLOW_BRIGHT    = 0xffff00
+LED_ORANGE_BRIGHT    = 0xffa500
+LED_RED_BRIGHT       = 0xff0000
+LED_PURPLE_BRIGHT    = 0x800080
+LED_BLUE_BRIGHT      = 0x0000ff
+LED_TURQUOISE_BRIGHT = 0x40E0D0
+LED_PINK_BRIGHT      = 0xFF1493
 
 def set_led(led_color):
     pycom.heartbeat(False)  # disable blue heartbeat blink
