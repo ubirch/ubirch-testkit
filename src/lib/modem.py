@@ -44,6 +44,8 @@ def reset_modem(lte: LTE, debug_print=True):
         raise Exception("SIM does not seem to respond after reset")
 
     if debug_print: print("\tdisabling CEREG messages")
+    # we disable unsolicited CEREG messages, as they interfere with AT communication with the SIM via CSIM commands
+    # this also requires to use an attach method that does not require cereg messages, for pycom that is legacyattach=false
     for tries in range(5):
         _send_at_cmd(lte, "AT+CEREG=" + cereg_level, debug_print=debug_print)
         result = _send_at_cmd(lte, "AT+CEREG?", debug_print=debug_print)

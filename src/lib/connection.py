@@ -27,6 +27,8 @@ class NB_IoT(Connection):
             return
 
         sys.stdout.write("\tattaching to the NB-IoT network")
+        # since we disable unsolicited CEREG messages in modem.py, as they interfere with AT communication with the SIM via CSIM commands,
+        # we are required to use an attach method that does not require cereg messages, for pycom that is legacyattach=false
         self.lte.attach(band=self.band, apn=self.apn,legacyattach=False)
         i = 0
         while not self.lte.isattached() and i < 60:
