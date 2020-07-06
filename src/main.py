@@ -77,7 +77,7 @@ else:
     print("\tno SD card found")
 
 # set up error handling
-max_file_size_kb = 2000 if SD_CARD_MOUNTED else 20
+max_file_size_kb = 10240 if SD_CARD_MOUNTED else 20
 error_handler = ErrorHandler(file_logging_enabled=True, max_file_size_kb=max_file_size_kb,
                              sd_card=SD_CARD_MOUNTED)
 try:
