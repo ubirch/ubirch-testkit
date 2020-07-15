@@ -1,62 +1,37 @@
 print("*** UBIRCH SIM Testkit ***")
-print("++ importing:")
-
-print("\ttime")
 import time
 
 # remember wake-up time
-print("++ saving boot time")
 start_time = time.time()
 
-print("\tmachine")
 import machine
 
 # set watchdog: if execution hangs/takes longer than 'timeout' an automatic reset is triggered
 # we need to do this as early as possible in case an import cause a freeze for some reason
-print("++ enabling watchdog")
 wdt = machine.WDT(timeout=5 * 60 * 1000)  # set it
 wdt.feed()  # we only feed it once since this code hopefully finishes with deepsleep (=no WDT) before reset_after_ms
 
-print("\tOS")
-import os
-
-print("\tconfig")
+from binascii import hexlify
 from config import load_config
-
-print("\tconnection")
 from connection import get_connection, NB_IoT
-
-print("\terror handling")
 from error_handling import *
-
-print("\tmodem")
+from helpers import *
 from modem import get_imsi
-
-print("\trealtimeclock")
+from network import LTE
+from os import listdir
 from realtimeclock import *
 
-print("\tnetwork")
-from network import LTE
-
-print("\tubirch")
 import ubirch
 
-print("\thelpers")
-from helpers import *
-
-print("\tbinascii")
-from binascii import hexlify  # , b2a_base64, a2b_base64, unhexlify
-
 # Pycom specifics
-print("\tpyboard")
 from pyboard import get_pyboard
 
 # error color codes
 COLOR_INET_FAIL = LED_PURPLE_BRIGHT
 COLOR_BACKEND_FAIL = LED_ORANGE_BRIGHT
 COLOR_SIM_FAIL = LED_RED_BRIGHT
-COLOR_CONFIG_FAIL = LED_ORANGE_BRIGHT
-COLOR_MODEM_FAIL = LED_PURPLE_BRIGHT
+COLOR_CONFIG_FAIL = LED_YELLOW_BRIGHT
+COLOR_MODEM_FAIL = LED_PINK_BRIGHT
 COLOR_UNKNOWN_FAIL = LED_WHITE_BRIGHT
 
 #############
@@ -81,11 +56,11 @@ max_file_size_kb = 10240 if SD_CARD_MOUNTED else 20
 error_handler = ErrorHandler(file_logging_enabled=True, max_file_size_kb=max_file_size_kb,
                              sd_card=SD_CARD_MOUNTED)
 try:
-    # initialize globals
+    # initialize modem
     lte = LTE()
 
     try:
-        # do modem reset on any non-normal loop (modem might be in a strange state)
+        # reset modem on any non-normal loop (modem might be in a strange state)
         if not COMING_FROM_DEEPSLEEP:
             print("++ not coming from sleep, resetting modem")
             reset_modem(lte)
@@ -99,6 +74,7 @@ try:
         while True:
             machine.idle()
 
+    # write IMSI to SD card
     if not COMING_FROM_DEEPSLEEP and SD_CARD_MOUNTED: store_imsi(imsi)
 
     set_led(LED_TURQUOISE)
@@ -121,7 +97,7 @@ try:
         while True:
             machine.idle()
 
-    # get pin from flash, or bootstrap from backend and save
+    # get PIN from flash, or bootstrap from backend and then save PIN to flash
     pin_file = imsi + ".bin"
     pin = get_pin_from_flash(pin_file, imsi)
     if pin is None:
@@ -138,9 +114,12 @@ try:
             error_handler.log(e, COLOR_BACKEND_FAIL, reset=True)
 
     # disconnect from LTE connection before accessing SIM application
+    # (this is only necessary if we are connected via LTE)
     if isinstance(connection, NB_IoT):
         print("\tdisconnecting")
         connection.disconnect()
+
+    set_led(LED_ORANGE)
 
     # initialise ubirch SIM protocol
     print("++ initializing ubirch SIM protocol")
@@ -154,7 +133,7 @@ try:
         sim.sim_auth(pin)
     except Exception as e:
         error_handler.log(e, COLOR_SIM_FAIL)
-        # if pin is invalid, there is nothing we can do -> block
+        # if PIN is invalid, there is nothing we can do -> block
         if isinstance(e, ValueError):
             print("PIN is invalid, can't continue")
             while True:
@@ -171,7 +150,7 @@ try:
     uuid = sim.get_uuid(key_name)
     print("UUID: " + str(uuid))
 
-    # # send a X.509 Certificate Signing Request for the public key to the ubirch identity service
+    # send a X.509 Certificate Signing Request for the public key to the ubirch identity service (once)
     csr_file = "csr_{}_{}.der".format(uuid, api.env)
     if csr_file not in os.listdir():
         try:
@@ -186,7 +165,7 @@ try:
         except Exception as e:
             error_handler.log(e, COLOR_BACKEND_FAIL)
 
-    # check if the board has a time set, if not synchronize it
+    # if the board does not have a time set, synchronize it
     print("++ checking board time\n\ttime is: ", board_time())
     if not board_time_valid():  # time can't be correct -> connect to sync time
         print("\ttime invalid, syncing")
@@ -211,21 +190,18 @@ try:
     # get data from sensors
     print("++ getting measurements")
     data = sensors.get_data()
-    # print_data(data)
 
-    # pack data message containing measurements, device UUID and timestamp to ensure unique hash
-    print("++ packing data")
+    # pack data message containing measurements as well as device UUID and timestamp to ensure unique hash
     message = pack_data_json(uuid, data)
     print("\tdata message [json]: {}\n".format(message.decode()))
 
     # seal the data message (data message will be hashed and inserted into UPP as payload by SIM card)
-    print("++ creating UPP")
-    upp = sim.message_chained(key_name, message, hash_before_sign=True)
-    print("\tUPP: {}\n".format(hexlify(upp).decode()))
-
-    # retrieve data message hash from generated UPP for verification
-    # message_hash = get_upp_payload(upp)
-    # print("\tdata message hash: {}".format(b2a_base64(message_hash).decode()))
+    try:
+        print("++ creating UPP")
+        upp = sim.message_chained(key_name, message, hash_before_sign=True)
+        print("\tUPP: {}\n".format(hexlify(upp).decode()))
+    except Exception as e:
+        error_handler.log(e, COLOR_SIM_FAIL, reset=True)
 
     ###############
     #   SENDING   #
@@ -245,7 +221,10 @@ try:
     try:
         # send data message to data service, with reconnects/modem resets if necessary
         print("++ sending data")
-        status_code, content = send_backend_data(sim, lte, connection, api.send_data, uuid, message)
+        try:
+            status_code, content = send_backend_data(sim, lte, connection, api.send_data, uuid, message)
+        except Exception as e:
+            error_handler.log(e, COLOR_MODEM_FAIL, reset=True)
 
         # communication worked in general, now check server response
         if not 200 <= status_code < 300:
@@ -253,11 +232,14 @@ try:
 
         # send UPP to the ubirch authentication service to be anchored to the blockchain
         print("++ sending UPP")
-        status_code, content = send_backend_data(sim, lte, connection, api.send_upp, uuid, upp)
+        try:
+            status_code, content = send_backend_data(sim, lte, connection, api.send_upp, uuid, upp)
+        except Exception as e:
+            error_handler.log(e, COLOR_MODEM_FAIL, reset=True)
 
         # communication worked in general, now check server response
         if not 200 <= status_code < 300:
-            raise Exception("backend (UPP) returned error:: ({}) {}".format(status_code, str(content)))
+            raise Exception("backend (UPP) returned error: ({}) {}".format(status_code, str(content)))
 
     except Exception as e:
         error_handler.log(e, COLOR_BACKEND_FAIL)

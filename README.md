@@ -54,7 +54,7 @@ card, you can skip to the next step.
         >> getting IMSI
         IMSI: 987654321098765
         ```
-    - Copy the IMSI (`ctrl` + `shift` + `C`)
+    - Copy the IMSI
 
 1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.prod.ubirch.com):
     - Login or register if you don't have an account yet.
