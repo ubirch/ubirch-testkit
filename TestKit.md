@@ -15,9 +15,12 @@
 
 ### Quick Start
 1. In order to activate your SIM card in the UBIRCH backend, you'll need to *claim* it by registering the **IMSI**, 
-a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com). If you already know the IMSI of your SIM 
-card, you can skip to the next step. If the IMSI is unknown, you can find a file `imsi.txt` on the SD card [(1.)](#assembled-testkit)
-in the TestKit which contains the IMSI of your SIM card.
+a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com). 
+
+    *If you already know the IMSI of your SIM card, you can skip to the next step.* 
+
+    If the IMSI is unknown, you can find a file `imsi.txt` on the SD card [(1.)](#assembled-testkit)
+    in the TestKit which contains the IMSI of your SIM card.
     
 1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.prod.ubirch.com):
     - Login or register if you don't have an account yet.
@@ -79,17 +82,19 @@ The sealed data hash is then sent to the **UBIRCH authentication service** (*"Ni
  the previously registered public key and anchored to the blockchain.
  
 ### LED
-The LED on the GPy flashes blue during the initialisation process. If anything goes wrong (or initialisation finished),
- the LED will change colour:
+The LED on the GPy will light up with dim colors while it is active, i.e. setup, taking measurements, sending, to save power.
+ If anything goes wrong during the process, the LED will change to a bright color:
 
-| colour | meaning | what to do |
+| color | meaning | what to do |
 |--------|---------|------------|
 | yellow | couldn't get config from SD card | Make sure the SD card is inserted correctly and has a file named `config.txt` with the API config from the UBIRCH web UI. The content of the file should look like the example in the previous step including the braces (`{` `}`).
-| purple | couldn't connect to network (resets automatically) | Try to find a place with better signal or connect to WIFI instead. (see [here](#configuration) how to do that)
-| red | couldn't acquire PIN to unlock SIM from UBIRCH backend or other backend related issue | Make sure you have registered the correct IMSI at the [UBIRCH web UI](https://console.prod.ubirch.com) and you copied the `apiConfig` for your IMSI to the `config.txt` file on the SD card.
-| green | it's all good. device is measuring, sending data, sealing and sending data certificate to the UBIRCH backend| see next chapter |
-| orange | sending data or data certificate to the UBIRCH backend failed |  |
-| off | sleeping until the next measurement interval | 
+| purple | couldn't establish network connection (TestKit resets automatically and will try again) | Try to find a place with better signal or connect to WIFI instead. (see [here](#configuration) how to do that)
+| orange | couldn't acquire PIN to unlock SIM from UBIRCH backend or other backend related issue | Make sure you have registered the correct IMSI at the [UBIRCH web UI](https://console.prod.ubirch.com) and you copied the `apiConfig` for your IMSI to the `config.txt` file on the SD card.
+| pink | failed to setup modem or communicate with SIM card | Make sure the SIM card is properly inserted to the slot in the Gpy. |
+| red | SIM card application error | This should recover by itself. If it does not, or the LED **blinks** red, please contact us. |
+| white | unexpected error | Please check the error log on the SD card. |
+
+The TestKit also writes an error log to the SD card. 
 
 ### See the data coming in at the backend
 TODO not implemented yet
