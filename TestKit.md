@@ -81,11 +81,22 @@ In the next step, a **UBIRCH Protocol Package** (*"UPP"*) will be generated with
 The sealed data hash is then sent to the **UBIRCH authentication service** (*"Niomon"*), where it will be verified with
  the previously registered public key and anchored to the blockchain.
  
-### LED
+### LED Color Codes
 The LED on the GPy will light up with dim colors while it is active, i.e. setup, taking measurements, sending, to save power.
- If anything goes wrong during the process, the LED will change to a bright color:
+ If anything goes wrong during the process, the LED will change to a bright color. 
+#### Colors During Normal Operation (LED is dimmed)
+| color (dimmed) | meaning |
+|--------|---------|
+| pink | intializing modem and SD card |
+| turquoise | loading configuration |
+| orange | intializing ubirch nano client| 
+| blue | measuring sensor data, creating and sealing UPP |
+| green | sending sensor data and UPP to backend servers |
+| yellow | disconnecting and preparing hardware for sleep |
 
-| color | meaning | what to do |
+#### Colors During Error Condition (LED is at full brightness)
+
+| color (bright) | meaning | what to do |
 |--------|---------|------------|
 | yellow | couldn't get config from SD card | Make sure the SD card is inserted correctly and has a file named `config.txt` with the API config from the UBIRCH web UI. The content of the file should look like the example in the previous step including the braces (`{` `}`).
 | purple | couldn't establish network connection (TestKit resets automatically and will try again) | Try to find a place with better signal or connect to WIFI instead. (see [here](#configuration) how to do that)
