@@ -1,8 +1,10 @@
-# UBIRCH TestKit
+# Using the UBIRCH TestKit
 
 <img style="float: right" align="right" width="67%" src="pictures/exploded.jpg">
 
-### Components
+This readme guides you through the process of using the UBIRCH testkit. It assumes that you already have testkit hardware which is programmed and configured with the UBIRCH nano client. This is either because you have received a pre-programmed testkit from UBIRCH or because you have set up your own hardware, e.g. by following the instructions [here](README.md).
+
+### Testkit Components
 - 1NCE SIM Card with SIGNiT application
 - Pycom GPy
 - Pycom Pysense
@@ -10,17 +12,18 @@
 - micro SD card
 - micro USB cable
 
-### What you need
+### What you might also need
 - micro SD card writer
 
 ### Quick Start
+*Note: if you have setup your own testkit hardware, you might have already performed device claiming and flashed a config.json to the internal flash. In this case you can skip this quick start section.*
 1. In order to activate your SIM card in the UBIRCH backend, you'll need to *claim* it by registering the **IMSI**, 
 a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com). 
 
     *If you already know the IMSI of your SIM card, you can skip to the next step.* 
 
     If the IMSI is unknown, you can find a file `imsi.txt` on the SD card [(1.)](#assembled-testkit)
-    in the TestKit which contains the IMSI of your SIM card.
+    in the TestKit which contains the IMSI of your SIM card. (The testkit code must have run at least once.)
     
 1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.prod.ubirch.com):
     - Login or register if you don't have an account yet.
@@ -58,21 +61,36 @@ On initial start up, the TestKit will load the configuration from the SD card, c
  
 After initialisation, the device will take measurements once a minute and send a data message to the UBIRCH data service.
  The data message contains the device UUID, a timestamp and a map of the sensor data:
-```json
-{
-    "AccPitch": "<accelerator Pitch in [deg]>",
-    "AccRoll": "<accelerator Roll in [deg]>",
-    "AccX": "<acceleration on x-axis in [G]>",
-    "AccY": "<acceleration on y-axis in [G]>",
-    "AccZ": "<acceleration on z-axis in [G]>",
-    "H": "<relative humidity in [%RH]>",
-    "L_blue": "<ambient light levels (violet-blue wavelength) in [lux]>",
-    "L_red": "<ambient light levels (red wavelength) in [lux]>",
-    "P": "<atmospheric pressure in [Pa]>",
-    "T": "<external temperature in [°C]>",
-    "V": "<supply voltage in [V]>"
-}
-```
+ * With a pysense sensor board:
+    ```json
+    {
+        "AccPitch": <accelerator Pitch in [deg]>,
+        "AccRoll": <accelerator Roll in [deg]>,
+        "AccX": <acceleration on x-axis in [G]>,
+        "AccY": <acceleration on y-axis in [G]>,
+        "AccZ": <acceleration on z-axis in [G]>,
+        "H": <relative humidity in [%RH]>,
+        "L_blue": <ambient light levels (violet-blue wavelength) in [lux]>,
+        "L_red": <ambient light levels (red wavelength) in [lux]>,
+        "P": <atmospheric pressure in [Pa]>,
+        "T": <board temperature in [°C]>,
+        "V": <supply voltage in [V]>
+    }
+    ```
+* With a pytrack sensor board:
+    ```json
+    {
+        "AccPitch": <accelerator Pitch in [deg]>,
+        "AccRoll": <accelerator Roll in [deg]>,
+        "AccX": <acceleration on x-axis in [G]>,
+        "AccY": <acceleration on y-axis in [G]>,
+        "AccZ": <acceleration on z-axis in [G]>,
+        "GPS_lat": <latitude in [deg]>,
+        "GPS_long": <longitude in [deg]>,
+        "V": <supply voltage in [V]>
+    }
+    ```
+
 In the next step, a **UBIRCH Protocol Package** (*"UPP"*) will be generated with the unique hash of the serialised data,
  UUID and timestamp, chained to the previous UPP and signed with the SIM card's private key using the 
  crypto functionality of the **SIGNiT** applet. The private key is stored in the secure storage of the SIM card and
@@ -82,14 +100,14 @@ The sealed data hash is then sent to the **UBIRCH authentication service** (*"Ni
  the previously registered public key and anchored to the blockchain.
  
 ### LED Color Codes
-The LED on the GPy will light up with dim colors while it is active, i.e. setup, taking measurements, sending, to save power.
+The LED on the GPy will light up with dim colors during normal operation, i.e. setup, taking measurements, sending, etc.
  If anything goes wrong during the process, the LED will change to a bright color. 
 #### Colors During Normal Operation (LED is dimmed)
 | color (dimmed) | meaning |
 |--------|---------|
 | pink | intializing modem and SD card |
 | turquoise | loading configuration |
-| orange | intializing ubirch nano client| 
+| orange | intializing UBIRCH nano client| 
 | blue | measuring sensor data, creating and sealing UPP |
 | green | sending sensor data and UPP to backend servers |
 | yellow | disconnecting and preparing hardware for sleep |
@@ -113,9 +131,29 @@ TODO not implemented yet
 ### Verify the data hash in the backend
 TODO not implemented yet
 
-### Configuration
-You can configure your device by adding key-value pairs to the `config.txt`-file on the SD card.
- These are the configuration options:
+### Manually Check Blockchain Anchoring
+*This assumes that you have previously setup a console connection to the GPy via the Pymakr console.*
+1. While the Pycom is connected and running, and the IDE is open, check the Pymakr console and wait for the hash of 
+a data message to appear, e.g.:
+    ```
+    ** data message hash: kk/3ZIvK4SOPZXYnSoaFRt1n7ncC+9RxWnFXPO9tzdk=
+    ```
+    Copy the hash.
+
+1. Send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests):
+    ```
+    curl -s -X POST -H "accept: application/json" -H "Content-Type: text/plain" -d "$HASH" "https://verify.prod.ubirch.com/api/upp/verify/anchor"
+    ```
+    > Replace `$HASH` with the hash copied in step 1
+
+
+1. The response will list all blockchain anchors containing this measurement certificate. The `txid` (Blockchain 
+Transaction ID) of each anchors entry can be used to lookup the entry in the according blockchain explorer (consider 
+the `blockchain` and `network_type` attribute to find the right explorer)
+
+### Advanced Configuration
+You can set additional configuration options for your device by adding key-value pairs to the `config.txt`-file on the SD card.  (Or to the `config.json` in the internal flash if you have access to that via the pymakr console.)
+ These are the available configuration options:
 ```
 {
     "connection": "<'wifi' or 'nbiot', defaults to 'nbiot'>",
@@ -137,7 +175,7 @@ You can configure your device by adding key-value pairs to the `config.txt`-file
 }
 ```
 There are default values for everything except for the `password`-key, but you can overwrite the default configuration
- by simply adding a key-value pair to your config file on the SD card.
+ by simply adding a key-value pair to your config file on the SD card (or in the internal flash).
 
 The default connection type is NB-IoT, but if you can not connect to a NB-IoT network, you can change it to WIFI by adding...
 ```
@@ -150,7 +188,9 @@ The default connection type is NB-IoT, but if you can not connect to a NB-IoT ne
 
 ### Log file
 If a SD card is present, the device will create a `log.txt`-file on the card and write an error log to it.
- This can be useful if you are having trouble with your TestKit. 
+ This can be useful if you are having trouble with your TestKit. If there is no SD card, the device will store the 
+ log-file in the GPy's internal flash memory. You can read it by downloading the project files from your board's
+ flash memory using the Pymakr `DOWNLOAD` button, if you have configured Pymakr.
 
 ### Support
 Please feel free to contact [our helpdesk](https://ubirch.atlassian.net/servicedesk/customer/portal/1) for support.
