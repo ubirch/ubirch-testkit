@@ -1,6 +1,6 @@
 # Micropython client for the UBIRCH protocol on a SIM
 This example is targeted at micropython, specifically Pycom modules. 
-The micropython example code uses a SIM Card with SIGNiT applet for cryptographic functionality (e.g. a 1nce SIM with ubirch funtionality). For that reason,
+The micropython example code uses a SIM Card with SIGNiT applet for cryptographic functionality (e.g. a 1nce SIM with ubirch functionality). For that reason,
  it is necessary to use the Pycom **GPy**, which includes a modem. The user can choose **Pysense** or **Pytrack**
  for the expansion board.
  
