@@ -62,7 +62,7 @@ On initial start up, the TestKit will load the configuration from the SD card, c
 After initialisation, the device will take measurements once a minute and send a data message to the UBIRCH data service.
  The data message contains the device UUID, a timestamp and a map of the sensor data:
  * With a pysense sensor board:
-    ```json
+    ```
     {
         "AccPitch": <accelerator Pitch in [deg]>,
         "AccRoll": <accelerator Roll in [deg]>,
@@ -78,7 +78,7 @@ After initialisation, the device will take measurements once a minute and send a
     }
     ```
 * With a pytrack sensor board:
-    ```json
+    ```
     {
         "AccPitch": <accelerator Pitch in [deg]>,
         "AccRoll": <accelerator Roll in [deg]>,
@@ -117,7 +117,7 @@ The LED on the GPy will light up with dim colors during normal operation, i.e. s
 | color (bright) | meaning | what to do |
 |--------|---------|------------|
 | yellow | couldn't get config from SD card | Make sure the SD card is inserted correctly and has a file named `config.txt` with the API config from the UBIRCH web UI. The content of the file should look like the example in the previous step including the braces (`{` `}`).
-| purple | couldn't establish network connection (TestKit resets automatically and will try again) | Try to find a place with better signal or connect to WIFI instead. (see [here](#configuration) how to do that)
+| purple | couldn't establish network connection (TestKit resets automatically and will try again) | Try to find a place with better signal or connect to WIFI instead. (see [here](#advanced-configuration) how to do that)
 | orange | couldn't acquire PIN to unlock SIM from UBIRCH backend or other backend related issue | Make sure you have registered the correct IMSI at the [UBIRCH web UI](https://console.prod.ubirch.com) and you copied the `apiConfig` for your IMSI to the `config.txt` file on the SD card.
 | pink | failed to setup modem or communicate with SIM card | Make sure the SIM card is properly inserted to the slot in the Gpy. |
 | red | SIM card application error | This should recover by itself. If it does not, or the LED **blinks** red, please contact us. |
