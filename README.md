@@ -2,7 +2,7 @@
 
 A micropython client for the UBIRCH protocol on a SIM
 
-The ubirch testkit is a combination of hardware based on pycom hardware modules (we use GPy and Pysense) and micropython example code to demonstrate the usage of the UBIRCH protocol. It allows for easy use and evaluation of the 'blockchain on SIM' application which implements UBIRCH funtionality inside of a SIM card. The SIM Card card needs to have the 'SIGNiT' applet for cryptographic functionality present (e.g. a 1nce SIM with ubirch functionality enabled).
+The ubirch testkit is a combination of hardware based on pycom hardware modules (we use GPy and Pysense) and micropython example code to demonstrate the usage of the UBIRCH protocol. It allows for easy use and evaluation of the 'blockchain on a SIM' application which implements UBIRCH funtionality inside of a SIM card. The SIM card needs to have the 'SIGNiT' applet for cryptographic functionality present (e.g. a 1nce SIM with ubirch functionality enabled).
 
 **If you have already received pre-programmed testkit hardware from UBIRCH, you can directly head over to [the TestKit manual](TestKit.md) and follow the Quick Start for rapid UBIRCHING.**
 
@@ -90,7 +90,7 @@ card, you can skip to the next step.
           "board": "<'pysense' or 'pytrack'>"
         }
         ```
-        > Per default the device will try to establish a `NB-IoT` (LTE) connection. The default APN is `"iot.1nce.net"`. For more configuration options, see [here](#configuration).
+        > Per default the device will try to establish a `NB-IoT` (LTE) connection. The default APN is `"iot.1nce.net"`. For more configuration options, see [the TestKit manual](TestKit.md).
 
 1. Upload the program to your device again to transfer the `config.json` to the internal flash of the GPy.
     - Connect the Pycom device to your computer via USB and watch Pymakr console in your IDE. If it worked, you should see the following output:
