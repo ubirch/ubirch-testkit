@@ -31,7 +31,7 @@ class NB_IoT(Connection):
         # we are required to use an attach method that does not require cereg messages, for pycom that is legacyattach=false
         self.lte.attach(band=self.band, apn=self.apn,legacyattach=False)
         i = 0
-        while not self.lte.isattached() and i < 60:
+        while not self.lte.isattached() and i < 4*60:
             i += 1
             time.sleep(1.0)
             sys.stdout.write(".")
