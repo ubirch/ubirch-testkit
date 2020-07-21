@@ -22,7 +22,7 @@ Please acquire the following hardware:
 ### Update your devices
 Before you start, you should follow these instructions to update your hardware:
 * [Pysense/Pytrack firmware update](https://docs.pycom.io/pytrackpysense/installation/firmware/)
-* [device assembling](https://docs.pycom.io/gettingstarted/connection/gpy/)
+* [device assembling](https://docs.pycom.io/gettingstarted/connection/gpy/) (Please refer to the Pysense/Pytrack/Pyscan tab.)
 * [GPy firmware update](https://docs.pycom.io/gettingstarted/installation/firmwaretool/)
 * [modem firmware update](https://docs.pycom.io/tutorials/lte/firmware/) **Make sure you'll get the NB-IoT firmware for the modem!**
 
