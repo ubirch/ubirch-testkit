@@ -174,7 +174,7 @@ card, you can skip to the next step.
     - Click on your device in the *Your Things* overview and copy the content of the `apiConfig` field.
     
 1. Configure your device
-    * Create a file `config.json` in the `src` directory of the project and paste the `apiConfig` into it.
+    * Create a file `config.json` in the `src` directory of the project and paste the `apiConfig` from the `ThingsSettings` tab into it.
     * Your config file should then look similar to this one:
         ```json
         {
