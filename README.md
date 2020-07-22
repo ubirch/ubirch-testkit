@@ -56,8 +56,8 @@ Please perform an upgrade of the modem firmware as shown in [this tutorial video
     1. Acquire the firmware password: In order to download the password-protected firmware files, register on [forum.pycom.io](http://forum.pycom.io). Then you can find the password in the thread "Announcements & News –> Announcements for members only –> the Firmware Files for the Sequans LTE modem are now secured"
     2. Download the latest modem firmware from [here](https://software.pycom.io/downloads/sequans.html). **Please make sure you'll get the NB-IoT firmware for the modem!**
 2. Extract/copy the .dup and .elf files from the zip file onto an SD card, and insert the SD card into the pysense. The files should be placed in the root folder.
-3. Connect to your Pymakr console. You might have to click the 'Pymakr Console' button to toggle the board connection, it should show a checkmark and you should see ```>>>``` in the Pymakr terminal. **If you do not see ```>>>``` but other messages (or nothing), there might be code running on the GPy which will possibly interfere with the update.** If you accidentially already uploaded code, please upload an empty main.py to fix this. Altenatively, you can simply add an illegal statement such as "thiswillcauseanerror" to the first line of the main.py and reupload it. This will cause the main.py to exit immediately.
-4. Execute the firmware update by running the commands detailed in the tutorial video in the Pymakr console. If you can't find a matching upgdiff_XXXXX-to-YYYYY.dup for your current firmware version in the zip file, please use the NB1-YYYYY.dup and updater.elf file for the upgrade (e.g. ```sqnsupgrade.run('/sd/NB1-YYYYY.dup','/sd/updater.elf')```). If you run into problems, please **disconnect and reconnect** the board from all power sources before retrying to trigger a reset of the modem. If this does not help, try using a different SD card, a different/shorter USB cable or different USB port with sufficient power.
+3. Connect to your Pymakr console. You might have to click the 'Pymakr Console' button to toggle the board connection, it should show a checkmark and you should see ```>>>``` in the Pymakr terminal. **If you do not see ```>>>``` but other messages (or nothing), there might be code running on the GPy which will possibly interfere with the update.** If you accidentially already uploaded code, please upload an empty main.py to fix this. Altenatively, you can simply add an illegal statement such as "thiswillcauseanerror" to the first line of the main.py and reupload it. This will cause the main.py to exit immediately. Make sure to save the file before uploading.
+4. Execute the firmware update by running the commands detailed in the tutorial video in the Pymakr console. If you can't find a matching upgdiff_XXXXX-to-YYYYY.dup for your current firmware version in the zip file, please use the NB1-YYYYY.dup and updater.elf file for the upgrade (e.g. ```sqnsupgrade.run('/sd/NB1-YYYYY.dup','/sd/updater.elf')```). If you run into problems, please **disconnect (for 10 seconds) and reconnect** the board from all power sources before retrying to trigger a reset of the modem. If this does not help, try using a different SD card, a different/shorter USB cable or different USB port with sufficient power.
 
     Example output:
     ```
@@ -93,7 +93,7 @@ Please perform an upgrade of the modem firmware as shown in [this tutorial video
     True
     >>>
     ```
-5. **Disconnect and reconnect** the board from all power sources to trigger a reset of the modem.
+5. **Disconnect (for 10 seconds) and reconnect** the board from all power sources to trigger a reset of the modem.
 6. Reset the modem settings to default via the Pymakr console. This will take about 30 seconds and finish with a board reset.
     ```
     >>> from network import LTE
@@ -141,21 +141,30 @@ You should now see the testkit code files (.py) in your IDE's folder view. We ca
       
       >>> 
       ```
-1.  Press the Pymakr `UPLOAD` button. This transfers the example code into the GPy's internal flash.The code will be uploaded to the board and should start to print information in the Pymakr console while it is running. You now have a GPy running the Testkit code, the next step is to register your SIM with the UBIRCH backend.
+1.  Press the Pymakr `UPLOAD` button. This transfers the example code into the GPy's internal flash.The code will be uploaded to the board and should start to print information in the Pymakr console while it is running. You can ignore error messages regarding missing configuration or auth tokens, as we will set this up later. You now have a GPy running the Testkit code, the next step is to register your SIM with the UBIRCH backend and upload the configuration to the Testkit.
 
-### Set up SIM card and device
+### Set up SIM card and configure the Testkit
 1. In order to activate your SIM card in the UBIRCH backend, you'll need to *claim* it by registering the **IMSI**, 
 a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com). If you already know the IMSI of your SIM 
 card, you can skip to the next step. 
 
     If the IMSI is unknown:
     - Make sure you have already uploaded the code to the GPy in the previous step and can see the output in the Pymakr console.
-    - Wait for the IMSI to be printed to the console
-        ```
-        >> getting IMSI
-        IMSI: 123456789012345
-        ```
+    - Wait for the IMSI to be printed to the console. You can ignore error messages regarding the missing configuration, as we will set this up later.
     - Copy the IMSI
+    
+    Example output:
+    ```
+    ++ getting IMSI
+    IMSI: 123456789012345
+    ++ loading config
+            ERROR loading configuration
+    Traceback (most recent call last):
+      File "main.py", line 85, in <module>
+      File "/flash/lib/config.py", line 59, in load_config
+    Exception: missing auth token
+    Traceback (most recent call last):
+      File "main.py", line 282, in <module>    
 
 1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.prod.ubirch.com):
     - Login or register if you don't have an account yet.
@@ -166,18 +175,18 @@ card, you can skip to the next step.
     
 1. Configure your device
     * Create a file `config.json` in the `src` directory of the project and paste the `apiConfig` into it.
-    * Add configuration for the kind of expansion board you are using with the key `"board"` and the value `"pysense"` or `"pytrack"`.
-        Your config file should then look like this:
+    * Your config file should then look similar to this one:
         ```json
         {
           "password": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxx",
           "keyService": "https://key.prod.ubirch.com/api/keyService/v1/pubkey/mpack",
           "niomon": "https://niomon.prod.ubirch.com/",
           "data": "https://data.prod.ubirch.com/v1/msgPack",
-          "board": "<'pysense' or 'pytrack'>"
         }
         ```
-        > Per default the device will try to establish a `NB-IoT` (LTE) connection. The default APN is `"iot.1nce.net"`. For more configuration options, see [the TestKit manual](TestKit.md).
+        >* If you use a sensor board other than the 'pysense' (which is the default), e.g. a 'pytrack' board, you can add the line `"board": "pytrack",` between the `"data": ...` line and `}`. 
+        >* Per default the device will try to establish a `NB-IoT` (LTE) connection. The default APN is `"iot.1nce.net"`.
+        >* For more configuration options, see [the TestKit manual](TestKit.md).
 
 1. Upload the program to your device again to transfer the `config.json` to the internal flash of the GPy.
     - Connect the Pycom device to your computer via USB and watch Pymakr console in your IDE. If it worked, you should see the following output:
@@ -188,7 +197,7 @@ card, you can skip to the next step.
       ```
     - Press the Pymakr `UPLOAD` button.
 
-You should now see the testkit code running in the pymakr console and the boards LED cycle through different colors. You can now head over to [the TestKit manual.](TestKit.md) to learn how to use your testkit.
+You should now see the testkit code running in the pymakr console and the boards LED cycle through different colors. You can now head over to [the TestKit manual](TestKit.md) to learn how to use your testkit.
 
 ### Support
 Please feel free to contact [our helpdesk](https://ubirch.atlassian.net/servicedesk/customer/portal/1) for support.
