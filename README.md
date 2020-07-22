@@ -12,7 +12,10 @@ If you want to setup your own testkit hardware, read on.
 ### Required hardware
 Please acquire the following hardware:
 
-- 1NCE SIM Card with SIGNiT application
+From 1NCE:
+- 1NCE SIM Card with SIGNiT/UBIRCH application
+
+From an electronics distributor of your choice:
 - Pycom GPy
 - Pycom Pysense
 - Pycom LTE antenna
@@ -189,15 +192,13 @@ card, you can skip to the next step.
         >* For more configuration options, see [the TestKit manual](TestKit.md).
 
 1. Upload the program to your device again to transfer the `config.json` to the internal flash of the GPy.
-    - Connect the Pycom device to your computer via USB and watch Pymakr console in your IDE. If it worked, you should see the following output:
-      ```
-      Connecting to /dev/ttyACM0...
-      
+    - Connect the board to USB if you haven't already and watch the Pymakr console in your IDE. It will print the messages from the testkit code running, possibly giving errors about the incorrect configuration. Press `CTRL-C` to stop any running code. If it worked, you should see the following output:
+      ```           
       >>> 
       ```
-    - Press the Pymakr `UPLOAD` button.
+    - Press the Pymakr `UPLOAD` button to upload the updated `config.json` which you created in the project's `src` folder.
 
-You should now see the testkit code running in the pymakr console and the boards LED cycle through different colors. You can now head over to [the TestKit manual](TestKit.md) to learn how to use your testkit.
+You should now see the properly configured Testkit code running in the pymakr console and the boards LED cycle through different colors. You can now head over to [the TestKit manual](TestKit.md) to learn how to use your testkit.
 
 ### Support
 Please feel free to contact [our helpdesk](https://ubirch.atlassian.net/servicedesk/customer/portal/1) for support.
