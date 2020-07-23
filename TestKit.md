@@ -128,8 +128,8 @@ The TestKit also writes an error log to the SD card.
 ### See the data coming in at the backend
 TODO not implemented yet
 
-### Verify the data hash in the backend
-TODO not implemented yet
+### Verify the blockchain anchoring (UBIRCH console)
+Log in to the ubirch console and head to the ["verification" page](https://console.prod.ubirch.com/verification/). Insert the hash of the data message you want to verify in the search field, e.g. `Yx/M1vxy/RrdpYENQg/dHj4IFhIMPPS4W7CYapfjugY=` . If the lookup is successful, you can choose either a graphical or a JSON representation of the anchoring of that UPP. For the graphical representation, use scrollwheel and click+drag to navigate. Blockchain anchors in the graph such as IOTA, Ethereum, etc., can be clicked to view them in an online blockchain explorer.
 
 ### Manually Check Blockchain Anchoring
 *This assumes that you have previously setup a console connection to the GPy via the Pymakr console.*
