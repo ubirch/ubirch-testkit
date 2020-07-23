@@ -11,7 +11,7 @@ import machine
 wdt = machine.WDT(timeout=5 * 60 * 1000)  # set it
 wdt.feed()  # we only feed it once since this code hopefully finishes with deepsleep (=no WDT) before reset_after_ms
 
-from binascii import hexlify
+from binascii import hexlify, b2a_base64
 from config import load_config
 from connection import get_connection, NB_IoT
 from error_handling import *
@@ -200,6 +200,9 @@ try:
         print("++ creating UPP")
         upp = sim.message_chained(key_name, message, hash_before_sign=True)
         print("\tUPP: {}\n".format(hexlify(upp).decode()))
+        # print data message hash from generated UPP (useful for manual verification)
+        message_hash = get_upp_payload(upp)
+        print("\tdata message hash: {}".format(b2a_base64(message_hash).decode()))
     except Exception as e:
         error_handler.log(e, COLOR_SIM_FAIL, reset=True)
 

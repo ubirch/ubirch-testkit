@@ -136,9 +136,12 @@ TODO not implemented yet
 1. While the Pycom is connected and running, and the IDE is open, check the Pymakr console and wait for the hash of 
 a data message to appear, e.g.:
     ```
-    ** data message hash: kk/3ZIvK4SOPZXYnSoaFRt1n7ncC+9RxWnFXPO9tzdk=
+    ++ creating UPP
+        UPP: 9623c41005122542132140209225000012dc934ac44024d50ae74e137c049158c6aa4f844f5bd074f196ea311fe6839fa40ed4cc8d7f39bc8c8a4e7105593a76e1f1b86d105cdc8436d171aca1c739e97869bdcdbf8500c4208bef235928a170c58059eef04b4ab29c742b0a127682f54d8a329fd9c4e257f2c4400dccc20526a3c999753e4fa73c200d6a96fc60c1e8e6f4069c7c6d3d066b13376f65da6803cd6e9ca9b655c8946a8e30351bae31bdbf316df3edba5ca86c6cae
+
+        data message hash: i+8jWSihcMWAWe7wS0qynHQrChJ2gvVNijKf2cTiV/I=    
     ```
-    Copy the hash.
+    Copy the data message hash.
 
 1. Send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests):
     ```
