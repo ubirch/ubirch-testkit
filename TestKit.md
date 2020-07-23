@@ -137,22 +137,64 @@ TODO not implemented yet
 a data message to appear, e.g.:
     ```
     ++ creating UPP
-        UPP: 9623c41005122542132140209225000012dc934ac44024d50ae74e137c049158c6aa4f844f5bd074f196ea311fe6839fa40ed4cc8d7f39bc8c8a4e7105593a76e1f1b86d105cdc8436d171aca1c739e97869bdcdbf8500c4208bef235928a170c58059eef04b4ab29c742b0a127682f54d8a329fd9c4e257f2c4400dccc20526a3c999753e4fa73c200d6a96fc60c1e8e6f4069c7c6d3d066b13376f65da6803cd6e9ca9b655c8946a8e30351bae31bdbf316df3edba5ca86c6cae
+        UPP: 9623c41005122542132140209225000013adf293c440590b27d80148bd997039c50683376487ecae4792e92a9f453c67671e2337f1fb8f884919477cc210a02217182d9b505ee2ffc498ce25aaa9f258dcf7e7e0fed900c420631fccd6fc72fd1adda5810d420fdd1e3e0816120c3cf4b85bb0986a97e3ba06c440e7ae1724014854061e2454dae38950eb1334eef887e8004deab224b9994dd5b05265e1dac34d9719adde97f12ce786dad5d54ee2e0e9719656e5ce1507f56158
 
-        data message hash: i+8jWSihcMWAWe7wS0qynHQrChJ2gvVNijKf2cTiV/I=    
+        data message hash: Yx/M1vxy/RrdpYENQg/dHj4IFhIMPPS4W7CYapfjugY=
     ```
     Copy the data message hash.
 
-1. Send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests):
+1. To see if the UPP arrived at the backend, send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests). The use of the jq command ('| jq .') is optional.:
+    > Replace the value after `HASH=` with the hash copied in step 1.
+    ```    
+    HASH=Yx/M1vxy/RrdpYENQg/dHj4IFhIMPPS4W7CYapfjugY=
+    curl -s -X POST https://verify.prod.ubirch.com/api/upp -d "$HASH" | jq .
     ```
-    curl -s -X POST -H "accept: application/json" -H "Content-Type: text/plain" -d "$HASH" "https://verify.prod.ubirch.com/api/upp/verify/anchor"
+    Example output:
     ```
-    > Replace `$HASH` with the hash copied in step 1
+    {
+        "upp": "liPEEAUSJUITIUAgkiUAABOt8pPEQFkLJ9gBSL2ZcDnFBoM3ZIfsrkeS6SqfRTxnZx4jN/H7j4hJGUd8whCgIhcYLZtQXuL/xJjOJaqp8ljc9+fg/tkAxCBjH8zW/HL9Gt2lgQ1CD90ePggWEgw89LhbsJhql+O6BsRA564XJAFIVAYeJFTa44lQ6xM07viH6ABN6rIkuZlN1bBSZeHaw02XGa3el/Es54ba1dVO4uDpcZZW5c4VB/VhWA==",
+        "prev": null,
+        "anchors": null
+    }
+    ```
+    If the response is empty, the UPP has not arrived at the backend yet.
 
+1. To check blockchain anchoring, please wait about 10 minutes for your UPP to be anchored. Afterwards, send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests). The use of the jq command ('| jq .') is optional.:
+    > Replace the value after `HASH=` with the hash copied in step 1.
+    ```
+    HASH=Yx/M1vxy/RrdpYENQg/dHj4IFhIMPPS4W7CYapfjugY=
+    curl -s -X POST https://verify.prod.ubirch.com/api/upp/verify/anchor -d "$HASH" | jq .
+    ```
+    Example output:
+    ```
+    {
+        "upp": "liPEEAUSJUITIUAgkiUAABOt8pPEQFkLJ9gBSL2ZcDnFBoM3ZIfsrkeS6SqfRTxnZx4jN/H7j4hJGUd8whCgIhcYLZtQXuL/xJjOJaqp8ljc9+fg/tkAxCBjH8zW/HL9Gt2lgQ1CD90ePggWEgw89LhbsJhql+O6BsRA564XJAFIVAYeJFTa44lQ6xM07viH6ABN6rIkuZlN1bBSZeHaw02XGa3el/Es54ba1dVO4uDpcZZW5c4VB/VhWA==",
+        "prev": "liPEEAUSJUITIUAgkiUAABOt8pPEQFCoBTkqdAmNqFqvs0b7XLoMjcfkaeCCzzbMme40luLRMn54qbdyYipLGAK1w2pYqmjbrGnpmrjrtalolsguw70AxCDDZlMunRg0ItIj0cCn55WGpfZPoJGcL8i80/HL+FCutcRAWQsn2AFIvZlwOcUGgzdkh+yuR5LpKp9FPGdnHiM38fuPiEkZR3zCEKAiFxgtm1Be4v/EmM4lqqnyWNz35+D+2Q==",
+        "anchors": [
+            {
+            "label": "PUBLIC_CHAIN",
+            "properties": {
+                "public_chain": "IOTA_MAINNET_IOTA_MAINNET_NETWORK",
+                "hash": "HNWXRY9OROVMDBDURUUVYILRVURRWIF9DNXYBFABPOWNKYYEGDJUROIZA9GVQNYCGWGZUXJFHPZ9Z9999",
+                "timestamp": "2020-07-23T16:13:54.381Z",
+                "prev_hash": "94bcb97a449d7e28b31253db2a291d035f64ec70332b94220dfc0a3f07ed2caf2f14fc1fe8ae4e898b23c82c6355bc3367dfb6323022ec1a4fc660f7802068e6"
+            }
+            },
+            {
+            "label": "PUBLIC_CHAIN",
+            "properties": {
+                "public_chain": "ETHEREUM-CLASSIC_MAINNET_ETHERERUM_CLASSIC_MAINNET_NETWORK",
+                "hash": "0x6ec75539792d92bdf1cb1cfb0ce89d1ce9b369ea1f43e86b0c7a6def2d06ab85",
+                "timestamp": "2020-07-23T16:15:02.953Z",
+                "prev_hash": "94bcb97a449d7e28b31253db2a291d035f64ec70332b94220dfc0a3f07ed2caf2f14fc1fe8ae4e898b23c82c6355bc3367dfb6323022ec1a4fc660f7802068e6"
+            }
+            }
+        ]
+    }
+    ```
+    If the "anchors" field is empty, this UPP might not have been anchored yet, please try again later.     
 
-1. The response will list all blockchain anchors containing this measurement certificate. The `txid` (Blockchain 
-Transaction ID) of each anchors entry can be used to lookup the entry in the according blockchain explorer (consider 
-the `blockchain` and `network_type` attribute to find the right explorer)
+1. The anchoring response lists all blockchain anchors containing this measurement certificate. The information can be used to lookup the entry in a suitable blockchain explorer. Consider the name of the blockchain e.g. Ethereum, IOTA, etc., to find a suitable explorer and perform the lookup using the hash.
 
 ### Advanced Configuration
 You can set additional configuration options for your device by adding key-value pairs to the `config.txt`-file on the SD card.  (Or to the `config.json` in the internal flash if you have access to that via the pymakr console.)
