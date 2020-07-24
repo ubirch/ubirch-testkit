@@ -172,9 +172,13 @@ card, you can skip to the next step.
 1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.prod.ubirch.com):
     - Login or register if you don't have an account yet.
     - Go to **Things** (in the menu on the left) and click on `+ ADD NEW DEVICE`.
-    - Select ID type **IMSI**, enter the IMSI of your SIM card to the **ID** field, 
-      add a description for your device (e.g. "TestKit") and click on `register`.
-    - Click on your device in the *Your Things* overview and copy the content of the `apiConfig` field in the `ThingsSettings` tab .
+    - In the resulting form enter the following data:
+        - Select ID type **IMSI**
+        - Enter the IMSI of your SIM card to the **ID** field
+        - Add a **description** for your device (e.g. "TestKit")
+        - Enter the **tag** matching your sensor board, usually `pysense`. Please **make sure you enter the tag correctly as otherwise there will be no display of the sensor data** in the console.
+    - Click on `register`.
+    - Click on your device in the *Your Things* overview and copy the content of the `apiConfig` field.
     
 1. Configure your device
     * Create a file `config.json` in the `src` directory of the project and paste the `apiConfig` into it.
@@ -198,7 +202,77 @@ card, you can skip to the next step.
       ```
     - Press the Pymakr `UPLOAD` button to upload the updated `config.json` which you created in the project's `src` folder.
 
-You should now see the properly configured Testkit code running in the pymakr console and the boards LED cycle through different colors. You can now head over to [the TestKit manual](TestKit.md) to learn how to use your testkit.
+You should now see the properly configured Testkit code running in the pymakr console and the boards LED cycle through different colors.
+
+Example output:
+```
+ets Jun  8 2016 00:22:57
+
+rst:0x1 (POWERON_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:1
+load:0x3fff8020,len:8
+load:0x3fff8028,len:2140
+ho 0 tail 12 room 4
+load:0x4009fa00,len:19760
+entry 0x400a05bc
+*** UBIRCH SIM Testkit ***
+[some lines omitted]
+++ loading config
+        no PIN found for 123456789012345
+        attaching to the NB-IoT network
+                attached: 0 s
+        connecting to the NB-IoT network.
+                connected: 1 s
+        bootstrapping SIM identity 123456789012345
+        disconnecting
+++ initializing ubirch SIM protocol
+UUID: 12345678-1234-1234-1234-00000fbeafea
+        connecting to the NB-IoT network
+                connected: 0 s
+** submitting CSR to identity service ...
+++ checking board time
+        time is:  (1970, 1, 1, 0, 1, 12, 99628, None)
+        time invalid, syncing
+        waiting for time sync
+        disconnecting
+++ getting measurements
+        data message [json]: {"data":{"AccPitch":"-19.60","AccRoll":"-7.10","AccX":"0.12","AccY":"0.34","AccZ":"0.96","H":"47.09","L_blue":14,"L_red":15,"P":"95842.49","T":"23.88","V":"4.70"},"msg_type":1,"timestamp":1595449261,"uuid":"05122541-1321-4020-9225-00000fb9a5d4"}
+++ creating UPP
+        UPP: 9623c41005122542132140209225000013adf293c440590b27d80148bd997039c50683376487ecae4792e92a9f453c67671e2337f1fb8f884919477cc210a02217182d9b505ee2ffc498ce25aaa9f258dcf7e7e0fed900c420631fccd6fc72fd1adda5810d420fdd1e3e0816120c3cf4b85bb0986a97e3ba06c440e7ae1724014854061e2454dae38950eb1334eef887e8004deab224b9994dd5b05265e1dac34d9719adde97f12ce786dad5d54ee2e0e9719656e5ce1507f56158
+
+        data message hash: Yx/M1vxy/RrdpYENQg/dHj4IFhIMPPS4W7CYapfjugY=
+
+++ checking/establishing connection
+        connecting to the NB-IoT network
+                connected: 0 s
+++ sending data
+        sending...
+++ sending UPP
+        sending...
+++ waiting for time sync
+        time synced
+++ preparing hardware for deepsleep
+        close connection
+        deinit SIM
+        deinit LTE
+>> going into deepsleep for 17 seconds
+[board powers down for 17 seconds and then reboots]
+ets Jun  8 2016 00:22:57
+rst:0x5 (DEEPSLEEP_RESET),boot:0x17 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:1
+load:0x3fff8020,len:8
+load:0x3fff8028,len:2140
+ho 0 tail 12 room 4
+load:0x4009fa00,len:19760
+entry 0x400a05bc
+*** UBIRCH SIM Testkit ***
+[testkit continues as before]
+```
+You can now head over to [the TestKit manual](TestKit.md) to learn how to use your testkit.
 
 ### Support
 Please feel free to contact [our helpdesk](https://ubirch.atlassian.net/servicedesk/customer/portal/1) for support.

@@ -23,13 +23,17 @@ a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com).
     *If you already know the IMSI of your SIM card, you can skip to the next step.* 
 
     If the IMSI is unknown, you can find a file `imsi.txt` on the SD card [(1.)](#assembled-testkit)
-    in the TestKit which contains the IMSI of your SIM card. (The testkit code must have run at least once.)
+    in the TestKit which contains the IMSI of your SIM card. If the file does not exist, please plug in the testkit for a minute so that it can be created. You can unplug the testkit to remove the SD when the LED stops changing colors or when it turns off.
     
 1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.prod.ubirch.com):
     - Login or register if you don't have an account yet.
     - Go to **Things** (in the menu on the left) and click on `+ ADD NEW DEVICE`.
-    - Select ID type **IMSI**, enter the IMSI of your SIM card to the **ID** field, 
-      add a description for your device (e.g. "TestKit") and click on `register`.
+    - In the resulting form enter the following data:
+        - Select ID type **IMSI**
+        - Enter the IMSI of your SIM card to the **ID** field
+        - Add a **description** for your device (e.g. "TestKit")
+        - Enter the **tag** matching your sensor board, usually `pysense`. Please **make sure you enter the tag correctly as otherwise there will be no display of the sensor data** in the console.
+    - Click on `register`.
     - Click on your device in the *Your Things* overview and copy the content of the `apiConfig` field.
     
 1. Configure your device:
@@ -125,10 +129,10 @@ The LED on the GPy will light up with dim colors during normal operation, i.e. s
 
 The TestKit also writes an error log to the SD card. 
 
-### See the data coming in at the backend
-TODO not implemented yet
+### Verify the Sensor Data  (UBIRCH console)
+Log in to the ubirch console and head to the [things list](https://console.prod.ubirch.com/devices/list). Click the device you want to view and select the "data" tab. You should now see a graphical representation of the sensor data of the testkit. If your device doesn't have the data tab, make sure that you added the correct tag for your sensor board (`pysense` or `pytrack`) to the things settings when you added it. You can verify this under the "ThingsSettings" tab.
 
-### Verify the blockchain anchoring (UBIRCH console)
+### Verify the Blockchain Anchoring (UBIRCH console)
 Log in to the ubirch console and head to the ["verification" page](https://console.prod.ubirch.com/verification/). Insert the hash of the data message you want to verify in the search field, e.g. `Yx/M1vxy/RrdpYENQg/dHj4IFhIMPPS4W7CYapfjugY=` . If the lookup is successful, you can choose either a graphical or a JSON representation of the anchoring of that UPP. For the graphical representation, use scrollwheel and click+drag to navigate. Blockchain anchors in the graph such as IOTA, Ethereum, etc., can be clicked to view them in an online blockchain explorer.
 
 ### Manually Check Blockchain Anchoring
