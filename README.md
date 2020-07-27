@@ -16,9 +16,9 @@ From 1NCE:
 - 1NCE SIM Card with SIGNiT/UBIRCH application
 
 From an electronics distributor of your choice:
-- Pycom GPy
-- Pycom Pysense
-- Pycom LTE antenna
+- [Pycom GPy](https://docs.pycom.io/datasheets/development/gpy/)
+- [Pycom Pysense](https://docs.pycom.io/datasheets/boards/pysense/)
+- [Pycom LTE-M antenna](https://pycom.io/product/lte-m-antenna-kit/)
 - micro SD card
 - micro USB cable
  
