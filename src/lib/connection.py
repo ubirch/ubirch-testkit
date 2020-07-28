@@ -17,10 +17,12 @@ class Connection:
 
 class NB_IoT(Connection):
 
-    def __init__(self, lte: LTE, apn: str, band: int or None):
+    def __init__(self, lte: LTE, apn: str, band: int or None, attachtimeout: int, connecttimeout:int):
         self.lte = lte
         self.apn = apn
         self.band = band
+        self.attachtimeout = attachtimeout
+        self.connecttimeout = connecttimeout
 
     def attach(self):
         if self.lte.isattached():
@@ -31,7 +33,7 @@ class NB_IoT(Connection):
         # we are required to use an attach method that does not require cereg messages, for pycom that is legacyattach=false
         self.lte.attach(band=self.band, apn=self.apn,legacyattach=False)
         i = 0
-        while not self.lte.isattached() and i < 4*60:
+        while not self.lte.isattached() and i < self.attachtimeout:
             i += 1
             time.sleep(1.0)
             sys.stdout.write(".")
@@ -49,7 +51,7 @@ class NB_IoT(Connection):
         sys.stdout.write("\tconnecting to the NB-IoT network")
         self.lte.connect()  # start a data session and obtain an IP address
         i = 0
-        while not self.lte.isconnected() and i < 60:
+        while not self.lte.isconnected() and i < self.connecttimeout:
             i += 1
             time.sleep(1.0)
             sys.stdout.write(".")
@@ -65,6 +67,12 @@ class NB_IoT(Connection):
     def disconnect(self):
         if self.lte.isconnected():
             self.lte.disconnect()
+
+    def setattachtimeout(self, attachtimeout:int):
+        self.attachtimeout = attachtimeout        
+
+    def setconnecttimeout(self, connecttimeout:int):
+        self.connecttimeout = connecttimeout
 
 
 class WIFI(Connection):
@@ -119,7 +127,7 @@ def get_connection(lte: LTE, cfg: dict) -> Connection:
         connectionInstance = WIFI(cfg['networks'])
         return connectionInstance
     elif cfg['connection'] == "nbiot":
-        connectionInstance = NB_IoT(lte, cfg['apn'], cfg['band'])
+        connectionInstance = NB_IoT(lte, cfg['apn'], cfg['band'],4*60,60)
         return connectionInstance
     else:
         raise Exception(
