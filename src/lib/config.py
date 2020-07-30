@@ -11,11 +11,17 @@ def load_config(sd_card_mounted: bool = False) -> dict:
     """
     Load available configurations. First set default configuration (see "default_config.json"),
     then overwrite defaults with configuration from user config file ("config.json")
-    the config file should be placed in the same directory than this file
+    the config file should be placed in the same directory as this file
     {
         "connection": "<'wifi' or 'nbiot'>",
         "apn": "<APN for NB IoT connection",
         "band": <LTE frequency band (integer) or 'null' to scan all bands>,
+        "nbiot_attach_timeout": <int in seconds, timeout after which the nb-iot attach is aborted and board reset>,
+        "nbiot_connect_timeout": <int in seconds, timeout after which the nb-iot connect is aborted and board reset>,
+        "nbiot_extended_attach_timeout": <int in seconds, extended attach timeout, used when not coming from sleep (after power-on, errors)>,
+        "nbiot_extended_connect_timeout": <int in seconds, extended connect timeout, used when not coming from sleep (after power-on, errors)>,
+        "watchdog_timeout": <int in seconds, if execution takes longer than this in total, the board is reset>,
+        "watchdog_extended_timeout": <int in seconds, extended watchdog timeout, used when not coming from sleep (after power-on, errors)>,
         "networks": {
           "<WIFI SSID>": "<WIFI PASSWORD>"
         },
