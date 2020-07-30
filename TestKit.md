@@ -208,6 +208,12 @@ You can set additional configuration options for your device by adding key-value
     "connection": "<'wifi' or 'nbiot', defaults to 'nbiot'>",
     "apn": "<APN for NB IoT connection, defaults to 'iot.1nce.net'>",
     "band": <LTE frequency band (integer or 'null' to scan all bands) , defaults to '8'>,
+    "nbiot_attach_timeout": <timeout after which the nb-iot attach is aborted and board reset, defaults to 60>,
+    "nbiot_connect_timeout": <timeout after which the nb-iot connect is aborted and board reset, defaults to 60>,
+    "nbiot_extended_attach_timeout": <extended attach timeout, used when not coming from sleep (after power-on, errors), defaults to 900>,
+    "nbiot_extended_connect_timeout": <extended connect timeout, used when not coming from sleep (after power-on, errors), defaults to 60>,
+    "watchdog_timeout": <if execution takes longer than this in total, the board is reset, defaults to 300>,
+    "watchdog_extended_timeout": <extended watchdog timeout, used when not coming from sleep (after power-on, errors), defaults to 960>,
     "networks": {
         "<your WIFI SSID>": "<your WIFI password>"
     },

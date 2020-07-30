@@ -2,7 +2,7 @@
   "connection": "nbiot",
   "apn": "iot.1nce.net",
   "band": 8,
-  "nbiot_attach_timeout": 240,
+  "nbiot_attach_timeout": 60,
   "nbiot_connect_timeout": 60,
   "nbiot_extended_attach_timeout": 900,
   "nbiot_extended_connect_timeout": 60,
