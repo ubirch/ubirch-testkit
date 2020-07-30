@@ -127,7 +127,7 @@ def get_connection(lte: LTE, cfg: dict) -> Connection:
         connectionInstance = WIFI(cfg['networks'])
         return connectionInstance
     elif cfg['connection'] == "nbiot":
-        connectionInstance = NB_IoT(lte, cfg['apn'], cfg['band'],4*60,60)
+        connectionInstance = NB_IoT(lte, cfg['apn'], cfg['band'],cfg['nbiot_attach_timeout'],cfg['nbiot_connect_timeout'])
         return connectionInstance
     else:
         raise Exception(
