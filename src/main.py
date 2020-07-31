@@ -8,7 +8,7 @@ import machine
 
 # set watchdog: if execution hangs/takes longer than 'timeout' an automatic reset is triggered
 # we need to do this as early as possible in case an import cause a freeze for some reason
-wdt = machine.WDT(timeout=5 * 60 * 1000)  # set it
+wdt = machine.WDT(timeout=5 * 60 * 1000)  # we set it to 5 minutes here and will reconfigure it when we have loaded the configuration
 wdt.feed()  # we only feed it once since this code hopefully finishes with deepsleep (=no WDT) before reset_after_ms
 
 from binascii import hexlify, b2a_base64
@@ -96,6 +96,20 @@ try:
         error_handler.log(e, COLOR_CONFIG_FAIL)
         while True:
             machine.idle()
+
+    #configure watchdog and connection timeouts according to config and reset reason
+    if COMING_FROM_DEEPSLEEP:
+        #this is a normal boot after sleep
+        wdt.init(cfg["watchdog_timeout"]*1000)
+        if isinstance(connection, NB_IoT):
+            connection.setattachtimeout(cfg["nbiot_attach_timeout"])
+            connection.setconnecttimeout(cfg["nbiot_connect_timeout"])
+    else:
+        #this is a boot after powercycle or error: use extended timeouts
+        wdt.init(cfg["watchdog_extended_timeout"]*1000)
+        if isinstance(connection, NB_IoT):
+            connection.setattachtimeout(cfg["nbiot_extended_attach_timeout"])
+            connection.setconnecttimeout(cfg["nbiot_extended_connect_timeout"])
 
     # get PIN from flash, or bootstrap from backend and then save PIN to flash
     pin_file = imsi + ".bin"
