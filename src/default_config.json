@@ -13,6 +13,6 @@
   "env": "prod",
   "CSR_country": "DE",
   "CSR_organization": "ubirch GmbH",
-  "interval": 60,
+  "interval": 600,
   "debug": false
 }
