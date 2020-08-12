@@ -63,7 +63,7 @@ On initial start up, the TestKit will load the configuration from the SD card, c
  and use it to register the SIM card's public key at the UBIRCH backend. Now the device is ready to send signed 
  UBIRCH Protocol Packages (*UPPs*) to the backend to be anchored to the blockchain.
  
-After initialisation, the device will take measurements once a minute and send a data message to the UBIRCH data service.
+After initialisation, the device will take measurements once every ten minutes and send a data message to the UBIRCH data service.
  The data message contains the device UUID, a timestamp and a map of the sensor data:
  * With a pysense sensor board:
     ```
@@ -229,7 +229,7 @@ You can set additional configuration options for your device by adding key-value
     "verify": "<verification service URL, defaults to 'https://verify.<env>.ubirch.com/api/upp'>",
     "bootstrap": "<bootstrap service URL, defaults to 'https://api.console.<env>.ubirch.com/ubirch-web-ui/api/v1/devices/bootstrap'>",
     "debug": <flag to enable extended debug console output [true or false], defaults to 'false'>,
-    "interval": <measure interval in seconds, defaults to '60'>
+    "interval": <measure interval in seconds, defaults to '600'>
 }
 ```
 There are default values for everything except for the `password`-key, but you can overwrite the default configuration
