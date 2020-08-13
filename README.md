@@ -24,7 +24,7 @@ From an electronics distributor of your choice:
  
 ### Update GPy/Pysense Firmware
 Before you start, you should follow these instructions to update your pycom boards:
-1. [Update the Pysense firmware](https://docs.pycom.io/pytrackpysense/installation/firmware/)
+1. [Update the Pysense firmware](https://docs.pycom.io/updatefirmware/expansionboard/)
     - Please follow the instructions on the linked site.
 2. [Assemble the Pysense and GPy](https://docs.pycom.io/gettingstarted/connection/gpy/) 
     - Please refer to the Pysense/Pytrack/Pyscan tab on the linked page for the correct assembly. The RGB LED of the GPy should be on the same side as the Pysense's micro USB connector when you're done.
