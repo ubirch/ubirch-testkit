@@ -29,7 +29,7 @@ Before you start, you should follow these instructions to update your pycom boar
 2. [Assemble the Pysense and GPy](https://docs.pycom.io/gettingstarted/connection/gpy/) 
     - Please refer to the Pysense/Pytrack/Pyscan tab on the linked page for the correct assembly. The RGB LED of the GPy should be on the same side as the Pysense's micro USB connector when you're done.
     - **Also, do not forget to connect the antenna, the GPy might be damaged otherwise.** The antenna is connected to the port next to the RGB LED and reset button on the GPy.    
-3. [Update the GPy firmware](https://docs.pycom.io/gettingstarted/installation/firmwaretool/)
+3. [Update the GPy firmware](https://docs.pycom.io/updatefirmware/device/)
     - Please download the firmware update tool from the linked webpage and follow the tool's on-screen instructions
     - Please choose the following settings:
         - port: the serial port where your GPy board is connected
