@@ -1,9 +1,5 @@
 print("*** UBIRCH SIM Testkit ***")
 import time
-
-# remember wake-up time
-start_time = time.time()
-
 import machine
 
 # set watchdog: if execution hangs/takes longer than 'timeout' an automatic reset is triggered
@@ -196,104 +192,91 @@ try:
         print("\tdisconnecting")
         connection.disconnect()
 
-    ############
-    #   DATA   #
-    ############
-    set_led(LED_BLUE)
+    while True:
+        start_time = time.time()
 
-    # get data from sensors
-    print("++ getting measurements")
-    data = sensors.get_temp_and_hum()
+        ############
+        #   DATA   #
+        ############
+        set_led(LED_BLUE)
 
-    # pack data message containing measurements as well as device UUID and timestamp to ensure unique hash
-    message = pack_data_json(uuid, data)
-    print("\tdata message [json]: {}\n".format(message.decode()))
+        # get data from sensors
+        print("++ getting measurements")
+        data = sensors.get_temp_and_hum()
 
-    # seal the data message (data message will be hashed and inserted into UPP as payload by SIM card)
-    try:
-        print("++ creating UPP")
-        upp = sim.message_chained(key_name, message, hash_before_sign=True)
-        print("\tUPP: {}\n".format(hexlify(upp).decode()))
-        # print data message hash from generated UPP (useful for manual verification)
-        message_hash = get_upp_payload(upp)
-        print("\tdata message hash: {}".format(b2a_base64(message_hash).decode()))
-    except Exception as e:
-        error_handler.log(e, COLOR_SIM_FAIL, reset=True)
+        # pack data message containing measurements as well as device UUID and timestamp to ensure unique hash
+        message = pack_data_json(uuid, data)
+        print("\tdata message [json]: {}\n".format(message.decode()))
 
-    ###############
-    #   SENDING   #
-    ###############
-    set_led(LED_GREEN)
-
-    print("++ checking/establishing connection")
-    try:
-        connection.connect()
-        enable_time_sync()
-    except Exception as e:
-        error_handler.log(e, COLOR_INET_FAIL, reset=True)
-
-    # send data to ubirch data service and UPP to ubirch auth service
-    # TODO: add retrying to send/handling of already created UPP in case of final failure
-
-    try:
-        # send data message to data service, with reconnects/modem resets if necessary
-        print("++ sending data")
+        # seal the data message (data message will be hashed and inserted into UPP as payload by SIM card)
         try:
-            status_code, content = send_backend_data(sim, lte, connection, api.send_data, uuid, message)
+            print("++ creating UPP")
+            upp = sim.message_chained(key_name, message, hash_before_sign=True)
+            print("\tUPP: {}\n".format(hexlify(upp).decode()))
+            # print data message hash from generated UPP (useful for manual verification)
+            message_hash = get_upp_payload(upp)
+            print("\tdata message hash: {}".format(b2a_base64(message_hash).decode()))
         except Exception as e:
-            error_handler.log(e, COLOR_MODEM_FAIL, reset=True)
+            error_handler.log(e, COLOR_SIM_FAIL, reset=True)
 
-        # communication worked in general, now check server response
-        if not 200 <= status_code < 300:
-            raise Exception("backend (data) returned error: ({}) {}".format(status_code, str(content)))
+        ###############
+        #   SENDING   #
+        ###############
+        set_led(LED_GREEN)
 
-        # send UPP to the ubirch authentication service to be anchored to the blockchain
-        print("++ sending UPP")
+        print("++ checking/establishing connection")
         try:
-            status_code, content = send_backend_data(sim, lte, connection, api.send_upp, uuid, upp)
+            connection.connect()
+            enable_time_sync()
         except Exception as e:
-            error_handler.log(e, COLOR_MODEM_FAIL, reset=True)
+            error_handler.log(e, COLOR_INET_FAIL, reset=True)
 
-        # communication worked in general, now check server response
-        if not 200 <= status_code < 300:
-            raise Exception("backend (UPP) returned error: ({}) {}".format(status_code, str(content)))
+        # send data to ubirch data service and UPP to ubirch auth service
+        # TODO: add retrying to send/handling of already created UPP in case of final failure
 
-    except Exception as e:
-        error_handler.log(e, COLOR_BACKEND_FAIL)
+        try:
+            # send data message to data service, with reconnects/modem resets if necessary
+            print("++ sending data")
+            try:
+                status_code, content = send_backend_data(sim, lte, connection, api.send_data, uuid, message)
+            except Exception as e:
+                error_handler.log(e, COLOR_MODEM_FAIL, reset=True)
 
-    print("++ waiting for time sync")
-    try:
-        wait_for_sync(print_dots=True, timeout=10)
-        print("\ttime synced")
-    except Exception as e:
-        error_handler.log("WARNING: Could not sync time before timeout: {}".format(repr(e)), COLOR_INET_FAIL)
+            # communication worked in general, now check server response
+            if not 200 <= status_code < 300:
+                raise Exception("backend (data) returned error: ({}) {}".format(status_code, str(content)))
 
-    ###################
-    #   GO TO SLEEP   #
-    ###################
-    set_led(LED_YELLOW)
+            # send UPP to the ubirch authentication service to be anchored to the blockchain
+            print("++ sending UPP")
+            try:
+                status_code, content = send_backend_data(sim, lte, connection, api.send_upp, uuid, upp)
+            except Exception as e:
+                error_handler.log(e, COLOR_MODEM_FAIL, reset=True)
 
-    # prepare hardware for sleep (needed for low current draw and
-    # freeing of resources for after the reset, as the modem stays on)
-    print("++ preparing hardware for deepsleep")
-    print("\tclose connection")
-    connection.disconnect()
+            # communication worked in general, now check server response
+            if not 200 <= status_code < 300:
+                raise Exception("backend (UPP) returned error: ({}) {}".format(status_code, str(content)))
 
-    print("\tdeinit SIM")
-    sim.deinit()
+        except Exception as e:
+            error_handler.log(e, COLOR_BACKEND_FAIL)
 
-    # not detaching causes smaller/no re-attach time on next reset but but
-    # somewhat higher sleep current needs to be balanced based on your specific interval
-    print("\tdeinit LTE")
-    lte.deinit(detach=False)
+        print("++ waiting for time sync")
+        try:
+            wait_for_sync(print_dots=True, timeout=10)
+            print("\ttime synced")
+        except Exception as e:
+            error_handler.log("WARNING: Could not sync time before timeout: {}".format(repr(e)), COLOR_INET_FAIL)
 
-    # go to deepsleep
-    sleep_time = interval - int(time.time() - start_time)
-    if sleep_time < 0:
-        sleep_time = 0
-    print(">> going into deepsleep for {} seconds".format(sleep_time))
-    set_led(LED_OFF)
-    machine.deepsleep(1000 * sleep_time)  # sleep, execution will resume from main.py entry point
+        ###################
+        #   GO TO SLEEP   #
+        ###################
+        # wait for next interval
+        sleep_time = interval - int(time.time() - start_time)
+        if sleep_time > 0:
+            print(">> sleep for {} seconds".format(sleep_time))
+            set_led(LED_OFF)
+            machine.idle()
+            time.sleep(sleep_time)
 
 except Exception as e:
     error_handler.log(e, COLOR_UNKNOWN_FAIL, reset=True)
