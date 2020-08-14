@@ -53,6 +53,16 @@ class Pysense(Pyboard):
         })
         return data
 
+    def get_temp_and_hum(self) -> dict:
+        """
+        Get temperature and humidity measurements
+        :return: a dictionary (json) with the data
+        """
+        return {
+            "T": self.barometer.temperature(),
+            "H": self.humidity.humidity()
+        }
+
 
 class Pytrack(Pyboard):
 

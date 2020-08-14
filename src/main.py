@@ -24,7 +24,7 @@ from realtimeclock import *
 import ubirch
 
 # Pycom specifics
-from pyboard import get_pyboard
+from pyboard import Pysense
 
 # error color codes
 COLOR_INET_FAIL = LED_PURPLE_BRIGHT
@@ -88,7 +88,7 @@ try:
         if lvl_debug: print("\t" + repr(cfg))
 
         interval = cfg['interval']  # set measurement interval
-        sensors = get_pyboard(cfg['board'])  # initialise the sensors on the pyboard
+        sensors = Pysense()  # initialise the sensors on the pyboard
         connection = get_connection(lte, cfg)  # initialize connection object depending on config
         api = ubirch.API(cfg)  # set up API for backend communication
     except Exception as e:
@@ -97,16 +97,16 @@ try:
         while True:
             machine.idle()
 
-    #configure watchdog and connection timeouts according to config and reset reason
+    # configure watchdog and connection timeouts according to config and reset reason
     if COMING_FROM_DEEPSLEEP:
-        #this is a normal boot after sleep
-        wdt.init(cfg["watchdog_timeout"]*1000)
+        # this is a normal boot after sleep
+        wdt.init(cfg["watchdog_timeout"] * 1000)
         if isinstance(connection, NB_IoT):
             connection.setattachtimeout(cfg["nbiot_attach_timeout"])
             connection.setconnecttimeout(cfg["nbiot_connect_timeout"])
     else:
-        #this is a boot after powercycle or error: use extended timeouts
-        wdt.init(cfg["watchdog_extended_timeout"]*1000)
+        # this is a boot after powercycle or error: use extended timeouts
+        wdt.init(cfg["watchdog_extended_timeout"] * 1000)
         if isinstance(connection, NB_IoT):
             connection.setattachtimeout(cfg["nbiot_extended_attach_timeout"])
             connection.setconnecttimeout(cfg["nbiot_extended_connect_timeout"])
@@ -203,7 +203,7 @@ try:
 
     # get data from sensors
     print("++ getting measurements")
-    data = sensors.get_data()
+    data = sensors.get_temp_and_hum()
 
     # pack data message containing measurements as well as device UUID and timestamp to ensure unique hash
     message = pack_data_json(uuid, data)
