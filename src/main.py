@@ -93,6 +93,11 @@ try:
         while True:
             machine.idle()
 
+    # configure connection timeouts according to config
+    if isinstance(connection, NB_IoT):
+        connection.setattachtimeout(cfg["nbiot_extended_attach_timeout"])
+        connection.setconnecttimeout(cfg["nbiot_extended_connect_timeout"])
+
     # get PIN from flash, or bootstrap from backend and then save PIN to flash
     pin_file = imsi + ".bin"
     pin = get_pin_from_flash(pin_file, imsi)
@@ -178,11 +183,8 @@ try:
         print("\tdisconnecting")
         connection.disconnect()
 
-    # configure watchdog and connection timeouts
+    # reconfigure watchdog
     wdt.init(interval * 1000)
-    if isinstance(connection, NB_IoT):
-        connection.setattachtimeout(cfg["nbiot_extended_attach_timeout"])
-        connection.setconnecttimeout(cfg["nbiot_extended_connect_timeout"])
 
     while True:
         wdt.feed()
@@ -263,7 +265,12 @@ try:
         ###################
         #   GO TO SLEEP   #
         ###################
+        if isinstance(connection, NB_IoT):
+            print("\tdisconnecting")
+            connection.disconnect()
+
         wdt.feed()
+
         # wait for next interval
         sleep_time = interval - int(time.time() - start_time)
         if sleep_time > 0:
