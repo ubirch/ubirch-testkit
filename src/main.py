@@ -20,7 +20,7 @@ from realtimeclock import *
 import ubirch
 
 # Pycom specifics
-from pyboard import Pysense
+from pyboard import get_pyboard
 
 # error color codes
 COLOR_INET_FAIL = LED_PURPLE_BRIGHT
@@ -84,7 +84,7 @@ try:
         if lvl_debug: print("\t" + repr(cfg))
 
         interval = cfg['interval']  # set measurement interval
-        sensors = Pysense()  # initialise the sensors on the pyboard
+        sensors = get_pyboard(cfg['board'])  # initialise the sensors on the pyboard
         connection = get_connection(lte, cfg)  # initialize connection object depending on config
         api = ubirch.API(cfg)  # set up API for backend communication
     except Exception as e:

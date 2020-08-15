@@ -82,12 +82,53 @@ class Pytrack(Pyboard):
         })
         return data
 
+class Sht31(Pyboard):
+
+    def __init__(self):
+        """Initialized sensors on Pysense"""
+        # super().__init__()
+        from .adafruit_sht31d import SHT31D
+        from machine import I2C
+
+        # Create library object using our Bus I2C port
+        i2c = I2C(0, I2C.MASTER, baudrate=100000)
+        sensor = SHT31D(i2c)
+
+        self.sensor = sensor
+
+    def get_data(self) -> dict:
+        data = {
+            "AccX": 0.0,
+            "AccY": 0.0,
+            "AccZ": 0.0,
+            "AccRoll": 0.0,
+            "AccPitch": 0.0,
+            "V": 0.0
+        }
+        data.update({
+            "T": self.sensor.temperature,
+            "H": self.sensor.relative_humidity
+        })
+        return data
+
+    def get_temp_and_hum(self) -> dict:
+        """
+        Get temperature and humidity measurements
+        :return: a dictionary (json) with the data
+        """
+        return {
+            "T": self.sensor.temperature,
+            "H": self.sensor.relative_humidity
+        }
+
 
 def get_pyboard(type: str) -> Pyboard:
     if type == "pysense":
         return Pysense()
     elif type == "pytrack":
         return Pytrack()
+    elif type == "sht31":
+        return Sht31()
     else:
         raise Exception("Expansion board type {} not supported. Supported types: 'pysense' and 'pytrack'".format(type))
 
