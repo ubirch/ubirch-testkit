@@ -1,8 +1,8 @@
 # Using the UBIRCH TestKit
 
-<img style="float: right" align="right" width="67%" src="pictures/UBIRCH - TestKit - Overview.jpg">
-
 This readme guides you through the process of using the UBIRCH testkit. It assumes that you already have testkit hardware which is programmed and configured with the UBIRCH nano client. This is either because you have received a pre-programmed testkit from UBIRCH or because you have set up your own hardware, e.g. by following the instructions [here](README.md).
+
+<img style="float: right" align="right" width="67%" src="pictures/UBIRCH - TestKit - Overview.jpg">
 
 ### Testkit Components
 - 1NCE SIM Card with SIGNiT application
@@ -19,24 +19,24 @@ This readme guides you through the process of using the UBIRCH testkit. It assum
 *Note: This section shows how to assemble and setup the TestKit. If you have setup your own TestKit hardware, you might have already performed device claiming and flashed a config.json to the internal flash. In this case you can skip this quick start section.*
 
 1. Insert the SIM card into the Gpy.
-    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 2.png">
-    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 1.png">
-    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 3.png">
-    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 4.png">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 2.jpg">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 1.jpg">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 3.jpg">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 4.jpg">
     
 1. Connect the boards. The Gpy goes on top of the Pysense with the LED over the micro USB port. 
-    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - Boards 1.png">
-    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - Boards 2.png">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - Boards 1.jpg">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - Boards 2.jpg">
 
 1. Make sure the cellular antenna is attached to the Gpy.
     > WARNING: Using LTE/NB-IoT connectivity without the antenna being attached could damage the development board!
     
-    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - Antenna.png">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - Antenna.jpg">
     
 1. Insert the SD card into the Pysense.
-    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 1.png">
-    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 2.png">
-    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 3.png">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 1.jpg">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 2.jpg">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 3.jpg">
     
     Push the SD card into the slot until it *clicks* in.
 
