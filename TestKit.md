@@ -1,6 +1,6 @@
 # Using the UBIRCH TestKit
 
-<img style="float: right" align="right" width="67%" src="pictures/exploded.jpg">
+<img style="float: right" align="right" width="67%" src="pictures/UBIRCH - TestKit - Overview.jpg">
 
 This readme guides you through the process of using the UBIRCH testkit. It assumes that you already have testkit hardware which is programmed and configured with the UBIRCH nano client. This is either because you have received a pre-programmed testkit from UBIRCH or because you have set up your own hardware, e.g. by following the instructions [here](README.md).
 
@@ -16,14 +16,42 @@ This readme guides you through the process of using the UBIRCH testkit. It assum
 - micro SD card writer
 
 ### Quick Start
-*Note: if you have setup your own testkit hardware, you might have already performed device claiming and flashed a config.json to the internal flash. In this case you can skip this quick start section.*
+*Note: This section shows how to assemble and setup the TestKit. If you have setup your own TestKit hardware, you might have already performed device claiming and flashed a config.json to the internal flash. In this case you can skip this quick start section.*
+
+1. Insert the SIM card into the Gpy.
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 2.png">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 1.png">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 3.png">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 4.png">
+    
+1. Connect the boards. The Gpy goes on top of the Pysense with the LED over the micro USB port. 
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - Boards 1.png">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - Boards 2.png">
+
+1. Make sure the cellular antenna is attached to the Gpy.
+    > WARNING: Using LTE/NB-IoT connectivity without the antenna being attached could damage the development board!
+    
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - Antenna.png">
+    
+1. Insert the SD card into the Pysense.
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 1.png">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 2.png">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 3.png">
+    
+    Push the SD card into the slot until it *clicks* in.
+
 1. In order to activate your SIM card in the UBIRCH backend, you'll need to *claim* it by registering the **IMSI**, 
 a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com). 
 
     *If you already know the IMSI of your SIM card, you can skip to the next step.* 
 
-    If the IMSI is unknown, you can find a file `imsi.txt` on the SD card [(1.)](#assembled-testkit)
-    in the TestKit which contains the IMSI of your SIM card. If the file does not exist, please plug in the testkit for a minute so that it can be created. You can unplug the testkit to remove the SD when the LED stops changing colors or when it turns off.
+    If the IMSI is unknown, make sure the SD card is inserted and power up the TestKit with the micro USB cable.
+    
+    The TestKit will create a file `imsi.txt` on the SD card which contains the IMSI of your SIM card.
+    During this process the LED should switch on and change colors. Once the LED changes to bright yellow, it's done
+    and you can unplug the TestKit again.
+    
+    Push the SD card to eject it and use a SD card reader to get your IMSI.
     
 1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.prod.ubirch.com):
     - Login or register if you don't have an account yet.
@@ -46,13 +74,7 @@ a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com).
         "data": "https://data.prod.ubirch.com/v1/msgPack"
     }
     ```
-    * Insert the SD card into the Pysense. [(1.)](#assembled-testkit)
-1. Make sure the cellular antenna is attached to the Gpy [(2.)](#assembled-testkit) and power up the TestKit with the micro USB cable. [(3.)](#assembled-testkit)
-> WARNING: Using LTE/NB-IoT connectivity without the antenna being attached could damage the development board!
-
-###### Assembled TestKit
-
-<img align="middle" width="67%" src="pictures/assembled.png">
+   * Put the SD card back into the TestKit and power it up with the micro USB cable.
 
 **That's it!** Once powered up, the program on the TestKit starts running automatically.
 
