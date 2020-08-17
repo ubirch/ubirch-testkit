@@ -36,13 +36,11 @@ This readme guides you through the process of using the UBIRCH testkit. It assum
     
     > WARNING: Using LTE/NB-IoT connectivity without the antenna being attached could damage the development board!
     
-1. Insert the SD card into the Pysense.
+1. Insert the SD card into the Pysense. Push the SD card into the slot until it *clicks* in.
 
     <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 1.jpg">
     <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 2.jpg">
     <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 3.jpg">
-    
-    Push the SD card into the slot until it *clicks* in.
 
 1. In order to activate your SIM card in the UBIRCH backend, you'll need to *claim* it by registering the **IMSI**, 
 a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com). 
