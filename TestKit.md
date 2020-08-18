@@ -1,8 +1,8 @@
 # Using the UBIRCH TestKit
 
-<img style="float: right" align="right" width="67%" src="pictures/exploded.jpg">
-
 This readme guides you through the process of using the UBIRCH testkit. It assumes that you already have testkit hardware which is programmed and configured with the UBIRCH nano client. This is either because you have received a pre-programmed testkit from UBIRCH or because you have set up your own hardware, e.g. by following the instructions [here](README.md).
+
+<img style="float: right" align="right" width="67%" src="pictures/UBIRCH - TestKit - Overview.jpg">
 
 ### Testkit Components
 - 1NCE SIM Card with SIGNiT application
@@ -16,14 +16,44 @@ This readme guides you through the process of using the UBIRCH testkit. It assum
 - micro SD card writer
 
 ### Quick Start
-*Note: if you have setup your own testkit hardware, you might have already performed device claiming and flashed a config.json to the internal flash. In this case you can skip this quick start section.*
+*Note: This section shows how to assemble and setup the TestKit. If you have setup your own TestKit hardware, you might have already performed device claiming and flashed a config.json to the internal flash. In this case you can skip this quick start section.*
+
+1. Insert the SIM card into the Gpy.
+
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 2.jpg">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 1.jpg">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 3.jpg">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SIM 4.jpg">
+    
+1. Connect the boards. The Gpy goes on top of the Pysense with the LED over the micro USB port. 
+    
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - Boards 1.jpg">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - Boards 2.jpg">
+
+1. Make sure the cellular antenna is attached to the Gpy.
+    
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - Antenna.jpg">
+    
+    > WARNING: Using LTE/NB-IoT connectivity without the antenna being attached could damage the development board!
+    
+1. Insert the SD card into the Pysense. Push the SD card into the slot until it *clicks* in.
+
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 1.jpg">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 2.jpg">
+    <img width="50%" src="pictures/UBIRCH - TestKit - Assembly - SD 3.jpg">
+
 1. In order to activate your SIM card in the UBIRCH backend, you'll need to *claim* it by registering the **IMSI**, 
 a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com). 
 
     *If you already know the IMSI of your SIM card, you can skip to the next step.* 
 
-    If the IMSI is unknown, you can find a file `imsi.txt` on the SD card [(1.)](#assembled-testkit)
-    in the TestKit which contains the IMSI of your SIM card. If the file does not exist, please plug in the testkit for a minute so that it can be created. You can unplug the testkit to remove the SD when the LED stops changing colors or when it turns off.
+    If the IMSI is unknown, make sure the SD card is inserted and power up the TestKit with the micro USB cable.
+    
+    The TestKit will create a file `imsi.txt` on the SD card which contains the IMSI of your SIM card.
+    During this process the LED should switch on and change colors. Once the LED changes to bright yellow, 
+    after about 20 seconds, it's done and you can unplug the TestKit again.
+    
+    Push the SD card to eject it and use a SD card reader to get your IMSI.
     
 1. Claim your SIM card identity (IMSI) at the [UBIRCH web UI](https://console.prod.ubirch.com):
     - Login or register if you don't have an account yet.
@@ -46,54 +76,36 @@ a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com).
         "data": "https://data.prod.ubirch.com/v1/msgPack"
     }
     ```
-    * Insert the SD card into the Pysense. [(1.)](#assembled-testkit)
-1. Make sure the cellular antenna is attached to the Gpy [(2.)](#assembled-testkit) and power up the TestKit with the micro USB cable. [(3.)](#assembled-testkit)
-> WARNING: Using LTE/NB-IoT connectivity without the antenna being attached could damage the development board!
-
-###### Assembled TestKit
-
-<img align="middle" width="67%" src="pictures/assembled.png">
+   * Put the SD card back into the TestKit and power it up with the micro USB cable.
 
 **That's it!** Once powered up, the program on the TestKit starts running automatically.
 
-### How it works
-On initial start up, the TestKit will load the configuration from the SD card, connect to the NB-IoT network (APN: *iot.1nce.net*)
- and perform a bootstrap with the UBIRCH backend to acquire the SIM card's PIN via HTTPS.
- Once the SIM card is unlocked, the device will request the x509 certificate from the SIM card's secure storage
- and use it to register the SIM card's public key at the UBIRCH backend. Now the device is ready to send signed 
- UBIRCH Protocol Packages (*UPPs*) to the backend to be anchored to the blockchain.
+### Program flow
+On initial start up, the TestKit will load the configuration from the SD card and connect to the NB-IoT network (APN: *iot.1nce.net*). 
+Please note that **it can take up to 15 minutes** to establish a connection, or rather *attach* to the network, for the first time.
+(After that, it will be much faster.)
+
+The device then performs a bootstrap with the UBIRCH backend to acquire the SIM card's PIN via HTTPS.
+Once the SIM card is unlocked, the device is ready to send signed UBIRCH Protocol Packages (*UPPs*) 
+to the backend to be anchored to the blockchain.
  
 After initialisation, the device will take measurements once every ten minutes and send a data message to the UBIRCH data service.
  The data message contains the device UUID, a timestamp and a map of the sensor data:
- * With a pysense sensor board:
-    ```
-    {
-        "AccPitch": <accelerator Pitch in [deg]>,
-        "AccRoll": <accelerator Roll in [deg]>,
-        "AccX": <acceleration on x-axis in [G]>,
-        "AccY": <acceleration on y-axis in [G]>,
-        "AccZ": <acceleration on z-axis in [G]>,
-        "H": <relative humidity in [%RH]>,
-        "L_blue": <ambient light levels (violet-blue wavelength) in [lux]>,
-        "L_red": <ambient light levels (red wavelength) in [lux]>,
-        "P": <atmospheric pressure in [Pa]>,
-        "T": <board temperature in [°C]>,
-        "V": <supply voltage in [V]>
-    }
-    ```
-* With a pytrack sensor board:
-    ```
-    {
-        "AccPitch": <accelerator Pitch in [deg]>,
-        "AccRoll": <accelerator Roll in [deg]>,
-        "AccX": <acceleration on x-axis in [G]>,
-        "AccY": <acceleration on y-axis in [G]>,
-        "AccZ": <acceleration on z-axis in [G]>,
-        "GPS_lat": <latitude in [deg]>,
-        "GPS_long": <longitude in [deg]>,
-        "V": <supply voltage in [V]>
-    }
-    ```
+```
+{
+    "AccPitch": <accelerator Pitch in [deg]>,
+    "AccRoll": <accelerator Roll in [deg]>,
+    "AccX": <acceleration on x-axis in [G]>,
+    "AccY": <acceleration on y-axis in [G]>,
+    "AccZ": <acceleration on z-axis in [G]>,
+    "H": <relative humidity in [%RH]>,
+    "L_blue": <ambient light levels (violet-blue wavelength) in [lux]>,
+    "L_red": <ambient light levels (red wavelength) in [lux]>,
+    "P": <atmospheric pressure in [Pa]>,
+    "T": <board temperature in [°C]>,
+    "V": <supply voltage in [V]>
+}
+```
 
 In the next step, a **UBIRCH Protocol Package** (*"UPP"*) will be generated with the unique hash of the serialised data,
  UUID and timestamp, chained to the previous UPP and signed with the SIM card's private key using the 
@@ -101,7 +113,7 @@ In the next step, a **UBIRCH Protocol Package** (*"UPP"*) will be generated with
  can not be read by the device.
  
 The sealed data hash is then sent to the **UBIRCH authentication service** (*"Niomon"*), where it will be verified with
- the previously registered public key and anchored to the blockchain.
+ the SIM card's public key and anchored to the blockchain.
  
 ### LED Color Codes
 The LED on the GPy will light up with dim colors during normal operation, i.e. setup, taking measurements, sending, etc.
@@ -121,7 +133,7 @@ The LED on the GPy will light up with dim colors during normal operation, i.e. s
 | color (bright) | meaning | what to do |
 |--------|---------|------------|
 | yellow | couldn't get config from SD card | Make sure the SD card is inserted correctly and has a file named `config.txt` with the API config from the UBIRCH web UI. The content of the file should look like the example in the previous step including the braces (`{` `}`).
-| purple | couldn't establish network connection (TestKit resets automatically and will try again) | Try to find a place with better signal or connect to WIFI instead. (see [here](#advanced-configuration) how to do that)
+| purple | couldn't establish network connection (TestKit resets automatically and will try again) | Try to find a place with better signal, for example close to a window, or connect to WIFI instead. (see [here](#advanced-configuration) how to do that)
 | orange | couldn't acquire PIN to unlock SIM from UBIRCH backend or other backend related issue | Make sure you have registered the correct IMSI at the [UBIRCH web UI](https://console.prod.ubirch.com) and you copied the `apiConfig` for your IMSI to the `config.txt` file on the SD card.
 | pink | failed to setup modem or communicate with SIM card | Make sure the SIM card is properly inserted to the slot in the Gpy. |
 | red | SIM card application error | This should recover by itself. If it does not, or the LED **blinks** red, please contact us. |
