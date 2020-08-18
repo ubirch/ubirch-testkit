@@ -150,7 +150,7 @@ a data message to appear, e.g.:
     ```
     Copy the data message hash.
 
-1. To see if the UPP arrived at the backend, send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests). The use of the jq command ('| jq .') is optional.:
+1. To see if the UPP arrived at the backend, send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests). The use of the jq command (`| jq .`) is optional.:
     > Replace the value after `HASH=` with the hash copied in step 1.
     ```    
     HASH=Yx/M1vxy/RrdpYENQg/dHj4IFhIMPPS4W7CYapfjugY=
@@ -166,7 +166,7 @@ a data message to appear, e.g.:
     ```
     If the response is empty, the UPP has not arrived at the backend yet.
 
-1. To check blockchain anchoring, please wait about 10 minutes for your UPP to be anchored. Afterwards, send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests). The use of the jq command ('| jq .') is optional.:
+1. To check blockchain anchoring, please wait about 10 minutes for your UPP to be anchored. Afterwards, send a POST request to the UBIRCH verification service, e.g. by using **curl** (or any other tool to send POST requests). The use of the jq command (`| jq .`) is optional.:
     > Replace the value after `HASH=` with the hash copied in step 1.
     ```
     HASH=Yx/M1vxy/RrdpYENQg/dHj4IFhIMPPS4W7CYapfjugY=
