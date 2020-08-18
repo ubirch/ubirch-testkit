@@ -50,8 +50,8 @@ a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com).
     If the IMSI is unknown, make sure the SD card is inserted and power up the TestKit with the micro USB cable.
     
     The TestKit will create a file `imsi.txt` on the SD card which contains the IMSI of your SIM card.
-    During this process the LED should switch on and change colors. Once the LED changes to bright yellow, it's done
-    and you can unplug the TestKit again.
+    During this process the LED should switch on and change colors. Once the LED changes to bright yellow, 
+    after about 20 seconds, it's done and you can unplug the TestKit again.
     
     Push the SD card to eject it and use a SD card reader to get your IMSI.
     
@@ -80,44 +80,32 @@ a 15 digit number, at the [UBIRCH web UI](https://console.prod.ubirch.com).
 
 **That's it!** Once powered up, the program on the TestKit starts running automatically.
 
-### How it works
-On initial start up, the TestKit will load the configuration from the SD card, connect to the NB-IoT network (APN: *iot.1nce.net*)
- and perform a bootstrap with the UBIRCH backend to acquire the SIM card's PIN via HTTPS.
- Once the SIM card is unlocked, the device will request the x509 certificate from the SIM card's secure storage
- and use it to register the SIM card's public key at the UBIRCH backend. Now the device is ready to send signed 
- UBIRCH Protocol Packages (*UPPs*) to the backend to be anchored to the blockchain.
+### Program flow
+On initial start up, the TestKit will load the configuration from the SD card and connect to the NB-IoT network (APN: *iot.1nce.net*). 
+Please note that **it can take up to 15 minutes** to establish a connection, or rather *attach* to the network, for the first time.
+(After that, it will be much faster.)
+
+The device then performs a bootstrap with the UBIRCH backend to acquire the SIM card's PIN via HTTPS.
+Once the SIM card is unlocked, the device is ready to send signed UBIRCH Protocol Packages (*UPPs*) 
+to the backend to be anchored to the blockchain.
  
 After initialisation, the device will take measurements once every ten minutes and send a data message to the UBIRCH data service.
  The data message contains the device UUID, a timestamp and a map of the sensor data:
- * With a pysense sensor board:
-    ```
-    {
-        "AccPitch": <accelerator Pitch in [deg]>,
-        "AccRoll": <accelerator Roll in [deg]>,
-        "AccX": <acceleration on x-axis in [G]>,
-        "AccY": <acceleration on y-axis in [G]>,
-        "AccZ": <acceleration on z-axis in [G]>,
-        "H": <relative humidity in [%RH]>,
-        "L_blue": <ambient light levels (violet-blue wavelength) in [lux]>,
-        "L_red": <ambient light levels (red wavelength) in [lux]>,
-        "P": <atmospheric pressure in [Pa]>,
-        "T": <board temperature in [°C]>,
-        "V": <supply voltage in [V]>
-    }
-    ```
-* With a pytrack sensor board:
-    ```
-    {
-        "AccPitch": <accelerator Pitch in [deg]>,
-        "AccRoll": <accelerator Roll in [deg]>,
-        "AccX": <acceleration on x-axis in [G]>,
-        "AccY": <acceleration on y-axis in [G]>,
-        "AccZ": <acceleration on z-axis in [G]>,
-        "GPS_lat": <latitude in [deg]>,
-        "GPS_long": <longitude in [deg]>,
-        "V": <supply voltage in [V]>
-    }
-    ```
+```
+{
+    "AccPitch": <accelerator Pitch in [deg]>,
+    "AccRoll": <accelerator Roll in [deg]>,
+    "AccX": <acceleration on x-axis in [G]>,
+    "AccY": <acceleration on y-axis in [G]>,
+    "AccZ": <acceleration on z-axis in [G]>,
+    "H": <relative humidity in [%RH]>,
+    "L_blue": <ambient light levels (violet-blue wavelength) in [lux]>,
+    "L_red": <ambient light levels (red wavelength) in [lux]>,
+    "P": <atmospheric pressure in [Pa]>,
+    "T": <board temperature in [°C]>,
+    "V": <supply voltage in [V]>
+}
+```
 
 In the next step, a **UBIRCH Protocol Package** (*"UPP"*) will be generated with the unique hash of the serialised data,
  UUID and timestamp, chained to the previous UPP and signed with the SIM card's private key using the 
@@ -125,7 +113,7 @@ In the next step, a **UBIRCH Protocol Package** (*"UPP"*) will be generated with
  can not be read by the device.
  
 The sealed data hash is then sent to the **UBIRCH authentication service** (*"Niomon"*), where it will be verified with
- the previously registered public key and anchored to the blockchain.
+ the SIM card's public key and anchored to the blockchain.
  
 ### LED Color Codes
 The LED on the GPy will light up with dim colors during normal operation, i.e. setup, taking measurements, sending, etc.
@@ -145,7 +133,7 @@ The LED on the GPy will light up with dim colors during normal operation, i.e. s
 | color (bright) | meaning | what to do |
 |--------|---------|------------|
 | yellow | couldn't get config from SD card | Make sure the SD card is inserted correctly and has a file named `config.txt` with the API config from the UBIRCH web UI. The content of the file should look like the example in the previous step including the braces (`{` `}`).
-| purple | couldn't establish network connection (TestKit resets automatically and will try again) | Try to find a place with better signal or connect to WIFI instead. (see [here](#advanced-configuration) how to do that)
+| purple | couldn't establish network connection (TestKit resets automatically and will try again) | Try to find a place with better signal, for example close to a window, or connect to WIFI instead. (see [here](#advanced-configuration) how to do that)
 | orange | couldn't acquire PIN to unlock SIM from UBIRCH backend or other backend related issue | Make sure you have registered the correct IMSI at the [UBIRCH web UI](https://console.prod.ubirch.com) and you copied the `apiConfig` for your IMSI to the `config.txt` file on the SD card.
 | pink | failed to setup modem or communicate with SIM card | Make sure the SIM card is properly inserted to the slot in the Gpy. |
 | red | SIM card application error | This should recover by itself. If it does not, or the LED **blinks** red, please contact us. |
