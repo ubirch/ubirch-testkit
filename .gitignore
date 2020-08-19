@@ -3,4 +3,6 @@
 .vscode/
 venv/
 src/config.json
+src/config_wifi.json
+src/config_nbiot.json
 src/boot.json
