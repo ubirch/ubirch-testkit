@@ -160,10 +160,10 @@ class OTA():
         # Backup current file
         # if it exists
         try:
-            os.stat(dest_path)
+            os.stat(dest_path)#raises exception if file does not exist
             os.rename(dest_path, bak_path)
         except:
-            print("Warning, could not delete (rename to .bak_del) the file ",dest_path)
+            print("Warning: could not delete (rename to .bak_del) the file ",dest_path)
 
     def write_firmware(self, f):
         hash = self.get_data(f['URL'].split("/", 3)[-1],
