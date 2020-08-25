@@ -201,7 +201,7 @@ def get_latest_version():
 def get_all_paths(path, ignore=[]):
     ignore = set(ignore)
     paths = []
-    for entry in os.walk(path):
+    for entry in os.walk(path,followlinks=True):
         d, _, files = entry
         files = set(files).difference(ignore)
         paths += [os.path.join(d, f) for f in files]
