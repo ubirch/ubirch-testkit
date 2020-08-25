@@ -27,6 +27,7 @@ import sys
 
 from ota_wifi_secrets import WIFI_SSID, WIFI_PW
 
+# Try to get version number
 try:
     from OTA_VERSION import VERSION
 except ImportError:
@@ -34,12 +35,6 @@ except ImportError:
 
 # Configuration
 SERVER_IP = "10.42.0.1"
-
-# Try to get version number
-try:
-    from OTA_VERSION import VERSION
-except ImportError:
-    VERSION = '1.0.0'
 
 # To make the OTA bootloader self-contained, and hopefully more reliable, the library/classes are directly included here instead of an extra lib
 
