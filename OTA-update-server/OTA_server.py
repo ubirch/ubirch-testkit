@@ -158,14 +158,30 @@ class OTAHandler(BaseHTTPRequestHandler):
                 # This assumes there is no version lower than 0
                 current_ver = '0'
 
-            # Send manifest
+            # Send signed manifest data
+            # First create a JSON string of the manifest, then sign the data
+            # of that string which results in a signature data string (not JSON in this case).
+            # Finally, assemble both strings and send them. Signature and manifest data are distinguished
+            # using headers indicating their size (for easy and unambigous dissassembly at the client).
             print("Generating a manifest from version: {}".format(current_ver))
             manifest = generate_manifest(current_ver, host)
-            j = json.dumps(manifest,
+            manifest_string = json.dumps(manifest,
                            sort_keys=True,
                            indent=4,
-                           separators=(',', ': '))
-            self.wfile.write(j.encode())
+                           separators=(',', ': '))            
+
+            # get signature string for manifest JSON string 
+            # (signature string will already include headers)
+            signature_string = get_manifest_signature(manifest_string)
+
+            #add header to manifest JSON string
+            manifest_string = "MANIFEST[{}]:{}".format(len(manifest_string), manifest_string)
+
+            manifest_and_sig = manifest_string + signature_string
+            
+            print(manifest_and_sig)
+            
+            self.wfile.write(manifest_and_sig.encode())
 
         # Send file
         else:
@@ -309,6 +325,23 @@ def generate_manifest(current_ver, host):
         manifest["firmware"] = entry
 
     return manifest
+
+def get_manifest_signature(manifest_string: str)-> str:
+    """Returns a string for the signature data for a manifest (JSON) string.
+    Can actually be used to sign any type of string data. String type is
+    enforced to avoid JSON encoding ambiguities when signing. Signature string will
+    have headers (including size) for a "type" identifier and the signature data itself.
+    """
+    #calculate actual signature data here
+    signature_type = "dummy_sig_type"
+    signature_data = "01234deadbeef"
+
+    #add headers
+    signature_type = "SIGNATURE_TYPE[{}]:{}".format(len(signature_type), signature_type)
+    signature_data = "SIGNATURE_DATA[{}]:{}".format(len(signature_data), signature_data)
+
+    manifest_signature = signature_type + signature_data
+    return manifest_signature
 
 
 if __name__ == "__main__":

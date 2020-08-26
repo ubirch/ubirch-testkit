@@ -53,11 +53,85 @@ class OTA():
     def get_current_version(self):
         return VERSION
 
+    def check_manifest_signature(self,manifest:str,sig_type:str,sig_data:str)->bool:
+        print("Checking signature")
+        if sig_type != "dummy_sig_type":
+            raise Exception("Unknown signature type: {}".format(sig_type))
+        
+        if sig_data != "01234deadbeef":
+            return False            
+
+        print("Signature OK")
+        return True
+
+    def extract_from_response(self,header:str,response:str)->(str,str):
+        """Extracts the data from a server response using the header.
+        Returns the data itself and the response with data and header removed
+        Expected format: HEADER_NAME[len(data)]:data, e.g. MYDATA[3]:123SOMEOTHERDATA[2]:ab etc.
+        """
+        size_marker_start = "["
+        size_marker_end = "]:"
+
+        #find header including the begin of size field
+        header_start = response.find(header+size_marker_start)
+        if header_start == -1:#no valid header found
+            return("",response)
+
+        #determine start position of size integer
+        size_start = header_start + len(header) + len(size_marker_start)
+
+        #find end of size field
+        size_end = response.find(size_marker_end, size_start)
+        if size_end == -1:#end of size field not found
+            return("",response)
+
+        #extract size string and try conversion
+        size_str = response[size_start:size_end]
+        try:
+            data_size = int(size_str)
+        except:#size string conversion failed
+            return("",response)
+        
+        #extract data string
+        data_start = size_end+len(size_marker_end)
+        data_end = data_start + data_size
+        if data_end > len(response):#data size is larger than available data
+            return("",response)            
+        data_str = response[data_start:data_end]
+
+        #remove data and header from response
+        remaining_response = response[:header_start]+response[data_end:]
+
+        return(data_str,remaining_response)
+    
     def get_update_manifest(self):
+        """Get the manifest data from server and check signature.
+        Gets the data, splits it into the strings for manifest (JSON), signature type, and signature data
+        using the headers. Then checks the signature and finally parses the JSON of the manifest.
+        """
         req = "manifest.json?current_ver={}".format(self.get_current_version())
-        manifest_data = self.get_data(req).decode()
-        manifest = ujson.loads(manifest_data)
-        gc.collect()
+        response = self.get_data(req).decode()
+
+        # get the data from the headers and repeat with the remaining response
+        # we get/remove the manifest json first as it is the most critical to remove
+        # since it's data is arbitrary and might contain 'header-like' strings
+        manifest_str,response = self.extract_from_response("MANIFEST",response)
+        sig_type_str,response = self.extract_from_response("SIGNATURE_TYPE",response)
+        sig_data_str,response = self.extract_from_response("SIGNATURE_DATA",response)
+
+        #check that all data was found
+        if len(manifest_str) == 0 or \
+            len(sig_type_str) == 0 or \
+            len(sig_data_str) == 0 :
+            raise Exception("Could not find all required headers in response.")
+        
+        #check signature
+        if self.check_manifest_signature(manifest_str,sig_type_str,sig_data_str):        
+            manifest = ujson.loads(manifest_str)
+        else:
+            raise Exception("Signature of manifest is invalid")                   
+        
+        gc.collect()        
         return manifest
 
     def update(self):
