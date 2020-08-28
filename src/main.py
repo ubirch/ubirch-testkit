@@ -192,6 +192,9 @@ try:
         except Exception as e:
             error_handler.log(e, COLOR_INET_FAIL, reset=True)
 
+        # set start time again with valid time
+        start_time = time.time()
+
     if isinstance(connection, NB_IoT):
         print("\tdisconnecting")
         connection.disconnect()
