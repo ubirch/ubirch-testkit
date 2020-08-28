@@ -71,8 +71,8 @@ class FileLogger:
             self.file_position = f.tell()
         print("++ file logging enabled")
         print("\tfile: \"{}\"".format(self.logfile))
-        print("\tcurrent size:     {: 6.2f} KB".format(self.file_position / 1000.0))
-        print("\tmaximal size:     {: 6.2f} KB".format(self.MAX_FILE_SIZE / 1000.0))
+        print("\tcurrent size:  {: 9.2f} KB".format(self.file_position / 1000.0))
+        print("\tmaximal size:  {: 9.2f} KB".format(self.MAX_FILE_SIZE / 1000.0))
         print("\tfree flash memory:{: 6d} KB".format(os.getfree('/flash')))
         if log_to_sd_card:
             print("\tfree SD memory:   {: 6d} MB".format(int(os.getfree('/sd') / 1000)))
