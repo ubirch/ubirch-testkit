@@ -25,6 +25,8 @@
 """
 
 import time
+from binascii import a2b_base64, unhexlify
+
 import ubinascii as binascii
 from network import LTE
 from uuid import UUID
@@ -428,9 +430,38 @@ class SimProtocol:
 
         raise Exception(code)
 
+    def store_backend_public_keys(self):
+        """
+        Store the ECC UBIRCH backend public keys in the SIM cards secure storage
+        Throws exception if operation fails.
+        """
+        backend_keys = {
+            "dev": {
+                "uuid": UUID(unhexlify("9d3c78ff22f34441a5d185c636d486ff")),
+                "pubkey": a2b_base64(
+                    "LnU8BkvGcZQPy5gWVUL+PHA0DP9dU61H8DBO8hZvTyI7lXIlG1/oruVMT7gS2nlZDK9QG+ugkRt/zTrdLrAYDA==")
+            },
+            "demo": {
+                "uuid": UUID(unhexlify("9d3c78ff22f34441a5d185c636d486ff")),
+                "pubkey": a2b_base64(
+                    "LnU8BkvGcZQPy5gWVUL+PHA0DP9dU61H8DBO8hZvTyI7lXIlG1/oruVMT7gS2nlZDK9QG+ugkRt/zTrdLrAYDA==")
+            },
+            "prod": {
+                "uuid": UUID(unhexlify("9d3c78ff22f34441a5d185c636d486ff")),  # fixme use actual backend UUID
+                "pubkey": a2b_base64(
+                    "LnU8BkvGcZQPy5gWVUL+PHA0DP9dU61H8DBO8hZvTyI7lXIlG1/oruVMT7gS2nlZDK9QG+ugkRt/zTrdLrAYDA==")
+                # fixme use actual backend ecdsa public key
+            },
+        }
+
+        # store public keys of ubirch backend on the SIM card
+        for env in ["dev", "demo", "prod"]:
+            if not self.entry_exists(env):
+                self.store_public_key(env, backend_keys.get(env).get("uuid"), backend_keys.get(env).get("pubkey"))
+
     def store_public_key(self, entry_id: str, uuid: UUID, pub_key: bytes):
         """
-        Store an ECC public key on the SIM cards secure storage
+        Store an ECC public key in the SIM cards secure storage
         Throws exception if operation fails.
         :param entry_id: the entry ID for the key to be stored
         :param uuid: the corresponding UUID to the key
