@@ -44,29 +44,35 @@ SERVER_IP = "10.42.0.1"
 #See https://github.com/pycrypto/pycrypto/blob/7acba5f3a6ff10f1424c309d0d34d2b713233019/lib/Crypto/Signature/PKCS1_PSS.py
 
 class PKCS1_PSSVerifier():
-    def get_hash(self,data):
-        hasher = uhashlib.sha256(data)
-        return hasher.digest()
+    def __init__(self,hasher=uhashlib.sha256):
+        self.hasher = hasher
 
-    def byte_xor(self,ba1, ba2):
+    def __get_hash(self,data):
+        try:
+            hasher = self.hasher(data)        
+            return hasher.digest()
+        except:
+            hasher.digest()#try to close hasher in case of error as only one is allowed by pycom lib
+            raise        
+
+    def __byte_xor(self,ba1, ba2):
         return bytes([_a ^ _b for _a, _b in zip(ba1, ba2)])
 
-    def modular_pow_public(self,message_int, exp_int, n_int):
-        """Perform RSA function by exponentiation of message to exp with modulus n, all public.
+    def __modular_pow_public(self,message_int, exp_int, n_int):
+        """Perform RSA function by exponentiation of message (= signature data) to exp with modulus n, all public.
         Only use with public parameters, as it will leak information about them. Micropython ints can be (almost) arbitrarily large.
         Based on micropython implementation from 
         https://github.com/artem-smotrakov/esp32-weather-google-sheets/blob/841722fd67404588bfd29c15def897c9f8e967e3/src/rsa/common.py
         (Published under MIT License, Copyright (c) 2019 Artem Smotrakov)
         """
-        #TODO: implement assert function
-        #assert_int(message, 'message')
-        #assert_int(exp, 'exp')
-        #assert_int(n, 'n')
+
+        if not isinstance(message_int,int) or not isinstance(exp_int,int)or not isinstance(n_int,int):
+            raise Exception('Only integer inputs are supported')
 
         if message_int < 0:
             raise Exception('Only non-negative numbers are supported')
 
-        if message_int > n_int:
+        if message_int >= n_int:
             raise Exception("The message %i is too long for n=%i" % (message_int, n_int))
 
         if n_int == 1:
@@ -81,7 +87,7 @@ class PKCS1_PSSVerifier():
             message_int = (message_int * message_int) % n_int
         return result
 
-    def EMSA_PSS_VERIFY(self,mhash, em, emBits, sLen):
+    def __EMSA_PSS_VERIFY(self,mhash, em, emBits, sLen):
         """
         Implement the ``EMSA-PSS-VERIFY`` function, as defined
         in PKCS#1 v2.1 (RFC3447, 9.1.2). 
@@ -125,9 +131,9 @@ class PKCS1_PSSVerifier():
         if lmask & em[0]:
             return False
         # Step 7
-        dbMask = self.MGF1(h, emLen-hLen-1)
+        dbMask = self.__MGF1(h, emLen-hLen-1)
         # Step 8
-        db = self.byte_xor(maskedDB, dbMask)
+        db = self.__byte_xor(maskedDB, dbMask)
         # Step 9
         db = ((db[0]) & ~lmask).to_bytes(1,'big') + db[1:]
         # Step 10
@@ -137,28 +143,30 @@ class PKCS1_PSSVerifier():
         salt = b''
         if sLen: salt = db[-sLen:]
         # Step 12 and 13
-        hp =self.get_hash((b'\x00')*8 + mhash + salt)
+        hp =self.__get_hash((b'\x00')*8 + mhash + salt)
         # Step 14
         if h!=hp:
             return False
         return True
 
-    def MGF1(self,mgfSeed, maskLen):
+    def __MGF1(self,mgfSeed, maskLen):
         """Mask Generation Function, described in B.2.1"""
         T = b''
-        hashsize = len(self.get_hash(""))
+        hashsize = len(self.__get_hash(""))
         for counter in range(math.ceil(maskLen/hashsize)):
             c = counter.to_bytes(4,'big')
-            T = T + self.get_hash(mgfSeed + c)
+            T = T + self.__get_hash(mgfSeed + c)
         assert(len(T)>=maskLen)
         return T[:maskLen]
 
-    def verify(self,mhash, signature_hex, pub_modulus_hex):
+    def changehashfunction(self,hasher):
+        self.hasher = hasher
+
+    def verify(self,mhash, signature_hex, pub_modulus_hex,pub_exponent = 65537,modBits = 2048):
             """Verify that a certain PKCS#1 PSS signature is authentic.     
         
             This function checks if the party holding the private half of the given
-            RSA key has really signed the message. These functions are currently
-            hardcoded to 2048 bit and SHA256
+            RSA key has really signed the message. 
         
             This function is called ``RSASSA-PSS-VERIFY``, and is specified in section
             8.1.2 of RFC3447.
@@ -169,29 +177,33 @@ class PKCS1_PSSVerifier():
             signature_hex : hex string
                     The signature that needs to be validated.
             pub_modulus_hex : hex string
-                    The public modulus (pubkey) for verification.
+                    The public modulus (pubkey main part) for verification.
+            pub_exponent : integer
+                    The public exponent (minor info/part of pubkey) for verification. Uses the common 65537 as default.
+            modBits : integer
+                    The bits the modulo n fits in. Genrally same as key length in bits, Defaults to 2048
         
             :Return: True if verification is correct. False otherwise.
 
             This was ported to micropython based on the pycrypto library function in PKCS1_PSS.py
             See https://github.com/pycrypto/pycrypto/blob/7acba5f3a6ff10f1424c309d0d34d2b713233019/lib/Crypto/Signature/PKCS1_PSS.py
-            """    
-            #public exponententas standardized
-            pub_exponent = 65537
-            
+            (Public domain, no rights reserved.)
+            """  
+
+            #Verify input parameters              
+
+            #determine length of hash returned by currently set hash function
+            hLen = len(self.__get_hash("0"))
             # salt length is assumed to be same as number of bytes in hash
-            sLen = 32 #we only support SHA256 as digest 
+            sLen = hLen
             
-            #Check hash has correct length
-            if len(mhash) != len(self.get_hash("0")):
+            #Check hash parameter has correct length
+            if len(mhash) != hLen:
                 print("Warning: Can't check signature, hash size is invalid.")
                 return False
-            
-    
+
             #parse other parameters
-            modBits = 2048 # hardcoded 2048 bit keys
             signature = ubinascii.unhexlify(signature_hex) 
-            #pub_modulus_string = "00baaa1a7d98bf662fdd0744e7a7fb83fe41f5613afc43b630013be7e52e4fae9e90634c358fa8ce724721e8a80a5a67978fb88cba9793517b7ab8997ee8b502a9f2933b77b3be0e72cbfe6746da8c081cf5fc8383e4de13b72c20a6e38e5750f1d8bdc1f4ae7e6289a1e664c6aec7cd341959e1506a2e5850385550a3e4cb1b77a3cb6a30b55a746e708000a0d1bddab38c05654c5c85d91d8a658ffc186bd0f46036eb2cd577b44eface5cb50d4de0213cfa2e9f96ad9e7172c3bb0fe550ddc92b86f45033cf62b3dc9942d198c9cb3e0a83d105e25fcf83f2d16bad31fc5eaa5d0e9281a059819f8b94c9a01aa613c1ed21a878cb65a66ca656b170857e79e3"
             pub_modulus = ubinascii.unhexlify(pub_modulus_hex)
             pub_modulus_int = int.from_bytes(pub_modulus, 'big')
             
@@ -205,13 +217,13 @@ class PKCS1_PSSVerifier():
             # Note that signature must be smaller than the module
             # but we won't complain about it (here).       
             sig_int = int.from_bytes(signature, 'big')        
-            m = self.modular_pow_public(sig_int,pub_exponent, pub_modulus_int)
+            m = self.__modular_pow_public(sig_int,pub_exponent, pub_modulus_int)
             # Step 2c (convert m int to em octet string)
             emLen = math.ceil((modBits-1)/8)
             em = m.to_bytes(emLen,'big')
             # Step 3
             try:
-                result = self.EMSA_PSS_VERIFY(mhash, em, modBits-1, sLen)
+                result = self.__EMSA_PSS_VERIFY(mhash, em, modBits-1, sLen)
             except ValueError:
                 return False
             # Step 4
