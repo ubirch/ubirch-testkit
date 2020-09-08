@@ -126,6 +126,9 @@ import json
 import hashlib
 import filecmp
 import re
+from Crypto.Signature import PKCS1_PSS
+from Crypto.Hash import SHA256,SHA512
+from Crypto.PublicKey import RSA
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
@@ -179,7 +182,7 @@ class OTAHandler(BaseHTTPRequestHandler):
 
             manifest_and_sig = manifest_string + signature_string
             
-            print(manifest_and_sig)
+            #print(manifest_and_sig)
             
             self.wfile.write(manifest_and_sig.encode())
 
@@ -329,12 +332,26 @@ def generate_manifest(current_ver, host):
 def get_manifest_signature(manifest_string: str)-> str:
     """Returns a string for the signature data for a manifest (JSON) string.
     Can actually be used to sign any type of string data. String type is
-    enforced to avoid JSON encoding ambiguities when signing. Signature string will
+    mandatory to avoid JSON encoding ambiguities when signing. Signature string will
     have headers (including size) for a "type" identifier and the signature data itself.
     """
-    #calculate actual signature data here
-    signature_type = "dummy_sig_type"
-    signature_data = "01234deadbeef"
+    #calculate signature (SHA256)
+    # signature_type = "SIG01_PKCS1_PSS_4096_SHA256"
+    # key = RSA.importKey(open('OTA_signing_key_rsa_4096.pem').read())
+    # h = SHA256.new()
+    # h.update(manifest_string.encode('utf-8'))
+    # signer = PKCS1_PSS.new(key)
+    # signaturebytes = signer.sign(h)
+    # signature_data = signaturebytes.hex()
+
+    #calculate signature (SHA512)
+    signature_type = "SIG02_PKCS1_PSS_4096_SHA512"
+    key = RSA.importKey(open('OTA_signing_key_rsa_4096.pem').read())
+    h = SHA512.new()
+    h.update(manifest_string.encode('utf-8'))
+    signer = PKCS1_PSS.new(key)
+    signaturebytes = signer.sign(h)
+    signature_data = signaturebytes.hex()
 
     #add headers
     signature_type = "SIGNATURE_TYPE[{}]:{}".format(len(signature_type), signature_type)

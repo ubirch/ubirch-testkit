@@ -246,15 +246,25 @@ class OTA():
         return VERSION
 
     def check_manifest_signature(self,manifest:str,sig_type:str,sig_data:str)->bool:
-        print("Checking signature")
-        if sig_type != "dummy_sig_type":
-            raise Exception("Unknown signature type: {}".format(sig_type))
+        #set public key (modulus) of OTA server signature here:
+        PUB_MOD_RSA_4096 = "00aebbfe89f3913597bb91bc3a22698f54fb94b9e1ecb0f01c9e9f39947e72f9d4ce794ad5004a7e6ec8dbab80950bafdd325f6c09738259a1b3eee6da5b885726df00a5c39c822927488ac0084c1722f466e787d051c53f913e1a4a2e547394af4bab60427dea73c646c6c1a4fafda6a39f0ca84b70f3477eb6bc30ff51ccc16ce208dccc643fece0b7aabc90427b53dee046464b9cc0d36db2af014ffcebf5168a7f588a6fa190dba0bf038c116ce78c8f537392d30a1443fe8a03c7fcc338d4faecdffae78fc9d0b15411a42c7e410255f1936c69a0c15a4464c9e4b2de42b97dcaa09074f029f4b95ec34c5ebbc4667001fe5cef7a4eda7fbd487fd9b23df2fc6c2994a74ecb61e814a80d84c6913890dfc1c19bd7e21148c5ca76ac725c4c3483f7da9ff8deb038889f326a602f8726f20d454712123d5683b1ddc12691fcc04bb82fc07b7dacad6f4f1476e0d84fa2e252832718d4f35c9eee140c8ec752613ee38d10df497736d164d88f6e11566bdae1fd968c4dc4e0d206e0396683eec00dd87418cdbd8ca36312af94cfa8645e7a532073a037598d69d3e5ed1ff14ddd0220a7292c3b0d4a684ebee28e9c6ef0937a86ebb58392a650be7335584fe36ae3d0a983e421c29721272eb2a3ace3605f3c086d2183bdf7f256bd0653053f5e86974b4a97aae7e3db108ad2f9ae679536cf81f3bef61ebe527ab1987c2419"       
         
-        if sig_data != "01234deadbeef":
-            return False            
+        if(sig_type=="SIG01_PKCS1_PSS_4096_SHA256"):    
+            verifier = PKCS1_PSSVerifier(hasher=uhashlib.sha256)   
+            pub_modulus = PUB_MOD_RSA_4096
+            hasher = uhashlib.sha256(manifest)
+            manifest_hash = hasher.digest()
+            return verifier.verify(manifest_hash,sig_data,pub_modulus,modBits=4096)
+        elif(sig_type=="SIG02_PKCS1_PSS_4096_SHA512"):    
+            verifier = PKCS1_PSSVerifier(hasher=uhashlib.sha512)   
+            pub_modulus = PUB_MOD_RSA_4096
+            hasher = uhashlib.sha512(manifest)
+            manifest_hash = hasher.digest()
+            return verifier.verify(manifest_hash,sig_data,pub_modulus,modBits=4096) 
+        else:
+            raise Exception("Unknown signature type: {}".format(sig_type))          
 
-        print("Signature OK")
-        return True
+        raise Exception("Something is wrong with check_manifest_signature(), you should not have reached this line.")
 
     def extract_from_response(self,header:str,response:str)->(str,str):
         """Extracts the data from a server response using the header.
@@ -319,7 +329,8 @@ class OTA():
             raise Exception("Could not find all required headers in response.")
         
         #check signature
-        if self.check_manifest_signature(manifest_str,sig_type_str,sig_data_str):        
+        if self.check_manifest_signature(manifest_str,sig_type_str,sig_data_str):    
+            print("Signature OK, parsing manifest")    
             manifest = ujson.loads(manifest_str)
         else:
             raise Exception("Signature of manifest is invalid")                   
@@ -540,7 +551,7 @@ class WiFiOTA(OTA):
                 return bytes(content)
         elif hash:
             return hash_val
-     
+
 
 # Turn on GREEN LED
 pycom.heartbeat(False)
@@ -652,9 +663,9 @@ while True:
         print("Performing OTA")
         # Perform OTA
         try:
-            cryptotest()
-            #ota.connect()
-            #ota.update()
+            #cryptotest()
+            ota.connect()
+            ota.update()
         except Exception as e:
             sys.print_exception(e)
     sleep(5)
