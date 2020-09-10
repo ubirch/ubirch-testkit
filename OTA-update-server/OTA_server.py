@@ -135,6 +135,7 @@ from urllib.parse import urlparse, parse_qs
 from distutils.version import LooseVersion
 
 PORT = 8000
+PROTECT_BOOTLOADER = True #if this is true, the server will never add protected files to the update manifest
 
 
 class OTAHandler(BaseHTTPRequestHandler):
@@ -247,6 +248,27 @@ def get_diff_list(left, right, ignore=['.DS_Store', 'pymakr.conf']):
                            os.path.join(right, f),
                            shallow=False):
             to_update.append(f)
+    
+
+    #check if lists contain protected files (e.g. bootloader and version)
+    #these are protected anywhere (=if a path ends with them)
+    if PROTECT_BOOTLOADER:
+        protected_files = ["boot.py","OTA_VERSION.py"]
+        lists_to_check = [to_delete, new_files, (to_update)]
+        
+        for filelist in lists_to_check:#for every list that was generated           
+            to_remove = []
+            for filepath in filelist:#for every path in that list/set
+                for protected_file in protected_files:#for every filename that is protected
+                    if filepath.lower().endswith(protected_file.lower()):#check filename (case insensitive)
+                        to_remove.append(filepath)#remember this path for removal
+                        print("Warning: removing protected file '{}' (on path '{}') from update manifest.".format(protected_file,filepath))
+            for item in to_remove:#remove all paths that contain protected files
+                try:
+                    filelist.remove(item)
+                except ValueError: #list does not have item (anymore), e.g. by double match
+                    pass
+            
 
     return (to_delete, new_files, (to_update))
 
@@ -277,7 +299,7 @@ def get_new_firmware(path, current_ver):
 
 
 # Returns a dict containing a manifest entry which contains the files
-# destination path, download URL and SHA1 hash.
+# destination path, download URL and SHA512 hash.
 # Parameters
 #    path - The relative path to the file
 #    version - The version number of the file
@@ -288,7 +310,7 @@ def generate_manifest_entry(host, path, version):
     entry["dst_path"] = "/{}".format(path)
     entry["URL"] = "http://{}/{}/{}".format(host, version, path)
     data = open(os.path.join('.', version, path), 'rb').read()
-    hasher = hashlib.sha1(data)
+    hasher = hashlib.sha512(data)
     entry["hash"] = hasher.hexdigest()
     return entry
 
@@ -323,7 +345,7 @@ def generate_manifest(current_ver, host):
         entry = {}
         entry["URL"] = "http://{}/{}".format(host, new_firmware)
         data = open(os.path.join('.', new_firmware), 'rb').read()
-        hasher = hashlib.sha1(data)
+        hasher = hashlib.sha512(data)
         entry["hash"] = hasher.hexdigest()
         manifest["firmware"] = entry
 
