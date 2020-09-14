@@ -1,7 +1,11 @@
 {
+  "connection": "nbiot",
+  "apn": "iot.1nce.net",
+  "band": 8,
   "board": "pysense",
+  "password": null,
+  "env": "prod",
   "logfile": true,
-  "debug": true,
-  "interrupt_threshold_mg": 1100,
-  "threshold_duration_ms": 10
+  "debug": false,
+  "interval": 60
 }
