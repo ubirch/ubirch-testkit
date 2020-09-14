@@ -246,6 +246,10 @@ class OTA():
 
     def get_data(self, req, dest_path=None, hash=False):
         raise NotImplementedError()
+    
+    #the returned id string will be used in the request to the server to make device identification easier
+    def get_device_id(self):
+        raise NotImplementedError()
 
     # OTA methods
 
@@ -476,7 +480,7 @@ class WiFiOTA(OTA):
                         machine.idle()  # save power while waiting
                     break
             else:
-                raise Exception("Cannot find network '{}'".format(SSID))
+                raise Exception("Cannot find network '{}'".format(self.SSID))
         else:
             # Already connected to the correct WiFi
             pass
@@ -676,5 +680,6 @@ while True:
             ota.update()
         except Exception as e:
             sys.print_exception(e)
+            time.sleep(3)
             machine.reset()
     sleep(5)
