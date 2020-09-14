@@ -320,7 +320,7 @@ class OTA():
         Gets the data, splits it into the strings for manifest (JSON), signature type, and signature data
         using the headers. Then checks the signature and finally parses the JSON of the manifest.
         """
-        #TODO: add salt to request, and IMSI (privacy concern?) or similar ID
+        #TODO: add salt to request, and hashed IMSI or similar ID
         req = "manifest.json?current_ver={}".format(self.get_current_version())
         response = self.get_data(req).decode()
 
@@ -397,7 +397,7 @@ class OTA():
         except OSError:
             pass  # There isnt a previous file to backup
         with open("/flash/OTA_VERSION.py", 'w') as fp:
-            fp.write("VERSION = '{}'".format(manifest['version']))
+            fp.write("VERSION = '{}'".format(manifest['new_version']))
         from OTA_VERSION import VERSION
 
         # Reboot the device to run the new decode

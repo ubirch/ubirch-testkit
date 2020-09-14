@@ -336,7 +336,8 @@ def generate_manifest(current_ver, host):
       "delete": list(to_delete),
       "new": [generate_manifest_entry(host, f, latest) for f in new_files],
       "update": [generate_manifest_entry(host, f, latest) for f in to_update],
-      "version": latest
+      "new_version": latest,
+      "old_version": current_ver
     }
 
     # If there is a newer firmware version add it to the manifest
