@@ -260,7 +260,7 @@ def get_diff_list(left, right, ignore=['.DS_Store', 'pymakr.conf']):
             to_remove = []
             for filepath in filelist:#for every path in that list/set
                 for protected_file in protected_files:#for every filename that is protected
-                    if filepath.lower().endswith(protected_file.lower()):#check filename (case insensitive)
+                    if os.path.basename(filepath).lower() == protected_file.lower():#check filename (case insensitive)
                         to_remove.append(filepath)#remember this path for removal
                         print("Warning: removing protected file '{}' (on path '{}') from update manifest.".format(protected_file,filepath))
             for item in to_remove:#remove all paths that contain protected files
