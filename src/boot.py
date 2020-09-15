@@ -24,7 +24,10 @@ import os
 import machine
 import time
 from time import sleep
+import ubinascii
 import sys
+import ucrypto
+from network import LTE
 #only add compiled-in libraries above for reliability
 #other code should be directly contained in boot.py
 
@@ -320,8 +323,9 @@ class OTA():
         Gets the data, splits it into the strings for manifest (JSON), signature type, and signature data
         using the headers. Then checks the signature and finally parses the JSON of the manifest.
         """
-        #TODO: add salt to request, and hashed IMSI or similar ID
-        req = "manifest.json?current_ver={}".format(self.get_current_version())
+        #generate request id string (based on random bits)
+        request_id = ubinascii.hexlify(ucrypto.getrandbits(128)).decode('utf-8')
+        req = "manifest.json?current_ver={}&devid={}&reqid={}".format(self.get_current_version(),self.get_device_id(),request_id)
         response = self.get_data(req).decode()
 
         if len(response)==0 or response is None:
@@ -469,6 +473,34 @@ class WiFiOTA(OTA):
         self.ip = ip
         self.port = port
 
+    
+    def get_device_id(self):
+        #TODO For Wifi, change this to something like the mac address instead of SIM ICCID
+        """Get an identifier for the device used in server requests
+        In this case, we return the SHA256 hash of the SIM ICCID prefixed with
+        'ID:' and then prepend an 'IC' (for ICCID) so the result is e.g.
+        devid = 'IC' + SHA256("ID:12345678901234567890")
+              = IC27c6bb74efe9633181ae95bade7740969df13ef15bca1d72a92aa19fb66d24c9"""
+
+        try:
+            lte = LTE()
+            iccid = lte.iccid()
+        except:
+            return "ICERROR"
+
+        hasher = None
+        try:
+            hasher = uhashlib.sha256("ID:"+iccid)        
+            hashvalue = hasher.digest()
+        except Exception as e:
+            if hasher is not None:
+                hasher.digest()#make sure hasher is closed, as only one is allowed at a time by the hardware
+            raise e  
+        
+        devid = "IC" + ubinascii.hexlify(hashvalue).decode('utf-8')
+
+        return devid
+    
     def connect(self):
         self.wlan = network.WLAN(mode=network.WLAN.STA)
         if not self.wlan.isconnected() or self.wlan.ssid() != self.SSID:
