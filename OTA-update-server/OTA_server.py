@@ -162,13 +162,20 @@ class OTAHandler(BaseHTTPRequestHandler):
                 # This assumes there is no version lower than 0
                 current_ver = '0'
 
+            # If query specified a request id, return it in the signed
+            # manifest (prevents replay/version pinning attacks)
+            if "reqid" in query_components:
+                request_id = query_components["reqid"][0]
+            else:                
+                request_id = None
+
             # Send signed manifest data
             # First create a JSON string of the manifest, then sign the data
             # of that string which results in a signature data string (not JSON in this case).
             # Finally, assemble both strings and send them. Signature and manifest data are distinguished
             # using headers indicating their size (for easy and unambigous dissassembly at the client).
             print("Generating a manifest from version: {}".format(current_ver))
-            manifest = generate_manifest(current_ver, host)
+            manifest = generate_manifest(current_ver, host, request_id)
             manifest_string = json.dumps(manifest,
                            sort_keys=True,
                            indent=4,
@@ -322,23 +329,33 @@ def generate_manifest_entry(host, path, version):
 #    version - The version that this manifest will bring the client up to
 #    firmware(optional) - A manifest entry for the new firmware, if one is
 #                         available.
-def generate_manifest(current_ver, host):
+def generate_manifest(current_ver, host,request_id):
     latest = get_latest_version()
 
+
+
     # If the current version is already the latest, there is nothing to do
+    # but we need to return at least manifest with the request ID, else this would generate
+    # a signed "do nothing" manifest which can be used for version pinning attacks
+    manifest = {            
+    "new_version": latest,
+    "old_version": current_ver,
+    "request_id": request_id
+    }
     if latest == current_ver:
-        return None
+        return manifest #if the versions are the same we are done here
 
     # Get lists of difference between versions
     to_delete, new_files, to_update = get_diff_list(current_ver, latest)
 
-    manifest = {
-      "delete": list(to_delete),
-      "new": [generate_manifest_entry(host, f, latest) for f in new_files],
-      "update": [generate_manifest_entry(host, f, latest) for f in to_update],
-      "new_version": latest,
-      "old_version": current_ver
-    }
+    #add lists to manifest
+    manifest.update(
+        {
+         "delete": list(to_delete),
+         "new": [generate_manifest_entry(host, f, latest) for f in new_files],
+         "update": [generate_manifest_entry(host, f, latest) for f in to_update]
+        }
+    )
 
     # If there is a newer firmware version add it to the manifest
     new_firmware = get_new_firmware('.', current_ver)
