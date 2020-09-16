@@ -332,8 +332,6 @@ def generate_manifest_entry(host, path, version):
 def generate_manifest(current_ver, host,request_id):
     latest = get_latest_version()
 
-
-
     # If the current version is already the latest, there is nothing to do
     # but we need to return at least manifest with the request ID, else this would generate
     # a signed "do nothing" manifest which can be used for version pinning attacks
