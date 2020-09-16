@@ -349,16 +349,35 @@ class OTA():
             print("Signature OK, parsing manifest")    
             manifest = ujson.loads(manifest_str)
         else:
-            raise Exception("Signature of manifest is invalid")                   
+            raise Exception("Signature of manifest is invalid")    
+
+        # check that this is the signature we requested and not a replay
+        try:
+            returned_req_id = manifest['request_id']
+        except KeyError:
+            raise Exception("Manifest invalid: no request ID returned")
+        if returned_req_id != request_id:
+            raise Exception("Manifest invalid: returned request ID does not match query request ID")
         
         gc.collect()        
         return manifest
 
     def update(self):
         manifest = self.get_update_manifest()
-        if manifest is None:
+        
+        #check if we are already on the latest version
+        try:
+            new_ver = manifest['new_version']
+            old_ver = manifest['old_version']
+        except KeyError:
+            raise Exception("Manifest is invalid: could not parse old/new version information")
+        if new_ver == old_ver:
             print("Already on the latest version")
             return
+
+        #check if the manifest was generated for the correct version
+        if old_ver != self.get_current_version():
+            raise Exception("Manifest is invalid: Manifest is based on version different from the device version")
 
         # Download new files and verify hashes
         for f in manifest['new'] + manifest['update']:
@@ -404,7 +423,7 @@ class OTA():
             fp.write("VERSION = '{}'".format(manifest['new_version']))
         from OTA_VERSION import VERSION
 
-        # Reboot the device to run the new decode
+        # Reboot the device to run the new code
         machine.reset()
 
     def get_file(self, f):
