@@ -621,6 +621,9 @@ class WiFiOTA(OTA):
 # objects out of global scope (boot.py and main.py have the same scope)
 # and thus allow for garbage collection of OTA memory usage later
 def check_OTA_update():
+    #setup watchdog
+    wdt = machine.WDT(timeout=15*60*1000)
+    wdt.feed()
     # Setup OTA
     ota = WiFiOTA(WIFI_SSID,
               WIFI_PW,
@@ -633,6 +636,12 @@ def check_OTA_update():
         sys.print_exception(e)
         time.sleep(3)
         machine.reset()
+
+    # before leaving, set watchdog to large value, so we don't interfere 
+    # with code in main.py (wdt can never be disabled after use)
+    wdt = machine.WDT(timeout=10*24*60*60*1000)
+    wdt.feed()
+
 
 # Turn on GREEN LED
 pycom.heartbeat(False)
