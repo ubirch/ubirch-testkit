@@ -617,31 +617,31 @@ class WiFiOTA(OTA):
             return hash_val
 
 
+# helper function to perform the update and keep the OTA
+# objects out of global scope (boot.py and main.py have the same scope)
+# and thus allow for garbage collection of OTA memory usage later
+def check_OTA_update():
+    # Setup OTA
+    ota = WiFiOTA(WIFI_SSID,
+              WIFI_PW,
+              SERVER_IP,  # Update server address
+              8000)  # Update server port
+    try:
+        ota.connect()
+        ota.update()
+    except Exception as e:
+        sys.print_exception(e)
+        time.sleep(3)
+        machine.reset()
+
 # Turn on GREEN LED
 pycom.heartbeat(False)
 pycom.rgbled(0x000500)
 
-# Setup OTA
-ota = WiFiOTA(WIFI_SSID,
-              WIFI_PW,
-              SERVER_IP,  # Update server address
-              8000)  # Update server port
-
-#TODO: add helper function for OTA to allow OTA class to be garbage collected (scope)
-
-while True:
-
-    # Some sort of OTA trigger
-    if True:
+while True:    
+    if True: # Some sort of OTA trigger should go here
         print("Current Version: ",VERSION)
         print("Performing OTA")
-        # Perform OTA
-        try:
-            #cryptotest()
-            ota.connect()
-            ota.update()
-        except Exception as e:
-            sys.print_exception(e)
-            time.sleep(3)
-            machine.reset()
+        check_OTA_update()
+        gc.collect() #free up memory used by OTA objects
     sleep(5)
