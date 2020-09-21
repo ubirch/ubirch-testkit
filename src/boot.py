@@ -41,6 +41,10 @@ except ImportError:
 
 # Configuration
 SERVER_IP = "10.42.0.1"
+NBIOT_APN = "iot.1nce.net"
+NBIOT_BAND = None #None = autoscan
+NBIOT_ATTACH_TIMEOUT = 15*60 #seconds
+NBIOT_CONNECT_TIMEOUT = 15*60 #seconds   
 
 # To make the OTA bootloader self-contained, and hopefully more reliable, the library/classes are directly included here instead of an extra lib
 
@@ -616,6 +620,168 @@ class WiFiOTA(OTA):
         elif hash:
             return hash_val
 
+class NBIoTOTA(OTA):
+    def __init__(self, lte: LTE, apn: str, band: int or None, attachtimeout: int, connecttimeout:int, ip:str, port:int):
+        self.lte = lte
+        self.apn = apn
+        self.band = band
+        self.attachtimeout = attachtimeout
+        self.connecttimeout = connecttimeout
+        self.ip = ip
+        self.port = port
+
+    def attach(self):
+        if self.lte.isattached():
+            return
+
+        sys.stdout.write("Attaching to the NB-IoT network")
+        # since we disable unsolicited CEREG messages in modem.py, as they interfere with AT communication with the SIM via CSIM commands,
+        # we are required to use an attach method that does not require cereg messages, for pycom that is legacyattach=false
+        self.lte.attach(band=self.band, apn=self.apn,legacyattach=False)
+        i = 0
+        while not self.lte.isattached() and i < self.attachtimeout:
+            i += 1
+            time.sleep(1.0)
+            sys.stdout.write(".")
+        if not self.lte.isattached():
+            raise OSError("Timeout when attaching to NB-IoT network.")
+
+        print("\nattached: {} s".format(i))
+
+    def connect(self):
+        if self.lte.isconnected():
+            return
+
+        if not self.lte.isattached(): self.attach()
+
+        sys.stdout.write("Connecting to the NB-IoT network")
+        self.lte.connect()  # start a data session and obtain an IP address
+        i = 0
+        while not self.lte.isconnected() and i < self.connecttimeout:
+            i += 1
+            time.sleep(1.0)
+            sys.stdout.write(".")
+        if not self.lte.isconnected():
+            raise OSError("Timeout when connecting to NB-IoT network.")
+
+        print("\nconnected: {} s".format(i))
+
+    def isconnected(self) -> bool:
+        return self.lte.isconnected()
+
+    def disconnect(self):
+        if self.lte.isconnected():
+            self.lte.disconnect()
+    
+    def get_device_id(self):
+        """Get an identifier for the device used in server requests
+        In this case, we return the SHA256 hash of the SIM ICCID prefixed with
+        'ID:' and then prepend an 'IC' (for ICCID) so the result is e.g.
+        devid = 'IC' + SHA256("ID:12345678901234567890")
+              = IC27c6bb74efe9633181ae95bade7740969df13ef15bca1d72a92aa19fb66d24c9"""
+
+        try:
+            connection = self.isconnected() #save connection state on entry
+            if connection:#we are connected at this point and must pause the data session
+                self.lte.pppsuspend()
+            iccid = self.lte.iccid()
+            if connection:#if there was a connection, resume it
+                self.lte.pppresume()
+        except:
+            return "ICERROR"
+
+        hasher = None
+        try:
+            hasher = uhashlib.sha256("ID:"+iccid)        
+            hashvalue = hasher.digest()
+        except Exception as e:
+            if hasher is not None:
+                hasher.digest()#make sure hasher is closed, as only one is allowed at a time by the hardware
+            raise e  
+        
+        devid = "IC" + ubinascii.hexlify(hashvalue).decode('utf-8')
+
+        return devid
+    
+    def _http_get(self, path, host):
+        req_fmt = 'GET /{} HTTP/1.0\r\nHost: {}\r\n\r\n'
+        req = bytes(req_fmt.format(path, host), 'utf8')
+        return req
+
+    def get_data(self, req, dest_path=None, hash=False, firmware=False):
+        h = None
+
+        # Connect to server
+        print("Requesting: {}".format(req))
+        s = socket.socket(socket.AF_INET,
+                          socket.SOCK_STREAM,
+                          socket.IPPROTO_TCP)
+        s.connect((self.ip, self.port))
+
+        # Request File
+        s.sendall(self._http_get(req, "{}:{}".format(self.ip, self.port)))
+
+        try:
+            content = bytearray()
+            fp = None
+            if dest_path is not None:
+                if firmware:
+                    raise Exception("Cannot write firmware to a file")
+                fp = open(dest_path, 'wb')
+
+            if firmware:
+                pycom.ota_start()
+
+            h = uhashlib.sha512()
+
+            # Get data from server
+            result = s.recv(100)
+
+            start_writing = False
+            while (len(result) > 0):
+                # Ignore the HTTP headers
+                if not start_writing:
+                    if "\r\n\r\n" in result:
+                        start_writing = True
+                        result = result.decode().split("\r\n\r\n")[1].encode()
+
+                if start_writing:
+                    if firmware:
+                        pycom.ota_write(result)
+                    elif fp is None:
+                        content.extend(result)
+                    else:
+                        fp.write(result)
+
+                    if hash:
+                        h.update(result)
+
+                result = s.recv(100)
+
+            s.close()
+
+            if fp is not None:
+                fp.close()
+            if firmware:
+                pycom.ota_finish()
+
+        except Exception as e:
+            # Since only one hash operation is allowed at Once
+            # ensure we close it if there is an error
+            if h is not None:
+                h.digest()
+            raise e
+
+        hash_val = ubinascii.hexlify(h.digest()).decode()
+
+        if dest_path is None:
+            if hash:
+                return (bytes(content), hash_val)
+            else:
+                return bytes(content)
+        elif hash:
+            return hash_val
+
 
 # helper function to perform the update and keep the OTA
 # objects out of global scope (boot.py and main.py have the same scope)
@@ -624,11 +790,26 @@ def check_OTA_update():
     #setup watchdog
     wdt = machine.WDT(timeout=15*60*1000)
     wdt.feed()
-    # Setup OTA
-    ota = WiFiOTA(WIFI_SSID,
-              WIFI_PW,
-              SERVER_IP,  # Update server address
-              8000)  # Update server port
+
+    # # Setup Wifi OTA
+    # ota = WiFiOTA(WIFI_SSID,
+    #           WIFI_PW,
+    #           SERVER_IP,  # Update server address
+    #           8000)  # Update server port
+    
+    # Setup NB-IoT OTA
+    print("Initializing LTE")
+    lte = LTE()
+    lte.reset()
+    lte.init()
+
+    ota = NBIoTOTA(lte,
+            NBIOT_APN, 
+            NBIOT_BAND,
+            NBIOT_ATTACH_TIMEOUT,
+            NBIOT_CONNECT_TIMEOUT,    
+            SERVER_IP,  # Update server address
+            8000)  # Update server port
     try:
         ota.connect()
         ota.update()
