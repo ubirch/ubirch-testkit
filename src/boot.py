@@ -255,8 +255,12 @@ class OTA():
     def get_data(self, req, dest_path=None, hash=False):
         raise NotImplementedError()
     
-    #the returned id string will be used in the request to the server to make device identification easier
+    # The returned id string will be used in the request to the server to make device identification easier
     def get_device_id(self):
+        raise NotImplementedError()
+
+    # This method should be called when the update is done to close connections and deinit hardware etc.
+    def clean_up(self):
         raise NotImplementedError()
 
     # OTA methods
@@ -509,7 +513,9 @@ class WiFiOTA(OTA):
         try:
             lte = LTE()
             iccid = lte.iccid()
-        except:
+        except Exception as e:
+            print("Getting device ID failed:")
+            print(e)
             return "ICERROR"
 
         hasher = None
@@ -540,6 +546,11 @@ class WiFiOTA(OTA):
         else:
             # Already connected to the correct WiFi
             pass
+
+    def clean_up(self):
+        if self.wlan.isconnected():
+            self.wlan.disconnect()
+        self.wlan.deinit()
 
     def _http_get(self, path, host):
         req_fmt = 'GET /{} HTTP/1.0\r\nHost: {}\r\n\r\n'
@@ -666,12 +677,10 @@ class NBIoTOTA(OTA):
 
         print("\nconnected: {} s".format(i))
 
-    def isconnected(self) -> bool:
-        return self.lte.isconnected()
-
-    def disconnect(self):
+    def clean_up(self):
         if self.lte.isconnected():
             self.lte.disconnect()
+        self.lte.deinit()
     
     def get_device_id(self):
         """Get an identifier for the device used in server requests
@@ -681,13 +690,15 @@ class NBIoTOTA(OTA):
               = IC27c6bb74efe9633181ae95bade7740969df13ef15bca1d72a92aa19fb66d24c9"""
 
         try:
-            connection = self.isconnected() #save connection state on entry
+            connection = self.lte.isconnected() #save connection state on entry
             if connection:#we are connected at this point and must pause the data session
                 self.lte.pppsuspend()
             iccid = self.lte.iccid()
             if connection:#if there was a connection, resume it
                 self.lte.pppresume()
-        except:
+        except Exception as e:
+            print("Getting device ID failed:")
+            print(e)
             return "ICERROR"
 
         hasher = None
@@ -810,9 +821,11 @@ def check_OTA_update():
             NBIOT_CONNECT_TIMEOUT,    
             SERVER_IP,  # Update server address
             8000)  # Update server port
+    
     try:
         ota.connect()
         ota.update()
+        ota.clean_up()
     except Exception as e:
         sys.print_exception(e)
         time.sleep(3)
@@ -829,9 +842,9 @@ pycom.heartbeat(False)
 pycom.rgbled(0x000500)
 
 while True:    
-    if True: # Some sort of OTA trigger should go here
+    if True: # Some sort of OTA trigger should go here        
+        print("Performing OTA update")
         print("Current Version: ",VERSION)
-        print("Performing OTA")
         check_OTA_update()
         gc.collect() #free up memory used by OTA objects
     sleep(5)
