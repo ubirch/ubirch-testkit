@@ -257,10 +257,10 @@ def get_diff_list(left, right, ignore=['.DS_Store', 'pymakr.conf']):
             to_update.append(f)
     
 
-    #check if lists contain protected files (e.g. bootloader and version)
+    #check if lists contain protected files (e.g. bootloader, bootloader settings, and version)
     #these are protected anywhere (=if a path ends with them)
     if PROTECT_BOOTLOADER:
-        protected_files = ["boot.py","OTA_VERSION.py"]
+        protected_files = ["boot.py","OTA_VERSION.py","ota_wifi_secrets.py"]
         lists_to_check = [to_delete, new_files, (to_update)]
         
         for filelist in lists_to_check:#for every list that was generated           
