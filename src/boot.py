@@ -421,7 +421,10 @@ class OTA():
 
         # Flash firmware
         if "firmware" in manifest:
-            self.write_firmware(manifest['firmware'])
+            print("Warning: manifest contains board firmware update, but this is not implemented")
+            # This is disabled as the current implementaion does not check the hash/buffers
+            # the file and needs to be rewritten
+            #self.write_firmware(manifest['firmware'])
 
         # Save version number
         try:
@@ -487,11 +490,11 @@ class OTA():
         except:
             print("Warning: could not delete (rename to .bak_del) the file ",dest_path)
 
-    def write_firmware(self, f):
-        hash = self.get_data(f['URL'].split("/", 3)[-1],
-                             hash=True,
-                             firmware=True)
-        # TODO: Add verification when released in future firmware
+    # def write_firmware(self, f):
+    #     hash = self.get_data(f['URL'].split("/", 3)[-1],
+    #                          hash=True,
+    #                          firmware=True)
+    #     # TODO: Add verification when released in future firmware
 
 
 class WiFiOTA(OTA):
@@ -557,7 +560,11 @@ class WiFiOTA(OTA):
         req = bytes(req_fmt.format(path, host), 'utf8')
         return req
 
-    def get_data(self, req, dest_path=None, hash=False, firmware=False):
+    def get_data(self, req, dest_path=None, hash=False):
+        # board firmware download is disabled as it needs to
+        # be rewritten to not ignore the file hash
+        firmware=False
+
         h = None
 
         # Connect to server
@@ -646,7 +653,7 @@ class NBIoTOTA(OTA):
             return
 
         sys.stdout.write("Attaching to the NB-IoT network")
-        # since we disable unsolicited CEREG messages in modem.py, as they interfere with AT communication with the SIM via CSIM commands,
+        # since we disable unsolicited CEREG messages, as they interfere with AT communication with the SIM via CSIM commands,
         # we are required to use an attach method that does not require cereg messages, for pycom that is legacyattach=false
         self.lte.attach(band=self.band, apn=self.apn,legacyattach=False)
         i = 0
@@ -719,7 +726,11 @@ class NBIoTOTA(OTA):
         req = bytes(req_fmt.format(path, host), 'utf8')
         return req
 
-    def get_data(self, req, dest_path=None, hash=False, firmware=False):
+    def get_data(self, req, dest_path=None, hash=False):
+        # board firmware download is disabled as it needs to
+        # be rewritten to not ignore the file hash
+        firmware=False
+
         h = None
 
         # Connect to server
@@ -802,25 +813,25 @@ def check_OTA_update():
     wdt = machine.WDT(timeout=15*60*1000)
     wdt.feed()
 
-    # # Setup Wifi OTA
-    # ota = WiFiOTA(WIFI_SSID,
-    #           WIFI_PW,
-    #           SERVER_IP,  # Update server address
-    #           8000)  # Update server port
+    # Setup Wifi OTA
+    ota = WiFiOTA(WIFI_SSID,
+              WIFI_PW,
+              SERVER_IP,  # Update server address
+              8000)  # Update server port
     
-    # Setup NB-IoT OTA
-    print("Initializing LTE")
-    lte = LTE()
-    lte.reset()
-    lte.init()
+    # # Setup NB-IoT OTA
+    # print("Initializing LTE")
+    # lte = LTE()
+    # lte.reset()
+    # lte.init()
 
-    ota = NBIoTOTA(lte,
-            NBIOT_APN, 
-            NBIOT_BAND,
-            NBIOT_ATTACH_TIMEOUT,
-            NBIOT_CONNECT_TIMEOUT,    
-            SERVER_IP,  # Update server address
-            8000)  # Update server port
+    # ota = NBIoTOTA(lte,
+    #         NBIOT_APN, 
+    #         NBIOT_BAND,
+    #         NBIOT_ATTACH_TIMEOUT,
+    #         NBIOT_CONNECT_TIMEOUT,    
+    #         SERVER_IP,  # Update server address
+    #         8000)  # Update server port
     
     try:
         ota.connect()
