@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Based on example OTA code from pycom which from
+# Based on example OTA code from pycom which is from
 # https://github.com/pycom/pycom-libraries/tree/master/examples/OTA
 # Copyright notice for original example code:
 #
@@ -11,6 +11,14 @@
 # available at https://www.pycom.io/opensource/licensing
 #
 
+import sys
+import machine
+
+#exit bootloader immediately if this is a deepsleep loop
+if (machine.reset_cause() == machine.DEEPSLEEP_RESET):
+    print("Deepsleep reset, skipping OTA bootloader")
+    sys.exit()
+
 import network
 import math
 import socket
@@ -21,37 +29,19 @@ import ubinascii
 import gc
 import pycom
 import os
-import machine
 import time
 from time import sleep
 import ubinascii
-import sys
 import ucrypto
 from network import LTE
 #only add compiled-in libraries above for reliability
 #other code should be directly contained in boot.py
-
-from ota_wifi_secrets import WIFI_SSID, WIFI_PW
-
-# Try to get version number
-try:
-    from OTA_VERSION import VERSION
-except ImportError:
-    VERSION = '1.0.0'
-
-# Configuration
-SERVER_IP = "10.42.0.1"
-NBIOT_APN = "iot.1nce.net"
-NBIOT_BAND = None #None = autoscan
-NBIOT_ATTACH_TIMEOUT = 15*60 #seconds
-NBIOT_CONNECT_TIMEOUT = 15*60 #seconds   
 
 # To make the OTA bootloader self-contained, and hopefully more reliable, the library/classes are directly included here instead of an extra lib
 
 #RSA PKCS1 PSS crypto functions
 #This was ported to micropython based on the pycrypto library function in PKCS1_PSS.py
 #See https://github.com/pycrypto/pycrypto/blob/7acba5f3a6ff10f1424c309d0d34d2b713233019/lib/Crypto/Signature/PKCS1_PSS.py
-
 class PKCS1_PSSVerifier():
     def __init__(self,hasher=uhashlib.sha256):
         self.hasher = hasher
@@ -240,7 +230,6 @@ class PKCS1_PSSVerifier():
             # Step 4
             return result
 
-
 class OTA():
     #set public key (modulus) of OTA server signature here:
     PUB_MOD_RSA_4096 = "00aebbfe89f3913597bb91bc3a22698f54fb94b9e1ecb0f01c9e9f39947e72f9d4ce794ad5004a7e6ec8dbab80950bafdd325f6c09738259a1b3eee6da5b885726df00a5c39c822927488ac0084c1722f466e787d051c53f913e1a4a2e547394af4bab60427dea73c646c6c1a4fafda6a39f0ca84b70f3477eb6bc30ff51ccc16ce208dccc643fece0b7aabc90427b53dee046464b9cc0d36db2af014ffcebf5168a7f588a6fa190dba0bf038c116ce78c8f537392d30a1443fe8a03c7fcc338d4faecdffae78fc9d0b15411a42c7e410255f1936c69a0c15a4464c9e4b2de42b97dcaa09074f029f4b95ec34c5ebbc4667001fe5cef7a4eda7fbd487fd9b23df2fc6c2994a74ecb61e814a80d84c6913890dfc1c19bd7e21148c5ca76ac725c4c3483f7da9ff8deb038889f326a602f8726f20d454712123d5683b1ddc12691fcc04bb82fc07b7dacad6f4f1476e0d84fa2e252832718d4f35c9eee140c8ec752613ee38d10df497736d164d88f6e11566bdae1fd968c4dc4e0d206e0396683eec00dd87418cdbd8ca36312af94cfa8645e7a532073a037598d69d3e5ed1ff14ddd0220a7292c3b0d4a684ebee28e9c6ef0937a86ebb58392a650be7335584fe36ae3d0a983e421c29721272eb2a3ace3605f3c086d2183bdf7f256bd0653053f5e86974b4a97aae7e3db108ad2f9ae679536cf81f3bef61ebe527ab1987c2419"       
@@ -266,6 +255,10 @@ class OTA():
     # OTA methods
 
     def get_current_version(self):
+        try:
+            from OTA_VERSION import VERSION
+        except ImportError:
+            VERSION = '1.0.0'
         return VERSION
 
     def check_manifest_signature(self,manifest:str,sig_type:str,sig_data:str)->bool:
@@ -495,7 +488,6 @@ class OTA():
     #                          hash=True,
     #                          firmware=True)
     #     # TODO: Add verification when released in future firmware
-
 
 class WiFiOTA(OTA):
     def __init__(self, ssid, password, ip, port):
@@ -809,53 +801,74 @@ class NBIoTOTA(OTA):
 # objects out of global scope (boot.py and main.py have the same scope)
 # and thus allow for garbage collection of OTA memory usage later
 def check_OTA_update():
+    # Configuration (if you are looking for the server pubkey: it's in the OTA class)
+    SERVER_IP = "10.42.0.1"
+    NBIOT_APN = "iot.1nce.net"
+    NBIOT_BAND = None #None = autoscan
+    NBIOT_ATTACH_TIMEOUT = 15*60 #seconds
+    NBIOT_CONNECT_TIMEOUT = 15*60 #seconds
+    WATCHDOG_TIMEOUT =  15*60*1000 #milliseconds
+
     #setup watchdog
-    wdt = machine.WDT(timeout=15*60*1000)
-    wdt.feed()
-
-    # Setup Wifi OTA
-    ota = WiFiOTA(WIFI_SSID,
-              WIFI_PW,
-              SERVER_IP,  # Update server address
-              8000)  # Update server port
-    
-    # # Setup NB-IoT OTA
-    # print("Initializing LTE")
-    # lte = LTE()
-    # lte.reset()
-    # lte.init()
-
-    # ota = NBIoTOTA(lte,
-    #         NBIOT_APN, 
-    #         NBIOT_BAND,
-    #         NBIOT_ATTACH_TIMEOUT,
-    #         NBIOT_CONNECT_TIMEOUT,    
-    #         SERVER_IP,  # Update server address
-    #         8000)  # Update server port
+    wdt = machine.WDT(timeout=WATCHDOG_TIMEOUT)
+    wdt.feed()   
     
     try:
+        # Setup Wifi OTA
+        from ota_wifi_secrets import WIFI_SSID, WIFI_PW
+        ota = WiFiOTA(WIFI_SSID,
+                WIFI_PW,
+                SERVER_IP,  # server address
+                8000)  # server port
+        
+        # # Setup NB-IoT OTA
+        # print("Initializing LTE")
+        # lte = LTE()
+        # lte.reset()
+        # lte.init()
+
+        # ota = NBIoTOTA(lte,
+        #         NBIOT_APN, 
+        #         NBIOT_BAND,
+        #         NBIOT_ATTACH_TIMEOUT,
+        #         NBIOT_CONNECT_TIMEOUT,    
+        #         SERVER_IP,  # server address
+        #         8000)  # server port
+
+        #start the update itself
+        print("Current version: ", ota.get_current_version())
         ota.connect()
         ota.update()
-        ota.clean_up()
     except Exception as e:
-        sys.print_exception(e)
-        time.sleep(3)
-        machine.reset()
+        raise(e)#let top level loop handle exception
+    finally:
+        if ota is not None:
+            ota.clean_up()
+        # before leaving, set watchdog to large value, so we don't interfere 
+        # with code in main.py (wdt can never be disabled after use)
+        wdt = machine.WDT(timeout=10*24*60*60*1000)
+        wdt.feed()
 
-    # before leaving, set watchdog to large value, so we don't interfere 
-    # with code in main.py (wdt can never be disabled after use)
-    wdt = machine.WDT(timeout=10*24*60*60*1000)
-    wdt.feed()
-
+### start main code ###
 
 # Turn on GREEN LED
+print("\nEntering OTA bootloader")
 pycom.heartbeat(False)
 pycom.rgbled(0x000500)
 
-while True:    
-    if True: # Some sort of OTA trigger should go here        
-        print("Performing OTA update")
-        print("Current Version: ",VERSION)
+ota_max_retries = 3
+for retries_left in range((ota_max_retries-1),-1,-1):
+    try:         
+        print("\nStarting OTA update")        
         check_OTA_update()
-        gc.collect() #free up memory used by OTA objects
-    sleep(5)
+        break # leave retry for loop if successful
+    except Exception as e:
+        print("Exception occured during OTA update:")
+        sys.print_exception(e)
+        if retries_left > 0:
+            print("Retrying update")
+        else:
+            print("Giving up")
+        
+gc.collect() #free up memory that was used by OTA objects
+print("\nLeaving OTA bootloader")
