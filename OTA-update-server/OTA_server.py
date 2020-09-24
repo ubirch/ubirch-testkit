@@ -11,12 +11,14 @@
 # Firmware over the air update server
 #
 # Version History
-#  1.0 - Initial release (Sebastian Goscik)
+#  1.0   - Initial release (Sebastian Goscik)
+#  1.0.1 - Extended by ubirch GmbH in Sept. 2020
 #
 # Setup
 # -------
 # This script runs a HTTP server on port 8000 that provisions over the air
 # (OTA) update manifests in JSON format as well as serving the update content.
+# The manifests are signed by the server and the signature is checked by the device.
 # This script should be run in a directory that contains every version of the
 # end devices code, in the following structure:
 #
@@ -27,7 +29,6 @@
 #    |  |   |- lib
 #    |  |   |  |- lib_a.py
 #    |  |   |- main.py
-#    |  |   |- boot.py
 #    |  |- sd
 #    |     |- some_asset.txt
 #    |     |- asset_that_will_be_removed.wav
@@ -37,7 +38,6 @@
 #    |  |   |  |- lib_a.py
 #    |  |   |  |- new_lib.py
 #    |  |   |- main.py
-#    |  |   |- boot.py
 #    |  |- sd
 #    |     |- some_asset.txt
 #    |- firmware_1.0.0.bin
@@ -50,7 +50,8 @@
 #                      (http://epydoc.sourceforge.net/stdlib/distutils.version.LooseVersion-class.html).
 #                      They should contain the entire file system of the end
 #                      device for the corresponding version number.
-#    Firmware: These files should be named in the format "firmare_VERSION.bin",
+#    Firmware: ***This feature is currently disabled.***
+#              These files should be named in the format "firmare_VERSION.bin",
 #              where VERSION is a a version number compatible with the python
 #              LooseVersion versioning scheme
 #              (http://epydoc.sourceforge.net/stdlib/distutils.version.LooseVersion-class.html).
@@ -59,63 +60,98 @@
 #
 # How to use
 # -----------
-# Once the directory has been setup as described above you simply need to start
-# this script using python3. Once started this script will run a HTTP server on
-# port 8000 (this can be changed by chaning the PORT variable below). This
-# server will serve all the files in directory as expected along with one
+# To use the server, please prepare these steps:
+#  -Set up the directory structure outlined above.
+#    - Tip for testing: create two folders "OTA-update-server/1.0.0/flash"
+#      and "OTA-update-server/1.0.1/flash". Then simply copy the contents of the "src" folder into
+#      both folders and add some extra files or do modifications to the "1.0.1/flash" folder. Don't
+#      forget to upload the 1.0.0 code also to the device.
+#  - Generate a key pair (RSA 4096 bit):
+#    - Put the private key in PEM format in the same directory as `OTA_server.py`. (`OTA-update-server/OTA_signing_key_rsa_4096.pem`):
+#       - generate a keypair using e.g. openssl in the server directory:
+#           cd OTA-update-server
+#           openssl genrsa -out OTA_signing_key_rsa_4096.pem 4096
+#    - Put the public key modulus in boot.py OTA class (`PUB_MOD_RSA_4096 = "ab01...ef"`):
+#       - save the public verifying key and afterwards display the modulus using e.g. openssl:
+#           openssl rsa -in OTA_signing_key_rsa_4096.pem -outform PEM -pubout -out OTA_verifying_key_rsa_4096.pem
+#           openssl rsa -pubin -modulus -noout -in OTA_verifying_key_rsa_4096.pem
+#        -copy the pubkey modulus hex output of the second command to boot.py after the "PUB_MOD_RSA_4096 =" in the OTA class
+#  - Set the server IP and check the other settings in boot.py in check_OTA_update()
+#  - If using wifi instead of NB-IoT: Set WiFi secrets in ota_wifi_secrets.py (see ota_wifi_secrets.py.example.txt), and in
+#    check_OTA_update() comment the NBIoTOTA setup section out and the WifiOTA section in.
+#
+# After setting up the above steps, start the server by simply running the `OTA_server.py` script using python 3:
+# python3 OTA_server.py
+# This will run a HTTP server on port 8000 (this can be changed in the code if necessary).
+# Power-on/hard-reset the pycom board to trigger execution of boot.py. The board will establish a connection and
+# request an update manifest from the server and if necessary update itself to the latest version.
+# The OTA procedure is triggered on every reset unless the device was simply
+# sleeping (deepsleep reset). The OTA device code is run from boot.py
+#
+# Implementation Details
+#-----------------------
+#
+# The server will serve all the files in the directory as expected along with one
 # additional special file, "manifest.json". This file does not exist on the
 # file system but is instead generated when requested and contains the required
 # change to bring the end device from its current version to the latest
 # available version. You can see an example of this by pointing your web
 # browser at:
-#    http://127.0.0.1:8000/manifest.json?current_ver=1.0.0
+#    http://127.0.0.1:8000/manifest.json?current_ver=1.0.1
 # The `current_ver` field at the end of the URL should be set to the current
-# firmware version of the end device. The generated manifest will contain lists
-# of which files are new, have changed or need to be deleted along with SHA1
-# hashes of the files. Below is an example of what such a manifest might look
-# like:
+# firmware version of the end device. The generated file is not strictly a json file
+# as it contains three sections marked by headers: the manifest json ("MANIFEST[len(data)]:"),
+# the signature type ("SIGNATURE_TYPE[len(data)]:"), and the signature itself ("SIGNATURE_DATA[len(data)]:").
+# The manifest data section is in json format. The signature is carried out over the string of the manifest json data.
+# The generated manifest json will contain lists of which files are new, have changed
+# or need to be deleted along with SHA512 hashes of the files. Below is an example
+# of what such a manifest might look like:
+
+# MANIFEST[754]:{
+#     "delete": [
+#         "flash/removed_file.txt"
+#     ],
+#     "new": [
+#         {
+#             "URL": "http://127.0.0.1:8000/1.0.3/flash/new_file.txt",
+#             "dst_path": "/flash/new_file.txt",
+#             "hash": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
+#         },
+#         {
+#             "URL": "http://127.0.0.1:8000/1.0.3/flash/new_file2.txt",
+#             "dst_path": "/flash/new_file2.txt",
+#             "hash": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
+#         }
+#     ],
+#     "new_version": "1.0.3",
+#     "old_version": "1.0.1",
+#     "request_id": null,
+#     "update": []
+# }SIGNATURE_TYPE[27]:SIG02_PKCS1_PSS_4096_SHA512SIGNATURE_DATA[1024]:84...de
 #
-# {
-#    "delete": [
-#       "flash/old_file.py",
-#       "flash/other_old_file.py"
-#    ],
-#    "firmware": {
-#        "URL": "http://192.168.1.144:8000/firmware_1.0.1b.bin",
-#        "hash": "ccc6914a457eb4af8855ec02f6909316526bdd08"
-#    },
-#    "new": [
-#        {
-#            "URL": "http://192.168.1.144:8000/1.0.1b/flash/lib/new_lib.py",
-#            "dst_path": "flash/lib/new_lib.py",
-#            "hash": "1095df8213aac2983efd68dba9420c8efc9c7c4a"
-#        }
-#    ],
-#    "update": [
-#        {
-#            "URL": "http://192.168.1.144:8000/1.0.1b/flash/changed_file.py",
-#            "dst_path": "flash/changed_file.py",
-#            "hash": "1095df8213aac2983efd68dba9420c8efc9c7c4a"
-#        }
-#    ],
-#    "version": "1.0.1b"
-# }
 #
-# The manifest contains the following feilds:
+# The manifest json data contains the following fields:
 #  "delete": A list of paths to files which are no longer needed
-#  "firmware": The URL and SHA1 hash of the firmware image
-#  "new": the URL, path on end device and SHA1 hash of all new files
-#  "update": the URL, path on end device and SHA1 hash of all files which
+#  "firmware": The URL and SHA512 hash of the firmware image for the board itself.
+#  "new": the URL, path on end device and SHA512 hash of all new files
+#  "update": the URL, path on end device and SHA512 hash of all files which
 #            existed before but have changed.
-#  "version": The version number that this manifest will update the client to
-#  "previous_version": The version the client is currently on before appling
-#                      this update
+#  "new_version": The version number that this manifest will update the client to
+#  "old_version": The version that the manifest compares the changes to/is based on.
+#                 If the returned version does not match the device version, the device aborts the update.
+#  "request_id": The request ID send by the device in the query string. This is used to prevent
+#                replay attacks. The device will generate a random ID for each request and check if
+#                the generated manifest contains the same ID. See OTA class in boot.py for details.
 #
 # Note: The version number of the files might not be the same as the firmware.
 #       The highest available version number, higher than the current client
 #       version is used for both firmware and files. This may differ between
 #       the two.
 #
+# Note: In the standard setting, the OTA bootloader (boot.py and related files) are protected by the server
+#       and never included in update manifests. This can be changed with the PROTECT_BOOTLOADER variable. Use with 
+#       caution.
+#      
 # In order for the URL's to be properly formatted you are required to send a
 # "host" header along with your HTTP get request e.g:
 # GET /manifest.json?current_ver=1.0.0 HTTP/1.0\r\nHost: 192.168.1.144:8000\r\n\r\n
