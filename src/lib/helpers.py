@@ -53,6 +53,7 @@ def send_backend_data(sim: ubirch.SimProtocol, lte: LTE, conn: Connection, api_f
             print("\tretrying with modem reset")
             sim.deinit()
             reset_modem(lte)  # TODO: should probably be connection.reset_hardware()
+            sim.init()
             conn.connect()
 
         # try to send multiple times (with reconnect)
