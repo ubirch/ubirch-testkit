@@ -214,6 +214,11 @@ try:
         except Exception as e:
             error_handler.log(e, COLOR_SIM_FAIL, reset=True)
 
+        # pack data message containing measurements as well as device UUID and timestamp to ensure unique hash
+        hash_string = b2a_base64(message_hash).decode()
+        message_h = pack_data_hash_json(uuid, data, hash_string)
+        print("\tdata message with hash[json]: {}\n".format(message_h.decode()))
+
         ###############
         #   SENDING   #
         ###############
@@ -233,7 +238,7 @@ try:
             # send data message to data service, with reconnects/modem resets if necessary
             print("++ sending data")
             try:
-                status_code, content = send_backend_data(sim, lte, connection, api.send_data, uuid, message)
+                status_code, content = send_backend_data(sim, lte, connection, api.send_data, uuid, message_h)
             except Exception as e:
                 error_handler.log(e, COLOR_MODEM_FAIL, reset=True)
 
