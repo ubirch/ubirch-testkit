@@ -2,7 +2,7 @@
 
 A micropython client for the UBIRCH protocol on a SIM
 
-The ubirch testkit is a combination of hardware based on pycom hardware modules (we use GPy and Pysense) and micropython example code to demonstrate the usage of the UBIRCH protocol. It allows for easy use and evaluation of the 'blockchain on a SIM' application which implements UBIRCH funtionality inside of a SIM card. The SIM card needs to have the 'SIGNiT' applet for cryptographic functionality present (e.g. a 1nce SIM with ubirch functionality enabled).
+The ubirch testkit is a combination of hardware based on pycom hardware modules (we use GPy and Pysense) and micropython example code to demonstrate the usage of the UBIRCH protocol. It allows for easy use and evaluation of the 'blockchain on a SIM' application which implements UBIRCH functionality inside of a SIM card. The SIM card needs to have the 'SIGNiT' applet for cryptographic functionality present (e.g. a 1nce SIM with ubirch functionality enabled).
 
 **If you have already received pre-programmed testkit hardware from UBIRCH, you can directly head over to [the TestKit manual](TestKit.md) and follow the Quick Start for rapid UBIRCHING.**
 
