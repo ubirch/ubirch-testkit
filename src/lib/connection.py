@@ -1,3 +1,4 @@
+from binascii import hexlify
 import machine
 import sys
 import time
@@ -98,7 +99,8 @@ class WIFI(Connection):
                     while not self.wlan.isconnected():
                         machine.idle()  # save power while waiting
                     print('\twifi network connected')
-                    print('\tIP address: {}\n'.format(self.wlan.ifconfig()))
+                    print('\tIP address: {}'.format(self.wlan.ifconfig()))
+                    print('\tMAC address: {}\n'.format(hexlify(machine.unique_id(),':').decode().upper()))
                     return
             print("!! no usable networks found, trying again in 30s")
             print("!! available networks:")
