@@ -141,13 +141,38 @@ def pack_data_json(uuid: UUID, data: dict) -> bytes:
     return serialize_json(msg_map)
 
 
-def pack_data_hash_json(uuid: UUID, data: dict, _hash: str) -> bytes:
+def pack_data_json_dashboard(uuid: UUID, data: dict) -> (bytes, int):
     """
     Generate a JSON formatted message for the ubirch data service.
     The message contains the device UUID, timestamp and data to ensure unique hash.
     :param uuid: the device UUID
     :param data: the mapped data to be sent to the ubirch data service
-    :param _hash: this is a temporary hashing solution for verification. TODO has to be removed later
+    :return: the msgpack formatted message
+    """
+    # hint for the message format (version)
+    MSG_TYPE = 1
+
+    _time = int(time.time())
+
+    # pack the message
+    msg_map = {
+        'uuid': str(uuid),
+        'msg_type': MSG_TYPE,
+        'timestamp': _time,
+        'data': data
+    }
+
+    # create a compact sorted rendering of the message to ensure determinism when creating the hash
+    # and return serialized message
+    return serialize_json(msg_map), _time
+
+def pack_data_time_json_dashboard(uuid: UUID, data: dict, ts: int) -> bytes:
+    """
+    Generate a JSON formatted message for the ubirch data service.
+    The message contains the device UUID, timestamp and data to ensure unique hash.
+    :param uuid: the device UUID
+    :param data: the mapped data to be sent to the ubirch data service
+    :param ts: real timestamp from UPP: TODO this is optimized for dashboard
     :return: the msgpack formatted message
     """
     # hint for the message format (version)
@@ -157,9 +182,8 @@ def pack_data_hash_json(uuid: UUID, data: dict, _hash: str) -> bytes:
     msg_map = {
         'uuid': str(uuid),
         'msg_type': MSG_TYPE,
-        'timestamp': int(time.time()),
-        'data': data,
-        'hash': _hash
+        'timestamp': ts,
+        'data': data
     }
 
     # create a compact sorted rendering of the message to ensure determinism when creating the hash

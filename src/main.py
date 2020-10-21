@@ -200,7 +200,7 @@ try:
         data = sensors.get_temp_and_hum()
 
         # pack data message containing measurements as well as device UUID and timestamp to ensure unique hash
-        message = pack_data_json(uuid, data)
+        message, ts = pack_data_json_dashboard(uuid, data)  # todo this is the dashboard optimized version, has to be removed later
         print("\tdata message [json]: {}\n".format(message.decode()))
 
         # seal the data message (data message will be hashed and inserted into UPP as payload by SIM card)
@@ -214,10 +214,15 @@ try:
         except Exception as e:
             error_handler.log(e, COLOR_SIM_FAIL, reset=True)
 
-        # pack data message containing measurements as well as device UUID and timestamp to ensure unique hash
-        hash_string = b2a_base64(message_hash).decode()
-        message_h = pack_data_hash_json(uuid, data, hash_string)
-        print("\tdata message with hash[json]: {}\n".format(message_h.decode()))
+        # add additional hash string and timestamp for the Grafana Dashboard. TODO has to be removed later
+        hash_string = b2a_base64(message_hash).decode().rstrip('\n')
+        data.update({
+            "hash": hash_string,
+            "ts": ts
+        })
+
+        message_h = pack_data_time_json_dashboard(uuid, data, ts)
+        # print("\tdata message with hash[json]: {}\n".format(message_h.decode()))
 
         ###############
         #   SENDING   #
