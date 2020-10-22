@@ -6,7 +6,16 @@ The ubirch testkit is a combination of hardware based on pycom hardware modules 
 
 **If you have already received pre-programmed testkit hardware from UBIRCH, you can directly head over to [the TestKit manual](TestKit.md) and follow the Quick Start for rapid UBIRCHING.**
 
-If you want to setup your own testkit hardware, read on.
+If you want to setup your own testkit hardware, read on. 
+
+---
+ **INFO**
+
+This firmware currently only supports pysense and pytrack version 1.x. If you have a pysense or pytrack v2.x, 
+you can switch to branch [pysense-2-update](https://github.com/ubirch/ubirch-testkit/tree/pysense-2-update). 
+However, the firmware on that branch has not been tested yet.
+
+ ---
 
 ## Setting up your own testkit hardware
 ### Required hardware
