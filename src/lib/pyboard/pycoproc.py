@@ -193,7 +193,6 @@ class Pycoproc:
         self._write(bytes([CMD_SETUP_SLEEP, time_s & 0xFF, (time_s >> 8) & 0xFF, (time_s >> 16) & 0xFF]))
 
     def go_to_sleep(self, gps=True):
-        # enable or disable back-up power to the GPS receiver
         self.gps_standby(gps)
         self.sensor_power(False)
         self.sd_power(False)
@@ -283,14 +282,22 @@ class Pycoproc:
         self.wake_int_pin_rising_edge = rising_edge
 
     def gps_standby(self, enabled=True):
-        # make RC4 an output
-        self.mask_bits_in_memory(TRISC_ADDR, ~(1 << 4))
+
         if enabled:
-            # drive RC4 low
-            self.mask_bits_in_memory(PORTC_ADDR, ~(1 << 4))
+            # make RC4 input
+            self.set_bits_in_memory(TRISC_ADDR, 1 << 4)
         else:
+            # make RC4 an output
+            self.mask_bits_in_memory(TRISC_ADDR, ~(1 << 4))
             # drive RC4 high
             self.set_bits_in_memory(PORTC_ADDR, 1 << 4)
+            time.sleep(0.2)
+            # drive RC4 low
+            self.mask_bits_in_memory(PORTC_ADDR, ~(1 << 4))
+            time.sleep(0.2)
+            # drive RC4 high
+            self.set_bits_in_memory(PORTC_ADDR, 1 << 4)
+            time.sleep(0.2)
 
     def sensor_power(self, enabled=True):
         # make RC7 an output
