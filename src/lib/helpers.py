@@ -161,6 +161,8 @@ def serialize_json(msg: dict) -> bytes:
             serialized += "\"{:.2f}\"".format(value)
         elif value_type is dict:
             serialized += serialize_json(value).decode()
+        elif value is None:
+            serialized += "null"
         else:
             raise Exception("unsupported data type {} for serialization in json message".format(value_type))
         serialized += ","
