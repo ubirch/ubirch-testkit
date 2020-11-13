@@ -32,6 +32,8 @@ class Pysense(Pyboard):
         """Initialized sensors on Pysense"""
         super().__init__()
 
+        print("Pysense initialized")
+
         from .LTR329ALS01 import LTR329ALS01
         from .MPL3115A2 import MPL3115A2, ALTITUDE, PRESSURE
         from .SI7006A20 import SI7006A20
@@ -60,15 +62,18 @@ class Pytrack(Pyboard):
         """Initialize sensors on Pytrack"""
         super().__init__()
 
+        print("Pytrack initialized")
+
         from .L76GNSS import L76GNSS
 
         self.location = L76GNSS(self, timeout=30)
 
     def get_data(self) -> dict:
         data = super().get_data()
+        coord = self.location.coordinates(debug=True)
         data.update({
-            "GPS_long": self.location.coordinates()[0],
-            "GPS_lat": self.location.coordinates()[1]
+            "GPS_long": coord[0],
+            "GPS_lat": coord[1]
         })
         return data
 
