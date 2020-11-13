@@ -62,6 +62,32 @@ class MPL3115A2:
         self.STA_reg = bytearray(1)
         self.mode = mode
 
+        #perform reset
+        MPL3115A2_CTRL_REG1_RST_BIT = bytes([0x04])
+        try:
+            self.i2c.writeto_mem(MPL3115_I2CADDR, MPL3115_CTRL_REG1,MPL3115A2_CTRL_REG1_RST_BIT)
+        except Exception as e:
+            #we expect a bus error, because the sensor immediately resets
+            #this sadly is kind of fragile because of the string check
+            if str(e) == "I2C bus error":
+                pass
+            else:
+                raise
+
+        #wait for reset to finish
+        ctr_reg1 = bytearray(1)
+        wait_loops=0
+        while True:
+            time.sleep(0.01)
+            self.i2c.readfrom_mem_into(MPL3115_I2CADDR, MPL3115_CTRL_REG1, ctr_reg1 )
+            if (ctr_reg1[0] & MPL3115A2_CTRL_REG1_RST_BIT[0]) == 0x00:
+                break
+
+            wait_loops += 1
+            if wait_loops > 100:
+                raise Exception("Timeout while waiting for reset")
+
+
         if self.mode is PRESSURE:
             self.i2c.writeto_mem(MPL3115_I2CADDR, MPL3115_CTRL_REG1, bytes([0x38])) # barometer mode, not raw, oversampling 128, minimum time 512 ms
             self.i2c.writeto_mem(MPL3115_I2CADDR, MPL3115_PT_DATA_CFG, bytes([0x07])) # no events detected
@@ -79,6 +105,7 @@ class MPL3115A2:
             raise MPL3115A2exception("Error with MPL3115A2")
 
     def _read_status(self):
+        wait_loops = 0
         while True:
             self.i2c.readfrom_mem_into(MPL3115_I2CADDR, MPL3115_STATUS, self.STA_reg)
 
@@ -89,6 +116,10 @@ class MPL3115A2:
                 return True
             else:
                 return False
+
+            wait_loops += 1
+            if wait_loops > 100:
+                raise Exception("Timeout while waiting for read status")
 
     def pressure(self):
         if self.mode == ALTITUDE:
