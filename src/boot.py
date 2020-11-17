@@ -21,14 +21,14 @@ if (machine.reset_cause() == machine.DEEPSLEEP_RESET):
 
 import network
 import math
-import socket
+import usocket as socket
 import machine
 import ujson
 import uhashlib
 import ubinascii
 import gc
 import pycom
-import os
+import uos as os
 import time
 from time import sleep
 import ubinascii
@@ -49,12 +49,12 @@ class PKCS1_PSSVerifier():
     def __get_hash(self,data):
         hasher = None
         try:
-            hasher = self.hasher(data)        
+            hasher = self.hasher(data)
             return hasher.digest()
         except Exception as e:
             if hasher is not None:
                 hasher.digest()#make sure hasher is closed, as only one is allowed at a time by the hardware
-            raise e    
+            raise e
 
     def __byte_xor(self,ba1, ba2):
         return bytes([_a ^ _b for _a, _b in zip(ba1, ba2)])
@@ -62,7 +62,7 @@ class PKCS1_PSSVerifier():
     def __modular_pow_public(self,message_int, exp_int, n_int):
         """Perform RSA function by exponentiation of message (= signature data) to exp with modulus n, all public.
         Only use with public parameters, as it will leak information about them. Micropython ints can be (almost) arbitrarily large.
-        Based on micropython implementation from 
+        Based on micropython implementation from
         https://github.com/artem-smotrakov/esp32-weather-google-sheets/blob/841722fd67404588bfd29c15def897c9f8e967e3/src/rsa/common.py
         (Published under MIT License, Copyright (c) 2019 Artem Smotrakov)
         """
@@ -91,7 +91,7 @@ class PKCS1_PSSVerifier():
     def __EMSA_PSS_VERIFY(self,mhash, em, emBits, sLen):
         """
         Implement the ``EMSA-PSS-VERIFY`` function, as defined
-        in PKCS#1 v2.1 (RFC3447, 9.1.2). 
+        in PKCS#1 v2.1 (RFC3447, 9.1.2).
         ``EMSA-PSS-VERIFY`` actually accepts the message ``M`` as input,
         and hash it internally. Here, we expect that the message has already
         been hashed instead.
@@ -164,14 +164,14 @@ class PKCS1_PSSVerifier():
         self.hasher = hasher
 
     def verify(self,mhash, signature_hex, pub_modulus_hex,pub_exponent = 65537,modBits = 2048):
-            """Verify that a certain PKCS#1 PSS signature is authentic.     
-        
+            """Verify that a certain PKCS#1 PSS signature is authentic.
+
             This function checks if the party holding the private half of the given
-            RSA key has really signed the message. 
-        
+            RSA key has really signed the message.
+
             This function is called ``RSASSA-PSS-VERIFY``, and is specified in section
             8.1.2 of RFC3447.
-        
+
             :Parameters:
             mhash : bytes
                     The hash that was carried out over the message as raw bytes
@@ -183,41 +183,41 @@ class PKCS1_PSSVerifier():
                     The public exponent (minor info/part of pubkey) for verification. Uses the common 65537 as default.
             modBits : integer
                     The bits the modulo n fits in. Genrally same as key length in bits, Defaults to 2048
-        
+
             :Return: True if verification is correct. False otherwise.
 
             This was ported to micropython based on the pycrypto library function in PKCS1_PSS.py
             See https://github.com/pycrypto/pycrypto/blob/7acba5f3a6ff10f1424c309d0d34d2b713233019/lib/Crypto/Signature/PKCS1_PSS.py
             (Public domain, no rights reserved.)
-            """  
+            """
 
-            #Verify input parameters              
+            #Verify input parameters
 
             #determine length of hash returned by currently set hash function
             hLen = len(self.__get_hash("0"))
             # salt length is assumed to be same as number of bytes in hash
             sLen = hLen
-            
+
             #Check hash parameter has correct length
             if len(mhash) != hLen:
                 print("Warning: Can't check signature, hash size is invalid.")
                 return False
 
             #parse other parameters
-            signature = ubinascii.unhexlify(signature_hex) 
+            signature = ubinascii.unhexlify(signature_hex)
             pub_modulus = ubinascii.unhexlify(pub_modulus_hex)
             pub_modulus_int = int.from_bytes(pub_modulus, 'big')
-            
+
             # See 8.1.2 in RFC3447
-            k = math.ceil(modBits/8) 
+            k = math.ceil(modBits/8)
             # Step 1
             if len(signature) != k:
                 print("Warning: Can't check signature, signature length wrong.")
                 return False
             # Step 2a (O2SIP), 2b (RSAVP1), and partially 2c (I2OSP)
             # Note that signature must be smaller than the module
-            # but we won't complain about it (here).       
-            sig_int = int.from_bytes(signature, 'big')        
+            # but we won't complain about it (here).
+            sig_int = int.from_bytes(signature, 'big')
             m = self.__modular_pow_public(sig_int,pub_exponent, pub_modulus_int)
             # Step 2c (convert m int to em octet string)
             emLen = math.ceil((modBits-1)/8)
@@ -232,18 +232,18 @@ class PKCS1_PSSVerifier():
 
 class OTA():
     #set public key (modulus) of OTA server signature here:
-    PUB_MOD_RSA_4096 = "CD01EC4B10F718BAD46F177EFFD64B1F4D3FAE655CA5C9E25D5C8B111D8AE8086BC91532CC6BBEE8A4D55B9C39AFA2A3BCAACB02D718FD4316BA744971199B05704601AC80DBDD48D902F333E17913477A66413440754F8717126AB26D3E4432050B73BE27FE028C2F6504799AF8B81B449AB65CC3846BCB1A7DD69C4F7949A93A4181DD9C5835CB69D5C15EA62F47501274E31293772DCC7D44D611C488AD98BE8B350FC6BB5418C6F190156F17AAAF8C64A02CF7CEA16DDBC2D0CD933C459EAF63C51A87F180E85A482C8B2DF172E1C78CEB825297A0A364A2280FB534050C1C12C773495BF9B2A09A85C9BCF8BA5E8D28F1E8E2D743F28188C7039D44ADC4AAB3700D58A2E8F563038C30E8A84E62E8CDB116014838C28C4D77A291F16B8C02F2036958743633763BAB880F7227B910CE256F53718476AF9A738E63AA2B3750FA1C5CA32B34E41A60221EADD230C5090A09A3802A4BE2AF10B8E4F964D36F2E57C186074ACCD9A607ECA2F75B44A401A1A7B52239485054FB11F2EDEA023BAA85C8DA42D8C7D35E595A4ADC3F6A1301AE597989BD679BB5D0C492C7DE732CAD9C27C53B316A9B03673E1A191CED5B84E1239A03D2EEE15F3930FFEA0D977F7200C5B78915C1481CFA81447F40F0B1D53BD1AAFD620A9465D740F96D0732C8C394AE8F14C349AA92F15E4E325F9A0336E877F08355324326E06209FA9C5DBB"       
+    PUB_MOD_RSA_4096 = "CD01EC4B10F718BAD46F177EFFD64B1F4D3FAE655CA5C9E25D5C8B111D8AE8086BC91532CC6BBEE8A4D55B9C39AFA2A3BCAACB02D718FD4316BA744971199B05704601AC80DBDD48D902F333E17913477A66413440754F8717126AB26D3E4432050B73BE27FE028C2F6504799AF8B81B449AB65CC3846BCB1A7DD69C4F7949A93A4181DD9C5835CB69D5C15EA62F47501274E31293772DCC7D44D611C488AD98BE8B350FC6BB5418C6F190156F17AAAF8C64A02CF7CEA16DDBC2D0CD933C459EAF63C51A87F180E85A482C8B2DF172E1C78CEB825297A0A364A2280FB534050C1C12C773495BF9B2A09A85C9BCF8BA5E8D28F1E8E2D743F28188C7039D44ADC4AAB3700D58A2E8F563038C30E8A84E62E8CDB116014838C28C4D77A291F16B8C02F2036958743633763BAB880F7227B910CE256F53718476AF9A738E63AA2B3750FA1C5CA32B34E41A60221EADD230C5090A09A3802A4BE2AF10B8E4F964D36F2E57C186074ACCD9A607ECA2F75B44A401A1A7B52239485054FB11F2EDEA023BAA85C8DA42D8C7D35E595A4ADC3F6A1301AE597989BD679BB5D0C492C7DE732CAD9C27C53B316A9B03673E1A191CED5B84E1239A03D2EEE15F3930FFEA0D977F7200C5B78915C1481CFA81447F40F0B1D53BD1AAFD620A9465D740F96D0732C8C394AE8F14C349AA92F15E4E325F9A0336E877F08355324326E06209FA9C5DBB"
     PROTOCOL_VERSION = "1.0" #version of the bootloader-server protocol
 
     # The following two methods need to be implemented in a subclass for the
-    # specific transport mechanism e.g. WiFi    
+    # specific transport mechanism e.g. WiFi
 
     def connect(self):
         raise NotImplementedError()
 
     def get_data(self, req, dest_path=None, hash=False):
         raise NotImplementedError()
-    
+
     # The returned id string will be used in the request to the server to make device identification easier
     def get_device_id(self):
         raise NotImplementedError()
@@ -263,20 +263,20 @@ class OTA():
 
     def check_manifest_signature(self,manifest:str,sig_type:str,sig_data:str)->bool:
 
-        if(sig_type=="SIG01_PKCS1_PSS_4096_SHA256"):    
-            verifier = PKCS1_PSSVerifier(hasher=uhashlib.sha256)   
+        if(sig_type=="SIG01_PKCS1_PSS_4096_SHA256"):
+            verifier = PKCS1_PSSVerifier(hasher=uhashlib.sha256)
             pub_modulus = self.PUB_MOD_RSA_4096
             hasher = uhashlib.sha256(manifest)
             manifest_hash = hasher.digest()
             return verifier.verify(manifest_hash,sig_data,pub_modulus,modBits=4096)
-        elif(sig_type=="SIG02_PKCS1_PSS_4096_SHA512"):    
-            verifier = PKCS1_PSSVerifier(hasher=uhashlib.sha512)   
+        elif(sig_type=="SIG02_PKCS1_PSS_4096_SHA512"):
+            verifier = PKCS1_PSSVerifier(hasher=uhashlib.sha512)
             pub_modulus = self.PUB_MOD_RSA_4096
             hasher = uhashlib.sha512(manifest)
             manifest_hash = hasher.digest()
-            return verifier.verify(manifest_hash,sig_data,pub_modulus,modBits=4096) 
+            return verifier.verify(manifest_hash,sig_data,pub_modulus,modBits=4096)
         else:
-            raise Exception("Unknown signature type: {}".format(sig_type))          
+            raise Exception("Unknown signature type: {}".format(sig_type))
 
         raise Exception("Something is wrong with check_manifest_signature(), you should not have reached this line.")
 
@@ -307,19 +307,19 @@ class OTA():
             data_size = int(size_str)
         except:#size string conversion failed
             return("",response)
-        
+
         #extract data string
         data_start = size_end+len(size_marker_end)
         data_end = data_start + data_size
         if data_end > len(response):#data size is larger than available data
-            return("",response)            
+            return("",response)
         data_str = response[data_start:data_end]
 
         #remove data and header from response
         remaining_response = response[:header_start]+response[data_end:]
 
         return(data_str,remaining_response)
-    
+
     def get_update_manifest(self):
         """Get the manifest data from server and check signature.
         Gets the data, splits it into the strings for manifest (JSON), signature type, and signature data
@@ -345,13 +345,13 @@ class OTA():
             len(sig_type_str) == 0 or \
             len(sig_data_str) == 0 :
             raise Exception("Could not find all required headers in response.")
-        
+
         #check signature
-        if self.check_manifest_signature(manifest_str,sig_type_str,sig_data_str):    
-            print("Signature OK, parsing manifest")    
+        if self.check_manifest_signature(manifest_str,sig_type_str,sig_data_str):
+            print("Signature OK, parsing manifest")
             manifest = ujson.loads(manifest_str)
         else:
-            raise Exception("Signature of manifest is invalid")    
+            raise Exception("Signature of manifest is invalid")
 
         # check that this is the signature we requested and not a replay
         try:
@@ -360,13 +360,13 @@ class OTA():
             raise Exception("Manifest invalid: no request ID returned")
         if returned_req_id != request_id:
             raise Exception("Manifest invalid: returned request ID does not match query request ID")
-        
-        gc.collect()        
+
+        gc.collect()
         return manifest
 
     def update(self):
         manifest = self.get_update_manifest()
-        
+
         #check if we are already on the latest version
         try:
             new_ver = manifest['new_version']
@@ -496,7 +496,7 @@ class WiFiOTA(OTA):
         self.ip = ip
         self.port = port
 
-    
+
     def get_device_id(self):
         #TODO For Wifi, change this to something like the mac address instead of SIM ICCID
         """Get an identifier for the device used in server requests
@@ -515,18 +515,18 @@ class WiFiOTA(OTA):
 
         hasher = None
         try:
-            hasher = uhashlib.sha256("ID:"+iccid)        
+            hasher = uhashlib.sha256("ID:"+iccid)
             hashvalue = hasher.digest()
         except Exception as e:
             if hasher is not None:
                 hasher.digest()#make sure hasher is closed, as only one is allowed at a time by the hardware
-            raise e  
-        
+            raise e
+
         devid = "IC" + ubinascii.hexlify(hashvalue).decode('utf-8')
 
         return devid
-    
-    def connect(self):
+
+    def connect(self, url:str=""):
         self.wlan = network.WLAN(mode=network.WLAN.STA)
         if not self.wlan.isconnected() or self.wlan.ssid() != self.SSID:
             for net in self.wlan.scan():
@@ -535,6 +535,18 @@ class WiFiOTA(OTA):
                                                        self.password))
                     while not self.wlan.isconnected():
                         machine.idle()  # save power while waiting
+                    # now get the IP for the url
+                    if url != "":
+                        if ":" in url:
+                            url, port = url.split(":", 1)
+                            port = int(port)
+                        try:
+                            ai = socket.getaddrinfo(url, port)
+                            print("IP ={}".format(ai[0][-1]))
+                            self.ip = ai[0][-1]
+                        except Exception:
+                            raise OSError("IP address could not be found")
+
                     break
             else:
                 raise Exception("Cannot find network '{}'".format(self.SSID))
@@ -658,7 +670,7 @@ class NBIoTOTA(OTA):
 
         print("\nattached: {} s".format(i))
 
-    def connect(self):
+    def connect(self, url:str=""):
         if self.lte.isconnected():
             return
 
@@ -676,11 +688,26 @@ class NBIoTOTA(OTA):
 
         print("\nconnected: {} s".format(i))
 
+        # now get the IP for the url
+        if url != "":
+            if ":" in url:
+                url, port = url.split(":", 1)
+                port = int(port)
+            socket.dnsserver(1, '8.8.4.4')
+            socket.dnsserver(0, '8.8.8.8')
+            try:
+                ai = socket.getaddrinfo(url, port)  # todo check if -> is needed, 0, usocket.SOCK_STREAM)
+                print("IP ={}".format(ai[0][-1]))
+                self.ip = ai[0][-1]
+            except Exception:
+                raise OSError("IP address could not be found")
+
+
     def clean_up(self):
         if self.lte.isconnected():
             self.lte.disconnect()
         self.lte.deinit()
-    
+
     def get_device_id(self):
         """Get an identifier for the device used in server requests
         In this case, we return the SHA256 hash of the SIM ICCID prefixed with
@@ -702,17 +729,17 @@ class NBIoTOTA(OTA):
 
         hasher = None
         try:
-            hasher = uhashlib.sha256("ID:"+iccid)        
+            hasher = uhashlib.sha256("ID:"+iccid)
             hashvalue = hasher.digest()
         except Exception as e:
             if hasher is not None:
                 hasher.digest()#make sure hasher is closed, as only one is allowed at a time by the hardware
-            raise e  
-        
+            raise e
+
         devid = "IC" + ubinascii.hexlify(hashvalue).decode('utf-8')
 
         return devid
-    
+
     def _http_get(self, path, host):
         req_fmt = 'GET /{} HTTP/1.0\r\nHost: {}\r\n\r\n'
         req = bytes(req_fmt.format(path, host), 'utf8')
@@ -802,6 +829,7 @@ class NBIoTOTA(OTA):
 # and thus allow for garbage collection of OTA memory usage later
 def check_OTA_update():
     # Configuration (if you are looking for the server pubkey: it's in the OTA class)
+    SERVER_URL = "" # todo this has to be checked, if it works, the connect should get the IP address for the URL
     SERVER_IP = "10.42.0.1"
     NBIOT_APN = "iot.1nce.net"
     NBIOT_BAND = None #None = autoscan
@@ -811,8 +839,8 @@ def check_OTA_update():
 
     #setup watchdog
     wdt = machine.WDT(timeout=WATCHDOG_TIMEOUT)
-    wdt.feed()   
-    
+    wdt.feed()
+
     try:
         # Setup Wifi OTA
         from ota_wifi_secrets import WIFI_SSID, WIFI_PW
@@ -820,7 +848,7 @@ def check_OTA_update():
                 WIFI_PW,
                 SERVER_IP,  # server address
                 8000)  # server port
-        
+
         # # Setup NB-IoT OTA
         # print("Initializing LTE")
         # lte = LTE()
@@ -828,23 +856,23 @@ def check_OTA_update():
         # lte.init()
 
         # ota = NBIoTOTA(lte,
-        #         NBIOT_APN, 
+        #         NBIOT_APN,
         #         NBIOT_BAND,
         #         NBIOT_ATTACH_TIMEOUT,
-        #         NBIOT_CONNECT_TIMEOUT,    
+        #         NBIOT_CONNECT_TIMEOUT,
         #         SERVER_IP,  # server address
         #         8000)  # server port
 
         #start the update itself
         print("Current version: ", ota.get_current_version())
-        ota.connect()
+        ota.connect(SERVER_URL) # todo this has to be checked, if it works, the connect should get the IP address for the URL
         ota.update()
     except Exception as e:
         raise(e)#let top level loop handle exception
     finally:
         if ota is not None:
             ota.clean_up()
-        # before leaving, set watchdog to large value, so we don't interfere 
+        # before leaving, set watchdog to large value, so we don't interfere
         # with code in main.py (wdt can never be disabled after use)
         wdt = machine.WDT(timeout=10*24*60*60*1000)
         wdt.feed()
@@ -856,10 +884,16 @@ print("\nEntering OTA bootloader")
 pycom.heartbeat(False)
 pycom.rgbled(0x000500)
 
+# disable the FTP Server
+server = network.Server()
+server.deinit() # disable the server
+# disable the wifi on boot
+pycom.wifi_on_boot(False)
+
 ota_max_retries = 3
 for retries_left in range((ota_max_retries-1),-1,-1):
-    try:         
-        print("\nStarting OTA update")        
+    try:
+        print("\nStarting OTA update")
         check_OTA_update()
         break # leave retry for loop if successful
     except Exception as e:
@@ -869,6 +903,6 @@ for retries_left in range((ota_max_retries-1),-1,-1):
             print("Retrying update")
         else:
             print("Giving up")
-        
+
 gc.collect() #free up memory that was used by OTA objects
 print("\nLeaving OTA bootloader")
