@@ -57,19 +57,34 @@ Get Pymakr for *Atom* or *Visual Studio Code*:
 1. Download and install [**Atom**](https://atom.io) or [**Visual Studio Code**](https://code.visualstudio.com/download) 
 2. Install the Pymakr plugin [for Atom](https://docs.pycom.io/pymakr/installation/atom/) or [for VSCode](https://docs.pycom.io/pymakr/installation/vscode/).
 
-You should now have a Pymakr terminal at the bottom of your IDE with buttons to upload and run code. Please do not upload any code yet, as it might interfere with the modem firmware update.
+You should now have a Pymakr terminal at the bottom of your IDE with buttons to upload and run code. Please do not upload any code yet, as it might interfere with the modem firmware upgrade.
 
-### Update the Modem Firmware
-Please do not skip the modem firmware update to **switch the GPy from CAT-M1 to the NB-IoT version**. Without this, there will be no connectivity with the SIM card.
+### Upgrade the Modem Firmware
+In order to connect to the NB-IoT network, you need to **switch the GPy Modem Firmware from CAT-M1 to the NB-IoT version**. 
 
-Please perform an upgrade of the modem firmware as shown in [this tutorial video](https://www.youtube.com/watch?v=jNbYhNHzma0). The main steps are oulined below.
+Please perform an upgrade of the modem firmware as shown in [this tutorial video](https://www.youtube.com/watch?v=jNbYhNHzma0). 
+The main steps are outlined below.
 
 1. Acquire the modem firmware files from the Pycom website
-    1. Acquire the firmware password: In order to download the password-protected firmware files, register on [forum.pycom.io](http://forum.pycom.io). Then you can find the password in the thread "Announcements & News –> Announcements for members only –> the Firmware Files for the Sequans LTE modem are now secured"
-    2. Download the latest modem firmware from [here](https://software.pycom.io/downloads/sequans.html). **Please make sure you'll get the NB-IoT firmware for the modem!**
-2. Extract/copy the .dup and .elf files from the zip file onto an SD card, and insert the SD card into the pysense. The files should be placed in the root folder.
-3. Connect to your Pymakr console. You might have to click the 'Pymakr Console' button to toggle the board connection, it should show a checkmark and you should see ```>>>``` in the Pymakr terminal. **If you do not see ```>>>``` but other messages (or nothing), there might be code running on the GPy which will possibly interfere with the update.** If you accidentially already uploaded code, please upload an empty main.py to fix this. Altenatively, you can simply add an illegal statement such as "thiswillcauseanerror" to the first line of the main.py and reupload it. This will cause the main.py to exit immediately. Make sure to save the file before uploading.
-4. Execute the firmware update by running the commands detailed in the tutorial video in the Pymakr console. If you can't find a matching upgdiff_XXXXX-to-YYYYY.dup for your current firmware version in the zip file, please use the NB1-YYYYY.dup and updater.elf file for the upgrade (e.g. ```sqnsupgrade.run('/sd/NB1-YYYYY.dup','/sd/updater.elf')```). If you run into problems, please **disconnect (for 10 seconds) and reconnect** the board from all power sources before retrying to trigger a reset of the modem. If this does not help, try using a different SD card, a different/shorter USB cable or different USB port with sufficient power.
+    1. Acquire the firmware password: In order to download the password-protected firmware files, register on
+     [forum.pycom.io](http://forum.pycom.io). Then you can find the password in the thread "Announcements & News –> 
+     Announcements for members only –> the Firmware Files for the Sequans LTE modem are now secured"
+    2. Download the latest modem firmware from [here](https://software.pycom.io/downloads/sequans.html). **Please make
+     sure you'll get the NB-IoT firmware for the modem!**
+2. Extract/copy the .dup and .elf files from the zip file onto an SD card, and insert the SD card into the pysense. 
+The files should be placed in the root folder.
+3. Connect to your Pymakr console. You might have to click the 'Pymakr Console' button to toggle the board connection,
+ it should show a checkmark and you should see ```>>>``` in the Pymakr terminal. **If you do not see ```>>>``` but other
+  messages (or nothing), there might be code running on the GPy which will possibly interfere with the upgrade.** If you 
+  accidentally already uploaded code, please upload an empty main.py to fix this. Alternatively, you can simply add an 
+  illegal statement such as "thiswillcauseanerror" to the first line of the main.py and reupload it. This will cause the
+   main.py to exit immediately. Make sure to save the file before uploading.
+4. Execute the firmware upgrade by running the commands detailed in the tutorial video in the Pymakr console. If you 
+can't find a matching upgdiff_XXXXX-to-YYYYY.dup for your current firmware version in the zip file, please use the 
+NB1-YYYYY.dup and updater.elf file for the upgrade (e.g. ```sqnsupgrade.run('/sd/NB1-YYYYY.dup','/sd/updater.elf')```).
+ If you run into problems, please **disconnect (for 10 seconds) and reconnect** the board from all power sources before
+  retrying to trigger a reset of the modem. If this does not help, try using a different SD card, a different/shorter 
+  USB cable or different USB port with sufficient power.
 
     Example output:
     ```
