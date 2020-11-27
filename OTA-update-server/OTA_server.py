@@ -16,7 +16,7 @@
 #
 # Setup
 # -------
-# This script runs a HTTP server on port 8000 that provisions over the air
+# This script runs a HTTP server on port 62633 that provisions over the air
 # (OTA) update manifests in JSON format as well as serving the update content.
 # The manifests are signed by the server and the signature is checked by the device.
 # This script should be run in a directory that contains every version of the
@@ -82,7 +82,7 @@
 #
 # After setting up the above steps, start the server by simply running the `OTA_server.py` script using python 3:
 # python3 OTA_server.py
-# This will run a HTTP server on port 8000 (this can be changed in the code if necessary).
+# This will run a HTTP server on port 62633 (this can be changed in the code if necessary).
 # Power-on/hard-reset the pycom board to trigger execution of boot.py. The board will establish a connection and
 # request an update manifest from the server and if necessary update itself to the latest version.
 # The OTA procedure is triggered on every reset unless the device was simply
@@ -97,7 +97,7 @@
 # change to bring the end device from its current version to the latest
 # available version. You can see an example of this by pointing your web
 # browser at:
-#    http://127.0.0.1:8000/manifest.json?current_ver=1.0.1
+#    http://127.0.0.1:62633/manifest.json?current_ver=1.0.1
 # The `current_ver` field at the end of the URL should be set to the current
 # firmware version of the end device. The generated file is not strictly a json file
 # as it contains three sections marked by headers: the manifest json ("MANIFEST[len(data)]:"),
@@ -113,12 +113,12 @@
 #     ],
 #     "new": [
 #         {
-#             "URL": "http://127.0.0.1:8000/1.0.3/flash/new_file.txt",
+#             "URL": "http://127.0.0.1:62633/1.0.3/flash/new_file.txt",
 #             "dst_path": "/flash/new_file.txt",
 #             "hash": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
 #         },
 #         {
-#             "URL": "http://127.0.0.1:8000/1.0.3/flash/new_file2.txt",
+#             "URL": "http://127.0.0.1:62633/1.0.3/flash/new_file2.txt",
 #             "dst_path": "/flash/new_file2.txt",
 #             "hash": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
 #         }
@@ -154,7 +154,7 @@
 #      
 # In order for the URL's to be properly formatted you are required to send a
 # "host" header along with your HTTP get request e.g:
-# GET /manifest.json?current_ver=1.0.0 HTTP/1.0\r\nHost: 192.168.1.144:8000\r\n\r\n
+# GET /manifest.json?current_ver=1.0.0 HTTP/1.0\r\nHost: 192.168.1.144:62633\r\n\r\n
 
 import os
 import socket
@@ -170,7 +170,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 from distutils.version import LooseVersion
 
-PORT = 8000
+PORT = 62633
 PROTECT_BOOTLOADER = True #if this is true, the server will never add protected files to the update manifest
 
 

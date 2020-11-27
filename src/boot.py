@@ -856,7 +856,7 @@ def check_OTA_update():
     # Configuration (if you are looking for the server pubkey: it's in the OTA class)
     #TODO: Change server URL and Pubkey to non-testing versions
     SERVER_URL = "kcych8hb3t4uhyk8.ddns.net"
-    SERVER_PORT = 8000
+    SERVER_PORT = 62633
     NBIOT_APN = "iot.1nce.net"
     NBIOT_BAND = None #None = autoscan
     NBIOT_ATTACH_TIMEOUT = 15*60 #seconds
