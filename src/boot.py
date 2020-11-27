@@ -490,9 +490,10 @@ class OTA():
     #     # TODO: Add verification when released in future firmware
 
 class WiFiOTA(OTA):
-    def __init__(self, ssid, password):
+    def __init__(self, ssid, password,sockettimeout:int=60):
         self.SSID = ssid
         self.password = password
+        self.sockettimeout = sockettimeout
         self.ip = None #IP is either set or resolved by "connect" function
         self.port = None #Port is  set by "connect" function
 
@@ -586,6 +587,7 @@ class WiFiOTA(OTA):
         s = socket.socket(socket.AF_INET,
                           socket.SOCK_STREAM,
                           socket.IPPROTO_TCP)
+        s.settimeout(self.sockettimeout)
         s.connect((self.ip, self.port))
 
         # Request File
@@ -653,12 +655,13 @@ class WiFiOTA(OTA):
             return hash_val
 
 class NBIoTOTA(OTA):
-    def __init__(self, lte: LTE, apn: str, band: int or None, attachtimeout: int, connecttimeout:int):
+    def __init__(self, lte: LTE, apn: str, band: int or None, attachtimeout: int, connecttimeout:int,sockettimeout:int = 60):
         self.lte = lte
         self.apn = apn
         self.band = band
         self.attachtimeout = attachtimeout
         self.connecttimeout = connecttimeout
+        self.sockettimeout = sockettimeout
         self.ip = None #IP is either set or resolved by "connect" function
         self.port = None #Port is  set by "connect" function
 
@@ -778,6 +781,7 @@ class NBIoTOTA(OTA):
         s = socket.socket(socket.AF_INET,
                           socket.SOCK_STREAM,
                           socket.IPPROTO_TCP)
+        s.settimeout(self.sockettimeout)
         s.connect((self.ip, self.port))
 
         # Request File
