@@ -177,7 +177,7 @@ PROTECT_BOOTLOADER = True #if this is true, the server will never add protected 
 class OTAHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
-        print("Got query for: {}".format(self.path))
+        print("Got query for: {}".format(repr(self.path)))
 
         # Parse the URL
         path = urlparse(self.path).path
