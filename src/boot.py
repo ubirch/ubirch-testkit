@@ -548,10 +548,8 @@ class WiFiOTA(OTA):
         self.port = port
 
         #check parameters and handle resolve/ip setting accordingly
-        if url == "" and ip == "": # nothing given
-            raise OSError("Neither URL nor IP specified")
-        elif ip != "": # ip given
-            self.ip = ip
+        if (url == "" and ip == "") or (url != "" and ip != ""): # nothing given or both given
+            raise OSError("No URL or IP, or both at the same time given")
         elif url != "": # url given
             if ":" in url:
                 raise OSError("Please specify port as separate parameter and not in URL")
@@ -561,6 +559,8 @@ class WiFiOTA(OTA):
                 self.ip = ai[0][-1][0]
             except Exception as e:
                 raise OSError("IP address could not be resolved: {}".format(e))
+        elif ip != "": # ip given
+            self.ip = ip
         print("Update server address: {}:{}".format(self.ip,self.port))
 
 
@@ -704,10 +704,8 @@ class NBIoTOTA(OTA):
         self.port = port
 
         #check parameters and handle resolve/ip setting accordingly
-        if url == "" and ip == "": # nothing given
-            raise OSError("Neither URL nor IP specified")
-        elif ip != "": # ip given
-            self.ip = ip
+        if (url == "" and ip == "") or (url != "" and ip != ""): # nothing given or both given
+            raise OSError("No URL or IP, or both at the same time given")
         elif url != "": # url given
             if ":" in url:
                 raise OSError("Please specify port as separate parameter and not in URL")
@@ -720,6 +718,8 @@ class NBIoTOTA(OTA):
                 self.ip = ai[0][-1][0]
             except Exception as e:
                 raise OSError("IP address could not be resolved: {}".format(e))
+        elif ip != "": # ip given
+            self.ip = ip
         print("Update server address: {}:{}".format(self.ip,self.port))
 
 
