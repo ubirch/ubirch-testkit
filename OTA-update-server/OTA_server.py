@@ -67,11 +67,11 @@
 #      both folders and add some extra files or do modifications to the "1.0.1/flash" folder. Don't
 #      forget to upload the 1.0.0 code also to the device.
 #  - Generate a key pair (RSA 4096 bit):
-#    - For the private key, first generate a key pair, and then export the private key into the corresponding enviroment variable:
-#       - generate a keypair using e.g. openssl:
+#    - For the private key, first generate a key pair, and then export the private key into the corresponding environment variable:
+#       - generate a keypair using e.g. openssl, preferably in some safe folder/location:
 #           cd OTA-update-server
 #           openssl genrsa -out OTA_signing_key_rsa_4096.pem 4096
-#       - pipe the key file into the terminal enviroment variable before starting the server, e.g.:
+#       - pipe the key file into the terminal environment variable before starting the server, e.g.:
 #           export OTA_SERVER_SIGNING_KEY_RSA_4096=`cat ./OTA_signing_key_rsa_4096.pem`
 #    - Put the public key modulus in boot.py OTA class (`PUB_MOD_RSA_4096 = "ab01...ef"`):
 #       - export the public verifying key and afterwards display the modulus using e.g. openssl:
@@ -445,7 +445,7 @@ def get_manifest_signature(manifest_string: str)-> str:
 if __name__ == "__main__":
 
     if OTA_SERVER_SIGNING_KEY_RSA_4096 is None:
-            raise ValueError("Server signing key enviroment variable (OTA_SERVER_SIGNING_KEY_RSA_4096) not set. Can't start server.")
+            raise ValueError("Server signing key environment variable (OTA_SERVER_SIGNING_KEY_RSA_4096) not set. Can't start server.")
 
     server_address = ('', PORT)
     httpd = HTTPServer(server_address, OTAHandler)
