@@ -67,16 +67,18 @@
 #      both folders and add some extra files or do modifications to the "1.0.1/flash" folder. Don't
 #      forget to upload the 1.0.0 code also to the device.
 #  - Generate a key pair (RSA 4096 bit):
-#    - Put the private key in PEM format in the same directory as `OTA_server.py`. (`OTA-update-server/OTA_signing_key_rsa_4096.pem`):
-#       - generate a keypair using e.g. openssl in the server directory:
+#    - For the private key, first generate a key pair, and then export the private key into the corresponding enviroment variable:
+#       - generate a keypair using e.g. openssl:
 #           cd OTA-update-server
 #           openssl genrsa -out OTA_signing_key_rsa_4096.pem 4096
+#       - pipe the key file into the terminal enviroment variable before starting the server, e.g.:
+#           export OTA_SERVER_SIGNING_KEY_RSA_4096=`cat ./OTA_signing_key_rsa_4096.pem`
 #    - Put the public key modulus in boot.py OTA class (`PUB_MOD_RSA_4096 = "ab01...ef"`):
-#       - save the public verifying key and afterwards display the modulus using e.g. openssl:
+#       - export the public verifying key and afterwards display the modulus using e.g. openssl:
 #           openssl rsa -in OTA_signing_key_rsa_4096.pem -outform PEM -pubout -out OTA_verifying_key_rsa_4096.pem
 #           openssl rsa -pubin -modulus -noout -in OTA_verifying_key_rsa_4096.pem
 #        -copy the pubkey modulus hex output of the second command to boot.py after the "PUB_MOD_RSA_4096 =" in the OTA class
-#  - Set the server IP and check the other settings in boot.py in check_OTA_update()
+#  - Set the server URL and check the other settings in boot.py in check_OTA_update()
 #  - If using wifi instead of NB-IoT: Set WiFi secrets in ota_wifi_secrets.py (see ota_wifi_secrets.py.example.txt), and in
 #    check_OTA_update() comment the NBIoTOTA setup section out and the WifiOTA section in.
 #
@@ -172,6 +174,7 @@ from distutils.version import LooseVersion
 
 PORT = 62633
 PROTECT_BOOTLOADER = True #if this is true, the server will never add protected files to the update manifest
+OTA_SERVER_SIGNING_KEY_RSA_4096 = os.getenv('OTA_SERVER_SIGNING_KEY_RSA_4096') #expects the signing key in pem format, e.g. via export OTA_SERVER_SIGNING_KEY_RSA_4096=`cat ./OTA_signing_key_rsa_4096.pem`
 
 
 class OTAHandler(BaseHTTPRequestHandler):
@@ -409,9 +412,13 @@ def get_manifest_signature(manifest_string: str)-> str:
     mandatory to avoid JSON encoding ambiguities when signing. Signature string will
     have headers (including size) for a "type" identifier and the signature data itself.
     """
+
+    if OTA_SERVER_SIGNING_KEY_RSA_4096 is None:
+        raise ValueError("Server signing key not set. Can't create manifest.")
+
     #calculate signature (SHA256)
     # signature_type = "SIG01_PKCS1_PSS_4096_SHA256"
-    # key = RSA.importKey(open('OTA_signing_key_rsa_4096.pem').read())
+    # key = RSA.importKey(OTA_SERVER_SIGNING_KEY_RSA_4096)
     # h = SHA256.new()
     # h.update(manifest_string.encode('utf-8'))
     # signer = PKCS1_PSS.new(key)
@@ -420,7 +427,7 @@ def get_manifest_signature(manifest_string: str)-> str:
 
     #calculate signature (SHA512)
     signature_type = "SIG02_PKCS1_PSS_4096_SHA512"
-    key = RSA.importKey(open('OTA_signing_key_rsa_4096.pem').read())
+    key = RSA.importKey(OTA_SERVER_SIGNING_KEY_RSA_4096)
     h = SHA512.new()
     h.update(manifest_string.encode('utf-8'))
     signer = PKCS1_PSS.new(key)
@@ -436,6 +443,10 @@ def get_manifest_signature(manifest_string: str)-> str:
 
 
 if __name__ == "__main__":
+
+    if OTA_SERVER_SIGNING_KEY_RSA_4096 is None:
+            raise ValueError("Server signing key enviroment variable (OTA_SERVER_SIGNING_KEY_RSA_4096) not set. Can't start server.")
+
     server_address = ('', PORT)
     httpd = HTTPServer(server_address, OTAHandler)
     httpd.serve_forever()
