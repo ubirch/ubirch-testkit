@@ -8,5 +8,5 @@ src/config_nbiot.json
 src/boot.json
 src/ota_wifi_secrets.py
 OTA-update-server/*/
-OTA_signing_key*.pem
-OTA_verifying_key*.pem
+keys/
+*.pem
