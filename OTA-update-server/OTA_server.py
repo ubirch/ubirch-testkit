@@ -443,7 +443,7 @@ def get_manifest_signature(manifest_string: str)-> str:
 
 
 if __name__ == "__main__":
-
+    print("OTA server started")
     if OTA_SERVER_SIGNING_KEY_RSA_4096 is None:
             raise ValueError("Server signing key environment variable (OTA_SERVER_SIGNING_KEY_RSA_4096) not set. Can't start server.")
 
