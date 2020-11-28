@@ -180,12 +180,19 @@ OTA_SERVER_SIGNING_KEY_RSA_4096 = os.getenv('OTA_SERVER_SIGNING_KEY_RSA_4096') #
 class OTAHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
-        print("Got query for: {}".format(repr(self.path)))
+        print("\nRequest from {}:".format(self.client_address[0]))
 
         # Parse the URL
         path = urlparse(self.path).path
         query_components = parse_qs(urlparse(self.path).query)
         host = self.headers.get('Host')
+
+        #print request info
+        for name,value in query_components.items():
+            print("\t{} {}".format(name.ljust(25, '-'),value[0]))
+        
+        print("\n\tfile: {}".format(repr(path)))
+
 
         # Generate update manifest
         if path == "/manifest.json":
@@ -213,7 +220,7 @@ class OTAHandler(BaseHTTPRequestHandler):
             # of that string which results in a signature data string (not JSON in this case).
             # Finally, assemble both strings and send them. Signature and manifest data are distinguished
             # using headers indicating their size (for easy and unambigous dissassembly at the client).
-            print("Generating a manifest from version: {}".format(current_ver))
+            print("\tManifest request: sending manifest for device version {} ...".format(current_ver),end="")
             manifest = generate_manifest(current_ver, host, request_id)
             manifest_string = json.dumps(manifest,
                            sort_keys=True,
@@ -232,18 +239,22 @@ class OTAHandler(BaseHTTPRequestHandler):
             #print(manifest_and_sig)
             
             self.wfile.write(manifest_and_sig.encode())
+            print(" Done.")
 
         # Send file
         else:
             try:
                 with open(os.path.join('.', self.path[1:]), 'rb') as f:
+                    print("\tSending file... ",end="")
                     self.send_response(200)
                     self.send_header('Content-type',
                                      'application/octet-stream')
                     self.end_headers()
                     self.wfile.write(f.read())
+                    print("Done.")
             # File could not be opened, send error
             except IOError as e:
+                print("\tError:{}".format(repr(e)))
                 self.send_error(404, "File Not Found {}".format(self.path))
 
 
@@ -443,7 +454,7 @@ def get_manifest_signature(manifest_string: str)-> str:
 
 
 if __name__ == "__main__":
-    print("OTA server started")
+    print("OTA update server started")
     if OTA_SERVER_SIGNING_KEY_RSA_4096 is None:
             raise ValueError("Server signing key environment variable (OTA_SERVER_SIGNING_KEY_RSA_4096) not set. Can't start server.")
 
