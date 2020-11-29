@@ -164,6 +164,7 @@ import json
 import hashlib
 import filecmp
 import re
+import datetime
 from Crypto.Signature import PKCS1_PSS
 from Crypto.Hash import SHA256,SHA512
 from Crypto.PublicKey import RSA
@@ -181,26 +182,35 @@ class OTAHandler(BaseHTTPRequestHandler):
 
     def log_request(self, code='-', size='-'):
         # disable logging of requests by re-implementing empty function
-        # re-enable if necessary by deleting this function
+        # re-enable if necessary by commenting out this function
+        pass
+    
+    def log_error(self, format, *args):
+        #redefine log_error to indent messages and use different format
+        print("\tServer error: %s at %s, %s" %
+                    (self.address_string(),
+                    self.log_date_time_string(),
+                    format%args
+                    ))
         pass
 
+
     def do_GET(self):
-        print("\nRequest from {}:".format(self.client_address[0]))
+        now = datetime.datetime.now() # save request time
 
         # Parse the URL
         path = urlparse(self.path).path
         query_components = parse_qs(urlparse(self.path).query)
-        host = self.headers.get('Host')
+        host = self.headers.get('Host')  
 
-        #print request info
-        for name,value in query_components.items():
-            print("\t{} {}".format(name.ljust(25, '-'),value[0]))
-        
-        print("\n\tfile: {}".format(repr(path)))
-
-
-        # Generate update manifest
+        # request to generate update manifest
         if path == "/manifest.json":
+            #print request info
+            print("\n{} manifest request from {}:".format(now.strftime("[%Y-%m-%d %H:%M:%S]"),self.client_address[0]))
+            #print query parameters
+            for name,value in query_components.items():
+                print("\t{} {}".format(name.ljust(25, '-'),value[0]))
+
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
@@ -225,7 +235,7 @@ class OTAHandler(BaseHTTPRequestHandler):
             # of that string which results in a signature data string (not JSON in this case).
             # Finally, assemble both strings and send them. Signature and manifest data are distinguished
             # using headers indicating their size (for easy and unambigous dissassembly at the client).
-            print("\tManifest request: sending manifest for device version {} ...".format(current_ver))
+            print("\n\tSending manifest for device version {}".format(current_ver))
             manifest = generate_manifest(current_ver, host, request_id)
             manifest_string = json.dumps(manifest,
                            sort_keys=True,
@@ -244,23 +254,28 @@ class OTAHandler(BaseHTTPRequestHandler):
             #print(manifest_and_sig)
             
             self.wfile.write(manifest_and_sig.encode())
-            print("\tDone.")
 
-        # Send file
-        else:
+        # send file only if this is a valid request into the release folder
+        elif path.startswith("/"+RELEASE_DIR+"/"):
+            print("\n{} file request from {}:".format(now.strftime("[%Y-%m-%d %H:%M:%S]"),self.client_address[0]))
+            print("\tsending file: {}".format(repr(path)))
             try:
                 with open(os.path.join('.', self.path[1:]), 'rb') as f:
-                    print("\tSending file... ")
                     self.send_response(200)
                     self.send_header('Content-type',
                                      'application/octet-stream')
                     self.end_headers()
                     self.wfile.write(f.read())
-                    print("\tDone.")
             # File could not be opened, send error
             except IOError as e:
                 print("\tError:{}".format(repr(e)))
                 self.send_error(404, "File Not Found {}".format(self.path))
+        
+        #all other requests are invalid and probably not from our devices
+        else:
+            print("\n{} invalid request from {}, responding with 418".format(now.strftime("[%Y-%m-%d %H:%M:%S]"),self.client_address[0]))
+            print("\trequest was:{}".format(repr(self.path)))
+            self.send_error(418,"I'm a teapot")
 
 
 # Searches the release directory for the directory named with the
@@ -464,7 +479,7 @@ def get_manifest_signature(manifest_string: str)-> str:
 
 
 if __name__ == "__main__":
-    print("OTA update server started")
+    print("OTA update server started, latest served release version is {}".format(get_latest_version()))
     if OTA_SERVER_SIGNING_KEY_RSA_4096 is None:
             raise ValueError("Server signing key environment variable (OTA_SERVER_SIGNING_KEY_RSA_4096) not set. Can't start server.")
 
