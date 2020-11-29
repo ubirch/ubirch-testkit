@@ -429,6 +429,8 @@ class OTA():
         from OTA_VERSION import VERSION
 
         # Reboot the device to run the new code
+        print("\nUpdate done. Resetting.")
+        time.sleep(0.5)
         machine.reset()
 
     def get_file(self, f):
