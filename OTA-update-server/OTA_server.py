@@ -24,27 +24,27 @@
 #
 #  - server directory
 #    |- this_script.py
-#    |- 1.0.0
-#    |  |- flash
-#    |  |   |- lib
-#    |  |   |  |- lib_a.py
-#    |  |   |- main.py
-#    |  |- sd
-#    |     |- some_asset.txt
-#    |     |- asset_that_will_be_removed.wav
-#    |- 1.0.1
-#    |  |- flash
-#    |  |   |- lib
-#    |  |   |  |- lib_a.py
-#    |  |   |  |- new_lib.py
-#    |  |   |- main.py
-#    |  |- sd
-#    |     |- some_asset.txt
-#    |- firmware_1.0.0.bin
-#    |- firmware_1.0.1.bin
+#    |- fw_releases
+#       |- 1.0.0
+#       |  |- flash
+#       |  |   |- lib
+#       |  |   |  |- lib_a.py
+#       |  |   |- main.py
+#       |  |- sd
+#       |     |- some_asset.txt
+#       |     |- asset_that_will_be_removed.wav
+#       |- 1.0.1
+#       |  |- flash
+#       |  |   |- lib
+#       |  |   |  |- lib_a.py
+#       |  |   |  |- new_lib.py
+#       |  |   |- main.py
+#       |  |- sd
+#       |     |- some_asset.txt
+#       |- firmware_1.0.0.bin
+#       |- firmware_1.0.1.bin
 #
-# The top level directory that contains this script can contain one of two
-# things:
+# The releases directory can contain one of two things:
 #     Update directory: These should be named with a version number compatible
 #                       with the python LooseVersion versioning scheme
 #                      (http://epydoc.sourceforge.net/stdlib/distutils.version.LooseVersion-class.html).
@@ -62,8 +62,8 @@
 # -----------
 # To use the server, please prepare these steps:
 #  -Set up the directory structure outlined above.
-#    - Tip for testing: create two folders "OTA-update-server/1.0.0/flash"
-#      and "OTA-update-server/1.0.1/flash". Then simply copy the contents of the "src" folder into
+#    - Tip for testing: create two folders "OTA-update-server/fw_releases/1.0.0/flash"
+#      and "OTA-update-server/fw_releases/1.0.1/flash". Then simply copy the contents of the "src" folder into
 #      both folders and add some extra files or do modifications to the "1.0.1/flash" folder. Don't
 #      forget to upload the 1.0.0 code also to the device.
 #  - Generate a key pair (RSA 4096 bit):
@@ -115,12 +115,12 @@
 #     ],
 #     "new": [
 #         {
-#             "URL": "http://127.0.0.1:62633/1.0.3/flash/new_file.txt",
+#             "URL": "http://127.0.0.1:62633/fw_releases/1.0.3/flash/new_file.txt",
 #             "dst_path": "/flash/new_file.txt",
 #             "hash": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
 #         },
 #         {
-#             "URL": "http://127.0.0.1:62633/1.0.3/flash/new_file2.txt",
+#             "URL": "http://127.0.0.1:62633/fw_releases/1.0.3/flash/new_file2.txt",
 #             "dst_path": "/flash/new_file2.txt",
 #             "hash": "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
 #         }
@@ -175,9 +175,14 @@ from distutils.version import LooseVersion
 PORT = 62633
 PROTECT_BOOTLOADER = True #if this is true, the server will never add protected files to the update manifest
 OTA_SERVER_SIGNING_KEY_RSA_4096 = os.getenv('OTA_SERVER_SIGNING_KEY_RSA_4096') #expects the signing key in pem format, e.g. via export OTA_SERVER_SIGNING_KEY_RSA_4096=`cat ./OTA_signing_key_rsa_4096.pem`
-
+RELEASE_DIR = "fw_releases" # name of the subdirectory containing the firmware releases
 
 class OTAHandler(BaseHTTPRequestHandler):
+
+    def log_request(self, code='-', size='-'):
+        # disable logging of requests by re-implementing empty function
+        # re-enable if necessary by deleting this function
+        pass
 
     def do_GET(self):
         print("\nRequest from {}:".format(self.client_address[0]))
@@ -220,7 +225,7 @@ class OTAHandler(BaseHTTPRequestHandler):
             # of that string which results in a signature data string (not JSON in this case).
             # Finally, assemble both strings and send them. Signature and manifest data are distinguished
             # using headers indicating their size (for easy and unambigous dissassembly at the client).
-            print("\tManifest request: sending manifest for device version {} ...".format(current_ver),end="")
+            print("\tManifest request: sending manifest for device version {} ...".format(current_ver))
             manifest = generate_manifest(current_ver, host, request_id)
             manifest_string = json.dumps(manifest,
                            sort_keys=True,
@@ -239,31 +244,32 @@ class OTAHandler(BaseHTTPRequestHandler):
             #print(manifest_and_sig)
             
             self.wfile.write(manifest_and_sig.encode())
-            print(" Done.")
+            print("\tDone.")
 
         # Send file
         else:
             try:
                 with open(os.path.join('.', self.path[1:]), 'rb') as f:
-                    print("\tSending file... ",end="")
+                    print("\tSending file... ")
                     self.send_response(200)
                     self.send_header('Content-type',
                                      'application/octet-stream')
                     self.end_headers()
                     self.wfile.write(f.read())
-                    print("Done.")
+                    print("\tDone.")
             # File could not be opened, send error
             except IOError as e:
                 print("\tError:{}".format(repr(e)))
                 self.send_error(404, "File Not Found {}".format(self.path))
 
 
-# Searches the current working directory for the directory named with the
+# Searches the release directory for the directory named with the
 # highest version number as per LooseVersion.
 def get_latest_version():
     latest = None
-    for d in os.listdir('.'):
-        if os.path.isfile(d):
+    basepath = os.path.join('.', RELEASE_DIR)
+    for d in os.listdir(basepath):
+        if os.path.isfile(os.path.join(basepath, d)):
             continue
         if latest is None or LooseVersion(latest) < LooseVersion(d):
             latest = d
@@ -330,7 +336,7 @@ def get_diff_list(left, right, ignore=['.DS_Store', 'pymakr.conf']):
     return (to_delete, new_files, (to_update))
 
 
-# Searches the current working directory for a file starting with "firmware_"
+# Searches the specified directory for a file starting with "firmware_"
 # followed by a version number higher than `current_ver` as per LooseVersion.
 # Returns None if such a file does not exist.
 # Parameters
@@ -341,9 +347,8 @@ def get_new_firmware(path, current_ver):
     latest = None
     for f in os.listdir(path):
         # Ignore directories
-        if not os.path.isfile(f):
+        if not os.path.isfile(os.path.join(path,f)):
             continue
-
         try:
             m = re.search(r'firmware_([0-9a-zA-Z.]+)(?=.bin|hex)', f)
             version = m.group(1)
@@ -365,8 +370,8 @@ def generate_manifest_entry(host, path, version):
     path = "/".join(path.split(os.path.sep))
     entry = {}
     entry["dst_path"] = "/{}".format(path)
-    entry["URL"] = "http://{}/{}/{}".format(host, version, path)
-    data = open(os.path.join('.', version, path), 'rb').read()
+    entry["URL"] = "http://{}/{}/{}/{}".format(host, RELEASE_DIR, version, path)
+    data = open(os.path.join('.', RELEASE_DIR, version, path), 'rb').read()
     hasher = hashlib.sha512(data)
     entry["hash"] = hasher.hexdigest()
     return entry
@@ -394,7 +399,9 @@ def generate_manifest(current_ver, host,request_id):
         return manifest #if the versions are the same we are done here
 
     # Get lists of difference between versions
-    to_delete, new_files, to_update = get_diff_list(current_ver, latest)
+    current_ver_dir = os.path.join('.', RELEASE_DIR, current_ver)
+    latest_dir = os.path.join('.', RELEASE_DIR, latest)
+    to_delete, new_files, to_update = get_diff_list(current_ver_dir, latest_dir)
 
     #add lists to manifest
     manifest.update(
@@ -406,14 +413,17 @@ def generate_manifest(current_ver, host,request_id):
     )
 
     # If there is a newer firmware version add it to the manifest
-    new_firmware = get_new_firmware('.', current_ver)
-    if new_firmware is not None:
-        entry = {}
-        entry["URL"] = "http://{}/{}".format(host, new_firmware)
-        data = open(os.path.join('.', new_firmware), 'rb').read()
-        hasher = hashlib.sha512(data)
-        entry["hash"] = hasher.hexdigest()
-        manifest["firmware"] = entry
+    # This is currently disabled as it needs to be re-implemented on the board and
+    # server side and also checked for edge cases (boards missing versions, files 
+    # transferred OK but firmware update fails, ensure matching FW for code versions, etc.)
+    # new_firmware = get_new_firmware(os.path.join('.', RELEASE_DIR), current_ver)
+    # if new_firmware is not None:
+    #     entry = {}
+    #     entry["URL"] = "http://{}/{}/{}".format(host, RELEASE_DIR ,new_firmware)
+    #     data = open(os.path.join('.', RELEASE_DIR, new_firmware), 'rb').read()
+    #     hasher = hashlib.sha512(data)
+    #     entry["hash"] = hasher.hexdigest()
+    #     manifest["firmware"] = entry
 
     return manifest
 

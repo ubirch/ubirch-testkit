@@ -7,6 +7,6 @@ src/config_wifi.json
 src/config_nbiot.json
 src/boot.json
 src/ota_wifi_secrets.py
-OTA-update-server/*/
+OTA-update-server/fw_releases/*/
 keys/
 *.pem

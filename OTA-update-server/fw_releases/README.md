@@ -1,0 +1,1 @@
+Place your version folders in this subfolder. The directory structure is explained in OTA_server.py.
