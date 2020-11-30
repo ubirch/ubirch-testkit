@@ -256,7 +256,8 @@ class OTAHandler(BaseHTTPRequestHandler):
             self.wfile.write(manifest_and_sig.encode())
 
         # send file only if this is a valid request into the release folder
-        elif path.startswith("/"+RELEASE_DIR+"/"):
+        # and does not contain /../ and /./ (filesystem characters)
+        elif path.startswith("/"+RELEASE_DIR+"/") and not any(forbidden in path for forbidden in ["/../","/./"]) :
             print("\n{} file request from {}:".format(now.strftime("[%Y-%m-%d %H:%M:%S]"),self.client_address[0]))
             print("\tsending file: {}".format(repr(path)))
             try:
