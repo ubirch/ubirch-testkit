@@ -1,3 +1,13 @@
+#!/usr/bin/env python
+#
+# Copyright (c) 2020, Pycom Limited.
+#
+# This software is licensed under the GNU GPL version 3 or any
+# later version, with permitted additional terms. For more information
+# see the Pycom Licence v1.0 document supplied with this file, or
+# available at https://www.pycom.io/opensource/licensing
+#
+
 import time
 from machine import I2C
 
@@ -72,7 +82,7 @@ class MPL3115A2:
             self.i2c.readfrom_mem_into(MPL3115_I2CADDR, MPL3115_CTRL_REG1, ctr_reg1 )
             if (ctr_reg1[0] & MPL3115A2_CTRL_REG1_RST_BIT[0]) == 0x00:
                 break
-            
+
             wait_loops += 1
             if wait_loops > 100:
                 raise Exception("Timeout while waiting for reset")
@@ -106,7 +116,7 @@ class MPL3115A2:
                 return True
             else:
                 return False
-            
+
             wait_loops += 1
             if wait_loops > 100:
                 raise Exception("Timeout while waiting for read status")
