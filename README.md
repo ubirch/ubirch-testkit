@@ -15,7 +15,7 @@ If you want to setup your own testkit hardware, read on.
 ---
 **INFO**
 
-This firmware supports pysense and pytrack version 1.x.
+This firmware supports pysense and pytrack hardware version **1.x**.
 
  ---
 
