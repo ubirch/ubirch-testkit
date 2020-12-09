@@ -66,9 +66,10 @@ class Pytrack(Pyboard):
 
     def get_data(self) -> dict:
         data = super().get_data()
+        coord = self.location.coordinates(debug=True)
         data.update({
-            "GPS_long": self.location.coordinates()[0],
-            "GPS_lat": self.location.coordinates()[1]
+            "GPS_long": coord[0],
+            "GPS_lat": coord[1]
         })
         return data
 
