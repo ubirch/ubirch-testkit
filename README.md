@@ -15,9 +15,7 @@ If you want to setup your own testkit hardware, read on.
 ---
 **INFO**
 
-This firmware supports pysense and pytrack hardware **version 2.x**. If you have a pysense or pytrack v1.x, you can check
-out the branch [pysense-v1](https://github.com/ubirch/ubirch-testkit/tree/pysense-v1), but note that this
-version might not be maintained anymore.
+This firmware supports pysense and pytrack hardware version **1.x**.
 
  ---
 
