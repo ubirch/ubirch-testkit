@@ -1,21 +1,9 @@
-#!/usr/bin/env python
-#
-# Copyright (c) 2020, Pycom Limited.
-#
-# This software is licensed under the GNU GPL version 3 or any
-# later version, with permitted additional terms. For more information
-# see the Pycom Licence v1.0 document supplied with this file, or
-# available at https://www.pycom.io/opensource/licensing
-#
-
-# See https://docs.pycom.io for more information regarding library specifics
-
 from machine import Pin
 from machine import I2C
 import time
 import pycom
 
-__version__ = '0.0.4'
+__version__ = '0.0.2'
 
 """ PIC MCU wakeup reason types """
 WAKE_REASON_ACCELEROMETER = 1
@@ -39,7 +27,6 @@ class Pycoproc:
     CMD_CALIBRATE = const(0x22)
     CMD_BAUD_CHANGE = const(0x30)
     CMD_DFU = const(0x31)
-    CMD_RESET = const(0x40)
 
     REG_CMD = const(0)
     REG_ADDRL = const(1)
@@ -69,7 +56,6 @@ class Pycoproc:
     ADRESL_ADDR = const(0x09B)
     ADRESH_ADDR = const(0x09C)
 
-    TRISA_ADDR = const(0x08C)
     TRISC_ADDR = const(0x08E)
 
     PORTA_ADDR = const(0x00C)
@@ -89,7 +75,7 @@ class Pycoproc:
         if i2c is not None:
             self.i2c = i2c
         else:
-            self.i2c = I2C(0, mode=I2C.MASTER, pins=(sda, scl), baudrate=100000)
+            self.i2c = I2C(0, mode=I2C.MASTER, pins=(sda, scl))
 
         self.sda = sda
         self.scl = scl
@@ -112,18 +98,13 @@ class Pycoproc:
         self.poke_memory(ADCON1_ADDR, (0x06 << _ADCON1_ADCS_POSN))
         # enable the pull-up on RA3
         self.poke_memory(WPUA_ADDR, (1 << 3))
-
+        # make RC5 an input
+        self.set_bits_in_memory(TRISC_ADDR, 1 << 5)
         # set RC6 and RC7 as outputs and enable power to the sensors and the GPS
         self.mask_bits_in_memory(TRISC_ADDR, ~(1 << 6))
         self.mask_bits_in_memory(TRISC_ADDR, ~(1 << 7))
 
-
-        self.gps_standby(False)
-        self.sensor_power()
-        self.sd_power()
-
-        # for Pysense/Pytrack 2.0, the minimum firmware version is 15
-        if self.read_fw_version() < 15:
+        if self.read_fw_version() < 6:
             raise ValueError('Firmware out of date')
 
 
@@ -182,6 +163,24 @@ class Pycoproc:
     def set_bits_in_memory(self, addr, bits):
         self.magic_write_read(addr, _or=bits)
 
+    def get_wake_reason(self):
+        """ returns the wakeup reason, a value out of constants WAKE_REASON_* """
+        return self.peek_memory(WAKE_REASON_ADDR)
+
+    def get_sleep_remaining(self):
+        """ returns the remaining time from sleep, as an interrupt (wakeup source) might have triggered """
+        c3 = self.peek_memory(WAKE_REASON_ADDR + 3)
+        c2 = self.peek_memory(WAKE_REASON_ADDR + 2)
+        c1 = self.peek_memory(WAKE_REASON_ADDR + 1)
+        time_device_s = (c3 << 16) + (c2 << 8) + c1
+        # this time is from PIC internal oscilator, so it needs to be adjusted with the calibration value
+        try:
+            self.calibrate_rtc()
+        except Exception:
+            pass
+        time_s = int((time_device_s / self.clk_cal_factor) + 0.5) # 0.5 used for round
+        return time_s
+
     def setup_sleep(self, time_s):
         try:
             self.calibrate_rtc()
@@ -193,21 +192,22 @@ class Pycoproc:
         self._write(bytes([CMD_SETUP_SLEEP, time_s & 0xFF, (time_s >> 8) & 0xFF, (time_s >> 16) & 0xFF]))
 
     def go_to_sleep(self, gps=True):
-        self.gps_standby(gps)
-        self.sensor_power(False)
-        self.sd_power(False)
-
+        # enable or disable back-up power to the GPS receiver
+        if gps:
+            self.set_bits_in_memory(PORTC_ADDR, 1 << 7)
+        else:
+            self.mask_bits_in_memory(PORTC_ADDR, ~(1 << 7))
         # disable the ADC
         self.poke_memory(ADCON0_ADDR, 0)
 
         if self.wake_int:
             # Don't touch RA3, RA5 or RC1 so that interrupt wake-up works
-            self.poke_memory(ANSELA_ADDR, ~(1 << 3))
+            self.poke_memory(ANSELA_ADDR, ~((1 << 3) | (1 << 5)))
             self.poke_memory(ANSELC_ADDR, ~((1 << 6) | (1 << 7) | (1 << 1)))
         else:
             # disable power to the accelerometer, and don't touch RA3 so that button wake-up works
             self.poke_memory(ANSELA_ADDR, ~(1 << 3))
-            self.poke_memory(ANSELC_ADDR, ~(0))
+            self.poke_memory(ANSELC_ADDR, ~(1 << 7))
 
         self.poke_memory(ANSELB_ADDR, 0xFF)
 
@@ -223,6 +223,8 @@ class Pycoproc:
             self.set_bits_in_memory(INTCON_ADDR, 1 << 4) # enable interrupt; set INTE)
 
         self._write(bytes([CMD_GO_SLEEP]), wait=False)
+        # kill the run pin
+        Pin('P3', mode=Pin.OUT, value=0)
 
     def calibrate_rtc(self):
         # the 1.024 factor is because the PIC LF operates at 31 KHz
@@ -233,7 +235,7 @@ class Pycoproc:
         self.i2c.deinit()
         Pin('P21', mode=Pin.IN)
         pulses = pycom.pulses_get('P21', 100)
-        self.i2c.init(mode=I2C.MASTER, pins=(self.sda, self.scl), baudrate=100000)
+        self.i2c.init(mode=I2C.MASTER, pins=(self.sda, self.scl))
         idx = 0
         for i in range(len(pulses)):
             if pulses[i][1] > EXP_RTC_PERIOD:
@@ -280,47 +282,3 @@ class Pycoproc:
         """ allows wakeup to be made by the INT pin (PIC -RC1) """
         self.wake_int_pin = True
         self.wake_int_pin_rising_edge = rising_edge
-
-    def gps_standby(self, enabled=True):
-
-        if enabled:
-            # make RC4 input
-            self.set_bits_in_memory(TRISC_ADDR, 1 << 4)
-        else:
-            # make RC4 an output
-            self.mask_bits_in_memory(TRISC_ADDR, ~(1 << 4))
-            # drive RC4 high
-            self.set_bits_in_memory(PORTC_ADDR, 1 << 4)
-            time.sleep(0.2)
-            # drive RC4 low
-            self.mask_bits_in_memory(PORTC_ADDR, ~(1 << 4))
-            time.sleep(0.2)
-            # drive RC4 high
-            self.set_bits_in_memory(PORTC_ADDR, 1 << 4)
-            time.sleep(0.2)
-
-    def sensor_power(self, enabled=True):
-        # make RC7 an output
-        self.mask_bits_in_memory(TRISC_ADDR, ~(1 << 7))
-        if enabled:
-            # drive RC7 high
-            self.set_bits_in_memory(PORTC_ADDR, 1 << 7)
-        else:
-            # drive RC7 low
-            self.mask_bits_in_memory(PORTC_ADDR, ~(1 << 7))
-
-    def sd_power(self, enabled=True):
-        # make RA5 an output
-        self.mask_bits_in_memory(TRISA_ADDR, ~(1 << 5))
-        if enabled:
-            # drive RA5 high
-            self.set_bits_in_memory(PORTA_ADDR, 1 << 5)
-        else:
-            # drive RA5 low
-            self.mask_bits_in_memory(PORTA_ADDR, ~(1 << 5))
-
-
-    # at the end:
-    def reset_cmd(self):
-        self._send_cmd(CMD_RESET)
-        return

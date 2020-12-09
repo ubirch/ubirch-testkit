@@ -32,8 +32,6 @@ class Pysense(Pyboard):
         """Initialized sensors on Pysense"""
         super().__init__()
 
-        print("Pysense initialized")
-
         from .LTR329ALS01 import LTR329ALS01
         from .MPL3115A2 import MPL3115A2, ALTITUDE, PRESSURE
         from .SI7006A20 import SI7006A20
@@ -61,8 +59,6 @@ class Pytrack(Pyboard):
     def __init__(self):
         """Initialize sensors on Pytrack"""
         super().__init__()
-
-        print("Pytrack initialized")
 
         from .L76GNSS import L76GNSS
 

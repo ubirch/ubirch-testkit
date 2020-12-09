@@ -1,24 +1,13 @@
-#!/usr/bin/env python
-#
-# Copyright (c) 2019, Pycom Limited.
-#
-# This software is licensed under the GNU GPL version 3 or any
-# later version, with permitted additional terms. For more information
-# see the Pycom Licence v1.0 document supplied with this file, or
-# available at https://www.pycom.io/opensource/licensing
-#
-
 from machine import Timer
 import time
 import gc
-import binascii
 
 
 class L76GNSS:
 
     GPS_I2CADDR = const(0x10)
 
-    def __init__(self, pytrack=None, sda='P22', scl='P21', timeout=None, buffer=64):
+    def __init__(self, pytrack=None, sda='P22', scl='P21', timeout=None):
         if pytrack is not None:
             self.i2c = pytrack.i2c
         else:
@@ -29,13 +18,12 @@ class L76GNSS:
 
         self.timeout = timeout
         self.timeout_status = True
-        self.buffer = buffer
 
         self.reg = bytearray(1)
         self.i2c.writeto(GPS_I2CADDR, self.reg)
 
     def _read(self):
-        self.reg = self.i2c.readfrom(GPS_I2CADDR, self.buffer)
+        self.reg = self.i2c.readfrom(GPS_I2CADDR, 64)
         return self.reg
 
     def _convert_coords(self, gngll_s):
@@ -95,25 +83,3 @@ class L76GNSS:
             return(None, None)
         else:
             return(lat_d, lon_d)
-
-    def dump_nmea(self):
-        nmea = b''
-        while True:
-            nmea = self._read().lstrip(b'\n\n').rstrip(b'\n\n')
-            start_idx = nmea.find(b'$')
-            #print('raw[{}]: {}'.format(start_idx, nmea))
-            if nmea is not None and len(nmea) > 0:
-                if start_idx != 0:
-                    if len(nmea[:start_idx]) > 1:
-                        print('{}'.format(nmea[:start_idx].decode('ASCII')), end='')
-                if len(nmea[start_idx:]) > 1:
-                    print('{}'.format(nmea[start_idx:].decode('ASCII')), end='')
-
-    def _checksum(self, nmeadata):
-        calc_cksum = 0
-        for s in nmeadata:
-            calc_cksum ^= ord(s)
-        return('{:X}'.format(calc_cksum))
-
-    def write(self, data):
-        self.i2c.writeto(GPS_I2CADDR, '${}*{}\r\n'.format(data, self._checksum(data)) )
