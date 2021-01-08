@@ -20,7 +20,7 @@ def _send_at_cmd(lte: LTE, cmd: str, debug_print=True) -> []:
 
 def reset_modem(lte: LTE, debug_print=False):
     function_level = "1"
-    cereg_level = "0"
+    cereg_level = "2"
 
     if debug_print: print("\twaiting for reset to finish")
     lte.reset()
