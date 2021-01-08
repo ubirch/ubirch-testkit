@@ -68,3 +68,20 @@ def get_imsi(lte: LTE, debug_print=False) -> str:
         return result[0]
 
     raise Exception("getting IMSI failed: {}".format(repr(result)))
+
+def get_signalquality(lte: LTE, debug_print=False) -> str:
+    """
+    Get received signal quality parameters.
+    """
+    get_signalquality_cmd = "AT+CESQ"
+    if debug_print:
+        print("\n>> getting signal quality")
+    result = _send_at_cmd(lte, get_signalquality_cmd, debug_print=debug_print)
+    if result[-1] == 'OK':
+        if "CESQ" not in result[0]:
+            raise Exception("getting signal quality failed: {}".format(repr(result)))
+        # +CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>
+        result = result[0].split(':')[1].strip().split(',')
+        return "RSRQ: {}, RSRP: {}".format(result[4], result[5])
+
+    raise Exception("getting signal quality failed: {}".format(repr(result)))
