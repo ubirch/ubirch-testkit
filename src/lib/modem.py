@@ -1,5 +1,83 @@
 import time
 from network import LTE
+from error_handling import ErrorHandler, COLOR_MODEM_FAIL
+
+
+class LTEunsolQ(LTE):
+    """
+    Extends LTE with handling of unsolicited responses.
+    """
+
+    def __init__(self, error_handler : ErrorHandler = None, *args, **kwargs):
+        """
+        Initialize with error handler.
+        :param debug: FIXME
+        """
+        super().__init__(*args, **kwargs)
+        self.error_handler = error_handler
+
+    def send_at_cmd(self, cmd: str, expected_result_prefix : str = None,
+                    debug_print : bool = False) -> str:
+        """
+        Sends AT command. This function extends the `send_at_command` method of
+        LTE. It additionally filters its output for unsolicited messages.
+        :param cmd: command to send
+        :param expected_result_prefix: the return value of LTE.send_at_cmd is
+            parsed by this value, if None it is extracted from the command
+        :param debug_print: debug output flag
+        :return: response message, None if it was a general error or just
+            unsolicited messages
+        """
+        at_prefix = "AT"
+        if at_prefix not in cmd:
+            raise Exception('use only for AT+ prefixed commands')
+
+        split_result_by_colon = False
+        if expected_result_prefix is None:
+            split_result_by_colon = True
+            if "=" in cmd:
+                expected_result_prefix = cmd[len(at_prefix):].split('=', 1)[0]
+            elif "?" in cmd:
+                expected_result_prefix = cmd[len(at_prefix):].split('?', 1)[0]
+            else:
+                expected_result_prefix = cmd[len(at_prefix):]
+
+        if debug_print:
+            print("++ {} -> expect result prefixed with \"{}\"."
+                  .format(cmd, expected_result_prefix))
+
+        result = [k for k in super().send_at_cmd(cmd).split('\r\n')
+                  if len(k.strip()) > 0]
+        if debug_print:
+            print('-- ' + '\r\n-- '.join([r for r in result]))
+
+        retval = None
+
+        # filter results
+        l_result = len(result)
+        ll = 0
+        while ll < l_result:
+            if result[ll] == "OK":
+                retval = result[ll]
+            elif result[ll].startswith("ERROR"):
+                pass
+            elif result[ll].startswith("+CME ERROR") or result[ll].startswith("+CMS ERROR"):
+                retval = result[ll]
+            elif result[ll].startswith(expected_result_prefix):
+                if (ll + 1 < l_result):
+                    if result[ll+1] == "OK":
+                        retval = result[ll]
+                    ll += 1
+                else:
+                    retval = result[ll]
+            else:
+                # unsolicited
+                if self.error_handler is not None:
+                    self.error_handler.log("WARNING: ignoring: {}".format(result[ll]),
+                                           COLOR_MODEM_FAIL)
+            ll += 1
+
+        return retval
 
 
 def _send_at_cmd(lte: LTE, cmd: str, debug_print=True) -> []:
@@ -76,12 +154,16 @@ def get_signalquality(lte: LTE, debug_print=False) -> str:
     get_signalquality_cmd = "AT+CESQ"
     if debug_print:
         print("\n>> getting signal quality")
-    result = _send_at_cmd(lte, get_signalquality_cmd, debug_print=debug_print)
-    if result[-1] == 'OK':
-        if "CESQ" not in result[0]:
-            raise Exception("getting signal quality failed: {}".format(repr(result)))
-        # +CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>
-        result = result[0].split(':')[1].strip().split(',')
-        return "RSRQ: {}, RSRP: {}".format(result[4], result[5])
+    for _ in range(3):
+        result = lte.send_at_cmd_new(get_signalquality_cmd,
+                                     debug_print=debug_print)
+        if result is None:
+            break
+    if result is None:
+        raise Exception("getting signal quality failed")
 
     raise Exception("getting signal quality failed: {}".format(repr(result)))
+
+
+
+        return retval
