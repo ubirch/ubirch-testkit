@@ -80,57 +80,57 @@ class LTEunsolQ(LTE):
         return retval
 
 
-def _send_at_cmd(lte: LTE, cmd: str, debug_print=True) -> []:
-    result = []
-    for _ in range(3):
-        if debug_print: print("++ " + cmd)
-        result = [k for k in lte.send_at_cmd(cmd).split('\r\n') if len(k.strip()) > 0]
-        if debug_print: print('-- ' + '\r\n-- '.join([r for r in result]))
-
-        if result[-1] == 'OK':
-            if debug_print: print()
-            break
-
-        time.sleep(0.2)
-
-    return result
-
-
-def reset_modem(lte: LTE, debug_print=False):
+def reset_modem(lte: LTE, cereg_level=0, debug_print=False):
     function_level = "1"
-    cereg_level = "2"
+    cereg_level = str(cereg_level)
 
     if debug_print: print("\twaiting for reset to finish")
     lte.reset()
     lte.init()
 
     if debug_print: print("\tsetting function level")
-    for tries in range(5):
-        _send_at_cmd(lte, "AT+CFUN=" + function_level, debug_print=debug_print)
-        result = _send_at_cmd(lte, "AT+CFUN?", debug_print=debug_print)
-        if result[0] == '+CFUN: ' + function_level:
+    for _ in range(15):
+        result = lte.send_at_cmd("AT+CFUN=" + function_level,
+                                 debug_print=debug_print)
+        time.sleep(0.2)
+        if result is not None:
             break
     else:
         raise Exception("could not set modem function level")
+    for _ in range(15):
+        result = lte.send_at_cmd("AT+CFUN?",
+                                 debug_print=debug_print)
+        time.sleep(0.2)
+        if result == "+CFUN: " + function_level:
+            break
+    else:
+        raise Exception("could not get modem function level")
 
     if debug_print: print("\twaiting for SIM to be responsive")
-    for tries in range(10):
-        result = _send_at_cmd(lte, "AT+CIMI", debug_print=debug_print)
-        if result[-1] == 'OK':
+    for _ in range(30):
+        if lte.send_at_cmd("AT+CIMI", expected_result_prefix="",
+                           debug_print=debug_print) is not None:
             break
+        time.sleep(0.2)
     else:
         raise Exception("SIM does not seem to respond after reset")
 
     if debug_print: print("\tdisabling CEREG messages")
     # we disable unsolicited CEREG messages, as they interfere with AT communication with the SIM via CSIM commands
     # this also requires to use an attach method that does not require cereg messages, for pycom that is legacyattach=false
-    for tries in range(5):
-        _send_at_cmd(lte, "AT+CEREG=" + cereg_level, debug_print=debug_print)
-        result = _send_at_cmd(lte, "AT+CEREG?", debug_print=debug_print)
-        if result[0][0:9] == '+CEREG: ' + cereg_level:
+    for _ in range(15):
+        if lte.send_at_cmd("AT+CEREG=" + cereg_level,
+                           debug_print=debug_print) is not None:
             break
+        time.sleep(0.2)
     else:
         raise Exception("could not set CEREG level")
+    for _ in range(15):
+        result = lte.send_at_cmd("AT+CEREG?", debug_print=debug_print)
+        if result.startswith('+CEREG: ' + cereg_level):
+            break
+    else:
+        raise Exception("could not get CEREG level")
 
 
 def get_imsi(lte: LTE, debug_print=False) -> str:
@@ -141,29 +141,35 @@ def get_imsi(lte: LTE, debug_print=False) -> str:
     get_imsi_cmd = "AT+CIMI"
 
     if debug_print: print("\n>> getting IMSI")
-    result = _send_at_cmd(lte, get_imsi_cmd, debug_print=debug_print)
-    if result[-1] == 'OK' and len(result[0]) == IMSI_LEN:
-        return result[0]
+    for _ in range(3):
+        result = lte.send_at_cmd(get_imsi_cmd, expected_result_prefix="",
+                                 debug_print=debug_print)
+        if result is not None and len(result) == IMSI_LEN:
+            return result
+        time.sleep(0.2)
 
     raise Exception("getting IMSI failed: {}".format(repr(result)))
+
 
 def get_signalquality(lte: LTE, debug_print=False) -> str:
     """
     Get received signal quality parameters.
     """
+
+    lte.__class__ = LTEunsolQ
+
     get_signalquality_cmd = "AT+CESQ"
     if debug_print:
         print("\n>> getting signal quality")
     for _ in range(3):
-        result = lte.send_at_cmd_new(get_signalquality_cmd,
-                                     debug_print=debug_print)
-        if result is None:
+        result = lte.send_at_cmd(get_signalquality_cmd,
+                                 debug_print=debug_print)
+        if result is not None:
             break
-    if result is None:
+        time.sleep(0.2)
+    else:
         raise Exception("getting signal quality failed")
 
-    raise Exception("getting signal quality failed: {}".format(repr(result)))
-
-
-
-        return retval
+    result = result.split(',')
+    # +CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>
+    return "RSRQ: {}, RSRP: {}".format(result[4], result[5])
