@@ -1,4 +1,4 @@
-print("*** UBIRCH SIM Testkit TESTING ***")
+print("*** UBIRCH SIM Testkit TESTING unsolicited messages ***")
 import time
 
 # remember wake-up time
@@ -16,8 +16,7 @@ from config import load_config
 from connection import get_connection, NB_IoT
 from error_handling import *
 from helpers import *
-from modem import get_imsi, get_signalquality
-from network import LTE
+from modem import get_imsi, get_signalquality, LTEunsolQ
 from os import listdir, uname
 from realtimeclock import *
 
@@ -63,13 +62,13 @@ try:
     #print("modem firmware: ", sqnsupgrade.info())
 
     # initialize modem
-    lte = LTE()
+    lte = LTEunsolQ()
 
     try:
         # reset modem on any non-normal loop (modem might be in a strange state)
         if not COMING_FROM_DEEPSLEEP:
             print("++ not coming from sleep, resetting modem")
-            reset_modem(lte, debug_print=True)
+            reset_modem(lte, cereg_level=2, debug_print=True)
 
         print("++ getting IMSI")
         imsi = get_imsi(lte)
@@ -220,6 +219,10 @@ try:
                     print('.', end='')
                 time.sleep(0.01)
             print()
+            unsolmsg = lte.unsolQ_pop()
+            while unsolmsg is not None:
+                print("unsolicited msg: ", unsolmsg)
+                unsolmsg = lte.unsolQ_pop()
     except Exception as e:
         error_handler.log(e, COLOR_INET_FAIL, reset=False)
 
