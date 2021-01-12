@@ -209,12 +209,6 @@ class SimProtocol:
 
         self._AT_session_active = False
 
-    def _send_at_cmd(self, cmd):
-        if self.DEBUG: print("++ " + cmd)
-        result = [k for k in self.lte.send_at_cmd(cmd).split('\r\n') if len(k.strip()) > 0]
-        if self.DEBUG: print('-- ' + '\r\n-- '.join([r for r in result]))
-        return result
-
     def _open_channel(self) -> int:
         """
         Open a new logical channel to communicate with the SIM (see ISO 7816 part 4 sect. 6.16)
@@ -274,10 +268,10 @@ class SimProtocol:
             cmd = cmd[0] + channel_char + cmd[2:]
 
         at_cmd = 'AT+CSIM={},"{}"'.format(len(cmd), cmd.upper())
-        result = self._send_at_cmd(at_cmd)
+        result = self.lte.send_at_cmd(at_cmd)
 
-        if result[-1] == 'OK':
-            response = result[0][7:].split(',')[1]
+        if result is not None:
+            response = result.split(',')[1]
             data = b''
             code = response[-4:]
             if len(response) > 4:
@@ -331,8 +325,8 @@ class SimProtocol:
         """
         for _ in range(3):
             time.sleep(0.2)
-            result = self._send_at_cmd("AT+CSIM=?")
-            if result[-1] == 'OK':
+            result = self.lte.send_at_cmd("AT+CSIM=?", expected_result_prefix="OK")
+            if result is not None:
                 return True
 
         return False
