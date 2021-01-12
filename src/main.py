@@ -16,8 +16,7 @@ from config import load_config
 from connection import get_connection, NB_IoT
 from error_handling import *
 from helpers import *
-from modem import get_imsi
-from network import LTE
+from modem import get_imsi, LTEunsolQ
 from os import listdir
 from realtimeclock import *
 
@@ -57,7 +56,7 @@ error_handler = ErrorHandler(file_logging_enabled=True, max_file_size_kb=max_fil
                              sd_card=SD_CARD_MOUNTED)
 try:
     # initialize modem
-    lte = LTE()
+    lte = LTEunsolQ(error_handler=error_handler)
 
     try:
         # reset modem on any non-normal loop (modem might be in a strange state)
@@ -112,6 +111,7 @@ try:
             connection.setconnecttimeout(cfg["nbiot_extended_connect_timeout"])
 
     # get PIN from flash, or bootstrap from backend and then save PIN to flash
+    lte.DEBUG = lvl_debug
     pin_file = imsi + ".bin"
     pin = get_pin_from_flash(pin_file, imsi)
     if pin is None:
