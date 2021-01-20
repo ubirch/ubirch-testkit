@@ -43,7 +43,7 @@ def get_pin_from_flash(pin_file: str, imsi: str) -> str or None:
         return None
 
 
-def send_backend_data(sim: ubirch.SimProtocol, lte: LTE, conn: Connection, api_function, uuid, data) -> (int, bytes):
+def send_backend_data(sim: ubirch.SimProtocol, lte: LTEunsolQ, conn: Connection, api_function, uuid, data) -> (int, bytes):
     MAX_MODEM_RESETS = 1  # number of retries with modem reset before giving up
     MAX_RECONNECTS = 1  # number of retries with reconnect before trying a modem reset
 
