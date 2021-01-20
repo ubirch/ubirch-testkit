@@ -81,7 +81,7 @@ class LTEunsolQ(LTE):
         return retval
 
 
-def reset_modem(lte: LTE, debug_print=False):
+def reset_modem(lte: LTEunsolQ, debug_print=False):
     function_level = "1"
 
     if debug_print: print("\twaiting for reset to finish")
@@ -116,7 +116,7 @@ def reset_modem(lte: LTE, debug_print=False):
         raise Exception("SIM does not seem to respond after reset")
 
 
-def get_imsi(lte: LTE, debug_print=False) -> str:
+def get_imsi(lte: LTEunsolQ, debug_print=False) -> str:
     """
     Get the international mobile subscriber identity (IMSI) of the SIM card
     """
@@ -134,12 +134,10 @@ def get_imsi(lte: LTE, debug_print=False) -> str:
     raise Exception("getting IMSI failed: {}".format(repr(result)))
 
 
-def get_signalquality(lte: LTE, debug_print=False) -> str:
+def get_signalquality(lte: LTEunsolQ, debug_print=False) -> str:
     """
     Get received signal quality parameters.
     """
-
-    lte.__class__ = LTEunsolQ
 
     get_signalquality_cmd = "AT+CESQ"
     if debug_print:
