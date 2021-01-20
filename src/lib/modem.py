@@ -81,9 +81,8 @@ class LTEunsolQ(LTE):
         return retval
 
 
-def reset_modem(lte: LTE, cereg_level=0, debug_print=False):
+def reset_modem(lte: LTE, debug_print=False):
     function_level = "1"
-    cereg_level = str(cereg_level)
 
     if debug_print: print("\twaiting for reset to finish")
     lte.reset()
@@ -115,23 +114,6 @@ def reset_modem(lte: LTE, cereg_level=0, debug_print=False):
         time.sleep(0.2)
     else:
         raise Exception("SIM does not seem to respond after reset")
-
-    if debug_print: print("\tdisabling CEREG messages")
-    # we disable unsolicited CEREG messages, as they interfere with AT communication with the SIM via CSIM commands
-    # this also requires to use an attach method that does not require cereg messages, for pycom that is legacyattach=false
-    for _ in range(15):
-        if lte.send_at_cmd("AT+CEREG=" + cereg_level,
-                           debug_print=debug_print) is not None:
-            break
-        time.sleep(0.2)
-    else:
-        raise Exception("could not set CEREG level")
-    for _ in range(15):
-        result = lte.send_at_cmd("AT+CEREG?", debug_print=debug_print)
-        if result.startswith('+CEREG: ' + cereg_level):
-            break
-    else:
-        raise Exception("could not get CEREG level")
 
 
 def get_imsi(lte: LTE, debug_print=False) -> str:
