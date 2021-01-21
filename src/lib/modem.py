@@ -1,7 +1,8 @@
 import time
 from network import LTE
-from error_handling import ErrorHandler, COLOR_MODEM_FAIL
+from error_handling import *
 
+COLOR_MODEM_FAIL = LED_PINK_BRIGHT
 
 class LTEunsolQ(LTE):
     """
