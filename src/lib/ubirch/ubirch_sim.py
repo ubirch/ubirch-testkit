@@ -486,7 +486,7 @@ class SimProtocol:
             self._finish_AT_session()
 
         if code != STK_OK:
-            raise Exception("storing key failed: {}".format(code))
+            raise Exception("storing key with entry ID \"{}\" failed: {}".format(entry_id, code))
 
     def get_key(self, entry_id: str) -> bytes:
         """
