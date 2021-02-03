@@ -25,9 +25,7 @@
 """
 
 import time
-from binascii import a2b_base64, unhexlify
-
-import ubinascii as binascii
+from binascii import unhexlify, hexlify
 from network import LTE
 from uuid import UUID
 
@@ -87,7 +85,7 @@ def _encode_tag(tags: [(int, bytes or str)]) -> str:
     for (tag, data) in tags:
         if isinstance(data, bytes):
             # convert bytes into hex encoded string
-            data = binascii.hexlify(data).decode()
+            data = hexlify(data).decode()
 
         data_len = int(len(data) / 2)
         if data_len > 0xff:
@@ -283,7 +281,7 @@ class SimProtocol:
             data = b''
             code = response[-4:]
             if len(response) > 4:
-                data = binascii.unhexlify(response[0:-4])
+                data = unhexlify(response[0:-4])
             return data, code
 
         raise Exception(result[-1])
@@ -359,7 +357,7 @@ class SimProtocol:
         :param entry_id: the entry ID
         :return: the data and code response from the operation
         """
-        data, code = self._execute(STK_APP_SS_SELECT.format(len(entry_id), binascii.hexlify(entry_id).decode()))
+        data, code = self._execute(STK_APP_SS_SELECT.format(len(entry_id), hexlify(entry_id).decode()))
         if code == STK_NF:
             raise Exception("entry \"{}\" not found".format(entry_id))
 
@@ -377,7 +375,7 @@ class SimProtocol:
         if self.DEBUG: print("\n>> unlocking SIM")
         self._prepare_AT_session()
         try:
-            data, code = self._execute(STK_AUTH_PIN.format(len(pin), binascii.hexlify(pin).decode()))
+            data, code = self._execute(STK_AUTH_PIN.format(len(pin), hexlify(pin).decode()))
         finally:
             self._finish_AT_session()
 
@@ -419,7 +417,7 @@ class SimProtocol:
         if self.DEBUG: print("\n>> looking for entry ID \"{}\"".format(entry_id))
         self._prepare_AT_session()
         try:
-            _, code = self._execute(STK_APP_SS_SELECT.format(len(entry_id), binascii.hexlify(entry_id).decode()))
+            _, code = self._execute(STK_APP_SS_SELECT.format(len(entry_id), hexlify(entry_id).decode()))
         finally:
             self._finish_AT_session()
 
@@ -429,34 +427,6 @@ class SimProtocol:
             return False
 
         raise Exception(code)
-
-    def store_backend_public_keys(self):
-        """
-        Store the UBIRCH backend public keys in the SIM cards secure storage
-        Throws exception if operation fails.
-        """
-        backend_keys = {
-            "dev": {
-                "uuid": UUID(unhexlify("9d3c78ff22f34441a5d185c636d486ff")),
-                "pubkey": a2b_base64(
-                    "LnU8BkvGcZQPy5gWVUL+PHA0DP9dU61H8DBO8hZvTyI7lXIlG1/oruVMT7gS2nlZDK9QG+ugkRt/zTrdLrAYDA==")
-            },
-            "demo": {
-                "uuid": UUID(unhexlify("0710423518924020904200003c94b60b")),
-                "pubkey": a2b_base64(
-                    "xm+iIomBRjR3QdvLJrGE1OBs3bAf8EI49FfgBriRk36n4RUYX+0smrYK8tZkl6Lhrt9lzjiUGrXGijRoVE+UjA==")
-            },
-            "prod": {
-                "uuid": UUID(unhexlify("10b2e1a456b34fff9adacc8c20f93016")),
-                "pubkey": a2b_base64(
-                    "pJdYoJN0N3QTFMBVjZVQie1hhgumQVTy2kX9I7kXjSyoIl40EOa9MX24SBAABBV7xV2IFi1KWMnC1aLOIvOQjQ==")
-            },
-        }
-
-        # store public keys of ubirch backend on the SIM card
-        for env in ["dev", "demo", "prod"]:
-            if not self.entry_exists(env):
-                self.store_public_key(env, backend_keys.get(env).get("uuid"), backend_keys.get(env).get("pubkey"))
 
     def store_public_key(self, entry_id: str, uuid: UUID, pub_key: bytes):
         """
@@ -650,7 +620,7 @@ class SimProtocol:
         try:
             _, code = self._execute(STK_APP_SIGN_INIT.format(protocol_version, int(len(args) / 2), args))
             if code == STK_OK:
-                args = binascii.hexlify(value).decode()
+                args = hexlify(value).decode()
                 _, code = self._send_cmd_in_chunks(STK_APP_SIGN_FINAL, args)
                 data, code = self._get_response(code)
                 if code == STK_OK:
@@ -674,7 +644,7 @@ class SimProtocol:
         try:
             _, code = self._execute(STK_APP_VERIFY_INIT.format(protocol_version, int(len(args) / 2), args))
             if code == STK_OK:
-                args = binascii.hexlify(value).decode()
+                args = hexlify(value).decode()
                 _, code = self._send_cmd_in_chunks(STK_APP_VERIFY_FINAL, args)
                 if code == STK_OK:
                     return True
