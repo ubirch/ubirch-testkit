@@ -4,12 +4,13 @@ from error_handling import *
 
 COLOR_MODEM_FAIL = LED_PINK_BRIGHT
 
+
 class LTEunsolQ(LTE):
     """
     Extends LTE with handling of unsolicited responses.
     """
 
-    def __init__(self, error_handler : ErrorHandler = None, *args, **kwargs):
+    def __init__(self, error_handler: ErrorHandler = None, *args, **kwargs):
         """
         Initialize with error handler.
         :param debug: FIXME
@@ -17,8 +18,8 @@ class LTEunsolQ(LTE):
         super().__init__(*args, **kwargs)
         self.error_handler = error_handler
 
-    def send_at_cmd(self, cmd: str, expected_result_prefix : str = None,
-                    debug_print : bool = False) -> str:
+    def send_at_cmd(self, cmd: str, expected_result_prefix: str = None,
+                    debug_print: bool = False) -> str:
         """
         Sends AT command. This function extends the `send_at_command` method of
         LTE. It additionally filters its output for unsolicited messages.
@@ -33,9 +34,7 @@ class LTEunsolQ(LTE):
         if at_prefix not in cmd:
             raise Exception('use only for AT+ prefixed commands')
 
-        split_result_by_colon = False
         if expected_result_prefix is None:
-            split_result_by_colon = True
             if "=" in cmd:
                 expected_result_prefix = cmd[len(at_prefix):].split('=', 1)[0]
             elif "?" in cmd:
@@ -55,17 +54,28 @@ class LTEunsolQ(LTE):
         retval = None
 
         # filter results
-        for line in result:
+        skip_next_line = False
+        for line_number, line in enumerate(result):
+            if skip_next_line:
+                continue
             if line == "OK":
                 retval = line
-            elif "ERROR" in line:
+            elif line.startswith("ERROR"):
                 pass
+            elif line.startswith("+CME ERROR") or line.startswith("+CMS ERROR"):
+                retval = line
             elif line.startswith(expected_result_prefix):
-                return line
+                if line_number + 1 < len(result):
+                    if result[line_number + 1] == "OK":
+                        retval = line
+                    skip_next_line = True
+                else:
+                    retval = line
             else:
                 # unsolicited
                 if self.error_handler is not None:
                     self.error_handler.log("WARNING: ignoring: {}".format(line), COLOR_MODEM_FAIL)
+
         return retval
 
 
@@ -119,7 +129,7 @@ def get_imsi(lte: LTEunsolQ, debug_print=False) -> str:
             return result
         time.sleep(0.2)
 
-    raise Exception("getting IMSI failed: {}".format(repr(result)))
+    raise Exception("getting IMSI failed: {}".format(repr(result)))  # fixme result can be 'None'
 
 
 def get_signalquality(lte: LTEunsolQ, debug_print=False) -> str:
