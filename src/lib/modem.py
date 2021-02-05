@@ -64,13 +64,13 @@ class LTEunsolQ(LTE):
                 pass
             elif line.startswith("+CME ERROR") or line.startswith("+CMS ERROR"):
                 retval = line
-            elif line.startswith(expected_result_prefix):
-                if line_number + 1 < len(result):
-                    if result[line_number + 1] == "OK":
-                        retval = line
-                    skip_next_line = True
-                else:
-                    retval = line
+            elif line.startswith(expected_result_prefix):  # if we find the expected prefix
+                if line_number + 1 < len(result):  # we check if there is a next line
+                    if result[line_number + 1] == "OK":  # only if the next line is "OK"
+                        retval = line  # the line with the expected prefix is the potential return value
+                    skip_next_line = True  # either way, we do not need to check the next line further
+                else:  # if there is no next line
+                    retval = line  # we return the line with the expected prefix
             else:
                 # unsolicited
                 if self.error_handler is not None:
