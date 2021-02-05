@@ -1,7 +1,8 @@
-from binascii import hexlify
-import machine
 import sys
 import time
+from binascii import hexlify
+
+import machine
 
 
 class Connection:
@@ -18,7 +19,7 @@ class Connection:
 
 class NB_IoT(Connection):
 
-    def __init__(self, lte: LTEunsolQ, apn: str, band: int or None, attachtimeout: int, connecttimeout:int):
+    def __init__(self, lte: LTE, apn: str, band: int or None, attachtimeout: int, connecttimeout: int):
         self.lte = lte
         self.apn = apn
         self.band = band
@@ -122,7 +123,7 @@ class WIFI(Connection):
 connectionInstance = None
 
 
-def get_connection(lte: LTEunsolQ, cfg: dict) -> Connection:
+def get_connection(lte: LTE, cfg: dict) -> Connection:
     global connectionInstance
     if connectionInstance is not None:
         return connectionInstance
@@ -130,7 +131,8 @@ def get_connection(lte: LTEunsolQ, cfg: dict) -> Connection:
         connectionInstance = WIFI(cfg['networks'])
         return connectionInstance
     elif cfg['connection'] == "nbiot":
-        connectionInstance = NB_IoT(lte, cfg['apn'], cfg['band'],cfg['nbiot_attach_timeout'],cfg['nbiot_connect_timeout'])
+        connectionInstance = NB_IoT(lte, cfg['apn'], cfg['band'], cfg['nbiot_attach_timeout'],
+                                    cfg['nbiot_connect_timeout'])
         return connectionInstance
     else:
         raise Exception(
