@@ -1,5 +1,5 @@
-import time
 from network import LTE
+
 from error_handling import *
 
 COLOR_MODEM_FAIL = LED_PINK_BRIGHT
@@ -55,29 +55,17 @@ class LTEunsolQ(LTE):
         retval = None
 
         # filter results
-        l_result = len(result)
-        ll = 0
-        while ll < l_result:
-            if result[ll] == "OK":
-                retval = result[ll]
-            elif result[ll].startswith("ERROR"):
+        for line in result:
+            if line == "OK":
+                retval = line
+            elif "ERROR" in line:
                 pass
-            elif result[ll].startswith("+CME ERROR") or result[ll].startswith("+CMS ERROR"):
-                retval = result[ll]
-            elif result[ll].startswith(expected_result_prefix):
-                if (ll + 1 < l_result):
-                    if result[ll+1] == "OK":
-                        retval = result[ll]
-                    ll += 1
-                else:
-                    retval = result[ll]
+            elif line.startswith(expected_result_prefix):
+                return line
             else:
                 # unsolicited
                 if self.error_handler is not None:
-                    self.error_handler.log("WARNING: ignoring: {}".format(result[ll]),
-                                           COLOR_MODEM_FAIL)
-            ll += 1
-
+                    self.error_handler.log("WARNING: ignoring: {}".format(line), COLOR_MODEM_FAIL)
         return retval
 
 
