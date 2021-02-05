@@ -25,8 +25,10 @@
 """
 
 import time
+
 import ubinascii as binascii
 from network import LTE
+
 from uuid import UUID
 
 supported_channels = [0, 1, 2, 3]
@@ -325,7 +327,7 @@ class SimProtocol:
         """
         for _ in range(3):
             time.sleep(0.2)
-            result = self.lte.send_at_cmd("AT+CSIM=?", expected_result_prefix="OK")
+            result = self.lte.send_at_cmd("AT+CSIM=?")
             if result is not None:
                 return True
 
