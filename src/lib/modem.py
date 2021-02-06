@@ -1,32 +1,62 @@
-from network import LTE
-
 from error_handling import *
+from network import LTE
+from ubirch import ModemInterface
 
 COLOR_MODEM_FAIL = LED_PINK_BRIGHT
 
 
-class LTEunsolQ(LTE):
+class Modem(ModemInterface):
     """
-    Extends LTE with handling of unsolicited responses.
+    todo
     """
 
-    def __init__(self, error_handler: ErrorHandler = None, *args, **kwargs):
+    def __init__(self, lte: LTE, error_handler: ErrorHandler = None, debug: bool = False):
         """
         Initialize with error handler.
-        :param debug: FIXME
+        :param debug: todo
         """
-        super().__init__(*args, **kwargs)
+        self.lte = lte
+        self._AT_session_active = False  # weather or not the lib currently opened an AT commands session
+        self._AT_session_modem_suspended = False  # weather the modem was suspended for an AT session
+        self.debug = debug
         self.error_handler = error_handler
 
-    def send_at_cmd(self, cmd: str, expected_result_prefix: str = None,
-                    debug_print: bool = False) -> str:
+    def prepare_AT_session(self) -> None:
+        """
+        Ensures all prerequisites to send AT commands to modem and saves the modems state
+        for restoring it later.
+        """
+        if self._AT_session_active:
+            return
+
+        # if modem is connected, suspend it and remember that we did
+        if self.lte.isconnected():
+            self.lte.pppsuspend()
+            self._AT_session_modem_suspended = True
+
+        self._AT_session_active = True
+
+    def finish_AT_session(self) -> None:
+        """
+        Restores the modem state after the library is finished sending AT commands.
+        """
+        if not self._AT_session_active:
+            return
+
+        # if modem was suspended for the session, restore it
+        if self._AT_session_modem_suspended:
+            self.lte.pppresume()
+            self._AT_session_modem_suspended = False
+
+        self._AT_session_active = False
+
+    def send_at_cmd(self, cmd: str, expected_result_prefix: str = None) -> str:
         """
         Sends AT command. This function extends the `send_at_command` method of
         LTE. It additionally filters its output for unsolicited messages.
         :param cmd: command to send
         :param expected_result_prefix: the return value of LTE.send_at_cmd is
             parsed by this value, if None it is extracted from the command
-        :param debug_print: debug output flag
         :return: response message, None if it was a general error or just
             unsolicited messages
         """
@@ -42,13 +72,12 @@ class LTEunsolQ(LTE):
             else:
                 expected_result_prefix = cmd[len(at_prefix):]
 
-        if debug_print:
+        if self.debug:
             print("++ {} -> expect result prefixed with \"{}\"."
                   .format(cmd, expected_result_prefix))
 
-        result = [k for k in super().send_at_cmd(cmd).split('\r\n')
-                  if len(k.strip()) > 0]
-        if debug_print:
+        result = [k for k in self.lte.send_at_cmd(cmd).split('\r\n') if len(k.strip()) > 0]
+        if self.debug:
             print('-- ' + '\r\n-- '.join([r for r in result]))
 
         retval = None
@@ -78,77 +107,69 @@ class LTEunsolQ(LTE):
 
         return retval
 
+    def reset(self):
+        function_level = "1"
 
-def reset_modem(lte: LTEunsolQ, debug_print=False):
-    function_level = "1"
+        if self.debug: print("\twaiting for reset to finish")
+        self.lte.reset()
+        self.lte.init()
 
-    if debug_print: print("\twaiting for reset to finish")
-    lte.reset()
-    lte.init()
+        if self.debug: print("\tsetting function level")
+        for _ in range(15):
+            result = self.send_at_cmd("AT+CFUN=" + function_level)
+            time.sleep(0.2)
+            if result is not None:
+                break
+        else:
+            raise Exception("could not set modem function level")
+        for _ in range(15):
+            result = self.send_at_cmd("AT+CFUN?")
+            time.sleep(0.2)
+            if result == "+CFUN: " + function_level:
+                break
+        else:
+            raise Exception("could not get modem function level")
 
-    if debug_print: print("\tsetting function level")
-    for _ in range(15):
-        result = lte.send_at_cmd("AT+CFUN=" + function_level,
-                                 debug_print=debug_print)
-        time.sleep(0.2)
-        if result is not None:
-            break
-    else:
-        raise Exception("could not set modem function level")
-    for _ in range(15):
-        result = lte.send_at_cmd("AT+CFUN?",
-                                 debug_print=debug_print)
-        time.sleep(0.2)
-        if result == "+CFUN: " + function_level:
-            break
-    else:
-        raise Exception("could not get modem function level")
+        if self.debug: print("\twaiting for SIM to be responsive")
+        for _ in range(30):
+            if self.send_at_cmd("AT+CIMI", expected_result_prefix="") is not None:
+                break
+            time.sleep(0.2)
+        else:
+            raise Exception("SIM does not seem to respond after reset")
 
-    if debug_print: print("\twaiting for SIM to be responsive")
-    for _ in range(30):
-        if lte.send_at_cmd("AT+CIMI", expected_result_prefix="",
-                           debug_print=debug_print) is not None:
-            break
-        time.sleep(0.2)
-    else:
-        raise Exception("SIM does not seem to respond after reset")
+    def get_imsi(self) -> str:
+        """
+        Get the international mobile subscriber identity (IMSI) of the SIM card
+        """
+        IMSI_LEN = 15
+        get_imsi_cmd = "AT+CIMI"
 
+        if self.debug: print("\n>> getting IMSI")
+        for _ in range(3):
+            result = self.send_at_cmd(get_imsi_cmd, expected_result_prefix="")
+            if result is not None and len(result) == IMSI_LEN:
+                return result
+            time.sleep(0.2)
 
-def get_imsi(lte: LTEunsolQ, debug_print=False) -> str:
-    """
-    Get the international mobile subscriber identity (IMSI) of the SIM card
-    """
-    IMSI_LEN = 15
-    get_imsi_cmd = "AT+CIMI"
+        raise Exception("getting IMSI failed: {}".format(repr(result)))  # fixme result can be 'None'
 
-    if debug_print: print("\n>> getting IMSI")
-    for _ in range(3):
-        result = lte.send_at_cmd(get_imsi_cmd, expected_result_prefix="",
-                                 debug_print=debug_print)
-        if result is not None and len(result) == IMSI_LEN:
-            return result
-        time.sleep(0.2)
+    def get_signalquality(self) -> str:
+        """
+        Get received signal quality parameters.
+        """
 
-    raise Exception("getting IMSI failed: {}".format(repr(result)))  # fixme result can be 'None'
+        get_signalquality_cmd = "AT+CESQ"
+        if self.debug:
+            print("\n>> getting signal quality")
+        for _ in range(3):
+            result = self.send_at_cmd(get_signalquality_cmd)
+            if result is not None:
+                break
+            time.sleep(0.2)
+        else:
+            raise Exception("getting signal quality failed")
 
-
-def get_signalquality(lte: LTEunsolQ, debug_print=False) -> str:
-    """
-    Get received signal quality parameters.
-    """
-
-    get_signalquality_cmd = "AT+CESQ"
-    if debug_print:
-        print("\n>> getting signal quality")
-    for _ in range(3):
-        result = lte.send_at_cmd(get_signalquality_cmd,
-                                 debug_print=debug_print)
-        if result is not None:
-            break
-        time.sleep(0.2)
-    else:
-        raise Exception("getting signal quality failed")
-
-    result = result.split(',')
-    # +CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>
-    return "RSRQ: {}, RSRP: {}".format(result[4], result[5])
+        result = result.split(',')
+        # +CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>
+        return "RSRQ: {}, RSRP: {}".format(result[4], result[5])
