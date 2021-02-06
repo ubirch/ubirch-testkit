@@ -3,8 +3,7 @@ import os
 import time
 
 from connection import Connection
-from modem import reset_modem
-from network import LTE
+from modem import Modem
 from uuid import UUID
 
 import ubirch
@@ -13,10 +12,10 @@ import ubirch
 def mount_sd():
     try:
         sd = machine.SD()
-        try:#check if sd is already mounted
+        try:  # check if sd is already mounted
             os.stat('/sd')
             return True
-        except:#not mounted: continue
+        except:  # not mounted: continue    # todo except specific exception
             pass
         os.mount(sd, '/sd')
         return True
@@ -43,7 +42,8 @@ def get_pin_from_flash(pin_file: str, imsi: str) -> str or None:
         return None
 
 
-def send_backend_data(sim: ubirch.SimProtocol, lte: LTEunsolQ, conn: Connection, api_function, uuid, data) -> (int, bytes):
+def send_backend_data(sim: ubirch.SimProtocol, modem: Modem, conn: Connection, api_function, uuid, data) -> (
+        int, bytes):
     MAX_MODEM_RESETS = 1  # number of retries with modem reset before giving up
     MAX_RECONNECTS = 1  # number of retries with reconnect before trying a modem reset
 
@@ -52,7 +52,7 @@ def send_backend_data(sim: ubirch.SimProtocol, lte: LTEunsolQ, conn: Connection,
         if reset_attempts > 0:
             print("\tretrying with modem reset")
             sim.deinit()
-            reset_modem(lte)  # TODO: should probably be connection.reset_hardware()
+            modem.reset()  # TODO: should probably be connection.reset_hardware()
             conn.connect()
 
         # try to send multiple times (with reconnect)
