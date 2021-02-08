@@ -32,6 +32,7 @@ from uuid import UUID
 supported_channels = [0, 1, 2, 3]
 
 # AT+CSIM=LENGTH,COMMAND
+# +CSIM: LENGTH,RESPONSE
 
 # Application Identifier
 APP_DF = 'D2760001180002FF34108389C0028B02'
@@ -255,15 +256,15 @@ class SimProtocol:
         at_cmd = 'AT+CSIM={},"{}"'.format(len(cmd), cmd.upper())
         result = self.modem.send_at_cmd(at_cmd)
 
-        if result is not None:
-            response = result.split(',')[1]
-            data = b''
-            code = response[-4:]
-            if len(response) > 4:
-                data = binascii.unhexlify(response[0:-4])
-            return data, code
+        if not result.startswith("+CSIM: ") or len(result) < len("+CSIM: 4,xxxx"):
+            raise Exception("invalid response for AT+CSIM command: {}".format(repr(result)))
 
-        raise Exception(result[-1])  # fixme result is 'None' here
+        response = result.split(',')[1]
+        data = b''
+        code = response[-4:]
+        if len(response) > 4:
+            data = binascii.unhexlify(response[:-4])
+        return data, code
 
     def _send_cmd_in_chunks(self, cmd, args) -> (bytes, str):
         """
