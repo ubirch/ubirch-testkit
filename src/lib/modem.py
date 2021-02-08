@@ -99,6 +99,7 @@ class Modem(ModemInterface):
         skip_next_line = False
         for line_number, line in enumerate(result):
             if skip_next_line:
+                skip_next_line = False
                 continue
             if line == "OK":
                 retval = line
