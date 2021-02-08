@@ -3,6 +3,7 @@ from network import LTE
 from ubirch import ModemInterface
 
 COLOR_MODEM_FAIL = LED_PINK_BRIGHT
+MAX_ERROR_RESP_PREFIX = len("+CME ERROR")
 
 
 class Modem(ModemInterface):
@@ -57,9 +58,12 @@ class Modem(ModemInterface):
         """
         for _ in range(3):
             time.sleep(0.2)
-            result = self.send_at_cmd("AT+CSIM=?")
-            if result == "OK":
-                return True
+            try:
+                result = self.send_at_cmd("AT+CSIM=?")
+                if result == "OK":
+                    return True
+            except:
+                pass
 
         return False
 
@@ -94,6 +98,7 @@ class Modem(ModemInterface):
             print('-- ' + '\r\n-- '.join([r for r in result]))
 
         retval = None
+        error = None
 
         # filter results
         skip_next_line = False
@@ -103,23 +108,23 @@ class Modem(ModemInterface):
                 continue
             if line == "OK":
                 retval = line
-            elif line.startswith("ERROR"):
-                pass
-            elif line.startswith("+CME ERROR") or line.startswith("+CMS ERROR"):
+            elif "ERROR" in line[:MAX_ERROR_RESP_PREFIX + 1]:
+                error = line
+            elif line.startswith(expected_result_prefix):
                 retval = line
-            elif line.startswith(expected_result_prefix):  # if we find the expected prefix
-                if line_number + 1 < len(result):               # we check if there is a next line
-                    if result[line_number + 1] == "OK":             # only if the next line is "OK"
-                        retval = line                                   # the line with the expected prefix is the potential return value
-                    skip_next_line = True                           # either way, we do not need to check the next line further
-                else:                                           # if there is no next line
-                    retval = line                                   # we return the line with the expected prefix
+                if line_number + 1 < len(result) and result[line_number + 1] == "OK":
+                    skip_next_line = True
             else:
                 # unsolicited
                 if self.error_handler is not None:
                     self.error_handler.log("WARNING: ignoring: {}".format(line), COLOR_MODEM_FAIL)
 
-        return retval
+        if retval is not None:
+            return retval
+        elif error is not None:
+            raise Exception(error)
+        else:
+            raise Exception("empty AT response")
 
     def reset(self):
         function_level = "1"
