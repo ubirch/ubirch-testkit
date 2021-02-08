@@ -244,7 +244,7 @@ try:
         # send data message to data service, with reconnects/modem resets if necessary
         print("++ sending data")
         try:
-            status_code, content = send_backend_data(sim, lte, connection, api.send_data, uuid, message)
+            status_code, content = send_backend_data(sim, modem, connection, api.send_data, uuid, message)
         except Exception as e:
             error_handler.log(e, COLOR_MODEM_FAIL, reset=True)
 
@@ -255,7 +255,7 @@ try:
         # send UPP to the ubirch authentication service to be anchored to the blockchain
         print("++ sending UPP")
         try:
-            status_code, content = send_backend_data(sim, lte, connection, api.send_upp, uuid, upp)
+            status_code, content = send_backend_data(sim, modem, connection, api.send_upp, uuid, upp)
         except Exception as e:
             error_handler.log(e, COLOR_MODEM_FAIL, reset=True)
 
