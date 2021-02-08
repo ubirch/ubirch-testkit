@@ -159,13 +159,19 @@ class Modem(ModemInterface):
         get_imsi_cmd = "AT+CIMI"
 
         if self.debug: print("\n>> getting IMSI")
+        result = None
         for _ in range(3):
             result = self.send_at_cmd(get_imsi_cmd, expected_result_prefix="")
             if result is not None and len(result) == IMSI_LEN:
-                return result
+                try:
+                    int(result)  # throws ValueError if IMSI has invalid syntax for integer with base 10
+                except ValueError:
+                    continue
+                else:
+                    return result
             time.sleep(0.2)
 
-        raise Exception("getting IMSI failed: {}".format(repr(result)))  # fixme result can be 'None'
+        raise Exception("getting IMSI failed: {}".format(repr(result)))
 
     def get_signalquality(self) -> str:
         """
