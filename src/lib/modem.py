@@ -50,6 +50,19 @@ class Modem(ModemInterface):
 
         self._AT_session_active = False
 
+    def check_sim_access(self) -> bool:
+        """
+        Checks Generic SIM Access.
+        :return: if SIM access was successful
+        """
+        for _ in range(3):
+            time.sleep(0.2)
+            result = self.send_at_cmd("AT+CSIM=?")
+            if result == "OK":
+                return True
+
+        return False
+
     def send_at_cmd(self, cmd: str, expected_result_prefix: str = None) -> str:
         """
         Sends AT command. This function extends the `send_at_command` method of
