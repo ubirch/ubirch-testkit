@@ -64,8 +64,8 @@ class Modem(ModemInterface):
                     return True
             except:
                 pass
-
-        return False
+        else:
+            return False
 
     def send_at_cmd(self, cmd: str, expected_result_prefix: str = None) -> str:
         """
@@ -135,26 +135,29 @@ class Modem(ModemInterface):
 
         if self.debug: print("\tsetting function level")
         for _ in range(15):
-            result = self.send_at_cmd("AT+CFUN=" + function_level)
             time.sleep(0.2)
-            if result is not None:
-                break
+            try:
+                result = self.send_at_cmd("AT+CFUN=" + function_level)
+                if result == "OK":
+                    break
+            except:
+                pass
         else:
             raise Exception("could not set modem function level")
+
         for _ in range(15):
-            result = self.send_at_cmd("AT+CFUN?")
             time.sleep(0.2)
-            if result == "+CFUN: " + function_level:
-                break
+            try:
+                result = self.send_at_cmd("AT+CFUN?")
+                if result == "+CFUN: " + function_level:
+                    break
+            except:
+                pass
         else:
             raise Exception("could not get modem function level")
 
         if self.debug: print("\twaiting for SIM to be responsive")
-        for _ in range(30):
-            if self.send_at_cmd("AT+CIMI", expected_result_prefix="") is not None:
-                break
-            time.sleep(0.2)
-        else:
+        if not self.check_sim_access():
             raise Exception("SIM does not seem to respond after reset")
 
     def get_imsi(self) -> str:
@@ -167,19 +170,22 @@ class Modem(ModemInterface):
         if self.debug: print("\n>> getting IMSI")
         result = None
         for _ in range(3):
-            result = self.send_at_cmd(get_imsi_cmd, expected_result_prefix="")
-            if result is not None and len(result) == IMSI_LEN:
-                try:
-                    int(result)  # throws ValueError if IMSI has invalid syntax for integer with base 10
-                except ValueError:
-                    continue
-                else:
-                    return result
             time.sleep(0.2)
+            try:
+                result = self.send_at_cmd(get_imsi_cmd, expected_result_prefix="")
+                if len(result) == IMSI_LEN:
+                    try:
+                        int(result)  # throws ValueError if IMSI has invalid syntax for integer with base 10
+                    except ValueError:
+                        continue
+                    else:
+                        return result
+            except:
+                pass
+        else:
+            raise Exception("getting IMSI failed: {}".format(repr(result)))
 
-        raise Exception("getting IMSI failed: {}".format(repr(result)))
-
-    def get_signalquality(self) -> str:
+    def get_signal_quality(self) -> str:
         """
         Get received signal quality parameters.
         """
@@ -188,10 +194,13 @@ class Modem(ModemInterface):
         if self.debug:
             print("\n>> getting signal quality")
         for _ in range(3):
-            result = self.send_at_cmd(get_signalquality_cmd)
-            if result is not None:
-                break
             time.sleep(0.2)
+            try:
+                result = self.send_at_cmd(get_signalquality_cmd)
+                if result.startswith("+CESQ"):
+                    break
+            except:
+                pass
         else:
             raise Exception("getting signal quality failed")
 

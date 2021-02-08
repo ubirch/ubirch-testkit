@@ -151,7 +151,7 @@ try:
     try:
         while True:
             # get signal quality
-            sigq = modem.get_signalquality()
+            sigq = modem.get_signal_quality()
             print("signal quality: " + sigq)
             for ii in range(50):
                 # generate APDU command traffic
