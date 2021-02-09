@@ -88,10 +88,10 @@ class Modem(ModemInterface):
         exc = Exception()
         for _ in range(max_retries):
             try:
-                time.sleep(0.2)
                 return self._send_at_cmd(cmd, expected_result_prefix)
             except Exception as e:
                 exc = e
+                time.sleep(0.2)
         else:
             raise exc
 
