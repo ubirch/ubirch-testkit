@@ -63,14 +63,14 @@ class Modem(ModemInterface):
             return False
 
     def send(self, cmd: str, expected_result_prefix: str = None, max_retries: int = 10) -> str:  # todo find better name
-        e = Exception()
+        exc = Exception()
         for _ in range(max_retries):
             try:
                 return self.send_at_cmd(cmd, expected_result_prefix)
             except Exception as e:
-                pass
+                exc = e
         else:
-            raise e
+            raise exc
 
     def send_at_cmd(self, cmd: str, expected_result_prefix: str = None) -> str:
         """
@@ -123,9 +123,17 @@ class Modem(ModemInterface):
         if retval is not None:
             return retval
         elif error is not None:
-            raise Exception(error)
+            raise Exception("command {} returned {}".format(cmd, error))
         else:
-            raise Exception("empty AT response")
+            raise Exception("command {} returned no AT response".format(cmd))
+
+    def set_function_level(self, function_level: str):
+        if self.debug: print("\tsetting function level: {}".format(function_level))
+        self.send("AT+CFUN=" + function_level, expected_result_prefix="OK")
+
+    def get_function_level(self) -> str:
+        result = self.send("AT+CFUN?")
+        return result.lstrip("+CFUN: ")
 
     def reset(self):
         function_level = "1"
@@ -134,14 +142,9 @@ class Modem(ModemInterface):
         self.lte.reset()
         self.lte.init()
 
-        if self.debug: print("\tsetting function level")
-        result = self.send("AT+CFUN=" + function_level, expected_result_prefix="OK")
-        if result != "OK":
+        self.set_function_level(function_level)
+        if not self.get_function_level() == function_level:
             raise Exception("could not set modem function level")
-
-        result = self.send("AT+CFUN?")
-        if result != "+CFUN: " + function_level:
-            raise Exception("could not get modem function level")
 
         if self.debug: print("\twaiting for SIM to be responsive")
         if not self.check_sim_access():
