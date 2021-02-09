@@ -338,7 +338,9 @@ class SimProtocol:
         """
         Authenticate against the SIM application to be able to use secure operations.
         Throws an exception if PIN not accepted.
-        :param pin: the pin to use for authentication
+        !!! Refrain from repeatedly calling this method to avoid the SIM card getting
+        locked after using the wrong PIN several times !!!
+        :param pin: the PIN to use for authentication
         """
         if self.DEBUG: print("\n>> unlocking SIM")
         self.modem.prepare_AT_session()
