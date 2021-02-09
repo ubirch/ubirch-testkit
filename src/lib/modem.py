@@ -57,31 +57,12 @@ class Modem(ModemInterface):
         :return: if SIM access was successful
         """
         try:
-            self.send("AT+CSIM=?", expected_result_prefix="OK")
+            self.send_at_cmd("AT+CSIM=?", expected_result_prefix="OK", max_retries=10)
             return True
         except:
             return False
 
-    def send(self, cmd: str, expected_result_prefix: str = None, max_retries: int = 10) -> str:  # todo find better name
-        exc = Exception()
-        for _ in range(max_retries):
-            try:
-                return self.send_at_cmd(cmd, expected_result_prefix)
-            except Exception as e:
-                exc = e
-        else:
-            raise exc
-
-    def send_at_cmd(self, cmd: str, expected_result_prefix: str = None) -> str:
-        """
-        Sends AT command. This function extends the `send_at_command` method of
-        LTE. It additionally filters its output for unsolicited messages.
-        :param cmd: command to send
-        :param expected_result_prefix: the return value of LTE.send_at_cmd is
-            parsed by this value, if None it is extracted from the command
-        :return: response message, None if it was a general error or just
-            unsolicited messages
-        """
+    def send_at_cmd(self, cmd: str, expected_result_prefix: str = None, max_retries: int = 1) -> str:
         at_prefix = "AT"
         if not cmd.startswith(at_prefix):
             raise Exception('use only for AT+ prefixed commands')
@@ -94,8 +75,26 @@ class Modem(ModemInterface):
             else:
                 expected_result_prefix = cmd[len(at_prefix):]
 
-        time.sleep(0.2)
+        exc = Exception()
+        for _ in range(max_retries):
+            try:
+                time.sleep(0.2)
+                return self._send_at_cmd(cmd, expected_result_prefix)
+            except Exception as e:
+                exc = e
+        else:
+            raise exc
 
+    def _send_at_cmd(self, cmd: str, expected_result_prefix: str) -> str:
+        """
+        Sends AT command. This function extends the `send_at_command` method of
+        LTE. It additionally filters its output for unsolicited messages.
+        :param cmd: command to send
+        :param expected_result_prefix: the return value of LTE.send_at_cmd is
+            parsed by this value, if None it is extracted from the command
+        :return: response message, None if it was a general error or just
+            unsolicited messages
+        """
         result = [k for k in self.lte.send_at_cmd(cmd).split('\r\n') if len(k.strip()) > 0]
         if self.debug:
             print('-- ' + '\r\n-- '.join([r for r in result]))
@@ -129,10 +128,10 @@ class Modem(ModemInterface):
 
     def set_function_level(self, function_level: str):
         if self.debug: print("\tsetting function level: {}".format(function_level))
-        self.send("AT+CFUN=" + function_level, expected_result_prefix="OK")
+        self.send_at_cmd("AT+CFUN=" + function_level, expected_result_prefix="OK", max_retries=10)
 
     def get_function_level(self) -> str:
-        result = self.send("AT+CFUN?")
+        result = self.send_at_cmd("AT+CFUN?", max_retries=10)
         return result.lstrip("+CFUN: ")
 
     def reset(self):
@@ -158,7 +157,7 @@ class Modem(ModemInterface):
         get_imsi_cmd = "AT+CIMI"
 
         if self.debug: print("\n>> getting IMSI")
-        result = self.send(get_imsi_cmd, expected_result_prefix="")
+        result = self.send_at_cmd(get_imsi_cmd, expected_result_prefix="", max_retries=10)
         if len(result) != IMSI_LEN:
             raise Exception("received invalid response: {}".format(result))
         int(result)  # throws ValueError if IMSI has invalid syntax for integer with base 10
@@ -172,7 +171,7 @@ class Modem(ModemInterface):
         get_signal_quality_cmd = "AT+CESQ"
 
         if self.debug: print("\n>> getting signal quality")
-        result = self.send(get_signal_quality_cmd).split(',')
+        result = self.send_at_cmd(get_signal_quality_cmd, max_retries=10).split(',')
         if len(result) != EXPECTED_RESULT_LEN:
             raise Exception("received invalid response: {}".format(result))
 
