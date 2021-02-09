@@ -57,11 +57,9 @@ class Modem(ModemInterface):
         :return: if SIM access was successful
         """
         for _ in range(3):
-            time.sleep(0.2)
             try:
-                result = self.send_at_cmd("AT+CSIM=?")
-                if result == "OK":
-                    return True
+                self.send_at_cmd("AT+CSIM=?", expected_result_prefix="OK")
+                return True
             except:
                 pass
         else:
@@ -78,7 +76,7 @@ class Modem(ModemInterface):
             unsolicited messages
         """
         at_prefix = "AT"
-        if at_prefix not in cmd:
+        if not cmd.startswith(at_prefix):
             raise Exception('use only for AT+ prefixed commands')
 
         if expected_result_prefix is None:
@@ -89,9 +87,7 @@ class Modem(ModemInterface):
             else:
                 expected_result_prefix = cmd[len(at_prefix):]
 
-        if self.debug:
-            print("++ {} -> expect result prefixed with \"{}\"."
-                  .format(cmd, expected_result_prefix))
+        time.sleep(0.2)
 
         result = [k for k in self.lte.send_at_cmd(cmd).split('\r\n') if len(k.strip()) > 0]
         if self.debug:
@@ -106,8 +102,6 @@ class Modem(ModemInterface):
             if skip_next_line:
                 skip_next_line = False
                 continue
-            if line == "OK":
-                retval = line
             elif "ERROR" in line[:MAX_ERROR_RESP_PREFIX + 1]:
                 error = line
             elif line.startswith(expected_result_prefix):
@@ -135,18 +129,15 @@ class Modem(ModemInterface):
 
         if self.debug: print("\tsetting function level")
         for _ in range(15):
-            time.sleep(0.2)
             try:
-                result = self.send_at_cmd("AT+CFUN=" + function_level)
-                if result == "OK":
-                    break
+                self.send_at_cmd("AT+CFUN=" + function_level, expected_result_prefix="OK")
+                break
             except:
                 pass
         else:
             raise Exception("could not set modem function level")
 
         for _ in range(15):
-            time.sleep(0.2)
             try:
                 result = self.send_at_cmd("AT+CFUN?")
                 if result == "+CFUN: " + function_level:
@@ -170,7 +161,6 @@ class Modem(ModemInterface):
         if self.debug: print("\n>> getting IMSI")
         result = None
         for _ in range(3):
-            time.sleep(0.2)
             try:
                 result = self.send_at_cmd(get_imsi_cmd, expected_result_prefix="")
                 if len(result) == IMSI_LEN:
@@ -189,21 +179,19 @@ class Modem(ModemInterface):
         """
         Get received signal quality parameters.
         """
-
-        get_signalquality_cmd = "AT+CESQ"
+        expected_result_len = "+CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>".split(',')
+        get_signal_quality_cmd = "AT+CESQ"
         if self.debug:
             print("\n>> getting signal quality")
         for _ in range(3):
-            time.sleep(0.2)
             try:
-                result = self.send_at_cmd(get_signalquality_cmd)
-                if result.startswith("+CESQ"):
+                result = self.send_at_cmd(get_signal_quality_cmd).split(',')
+                if len(result) == expected_result_len:
                     break
             except:
                 pass
         else:
             raise Exception("getting signal quality failed")
 
-        result = result.split(',')
         # +CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>
         return "RSRQ: {}, RSRP: {}".format(result[4], result[5])
