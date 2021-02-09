@@ -255,11 +255,13 @@ class SimProtocol:
 
         at_cmd = 'AT+CSIM={},"{}"'.format(len(cmd), cmd.upper())
         result = self.modem.send_at_cmd(at_cmd)
-
-        if not result.startswith("+CSIM: ") or len(result) < len("+CSIM: 4,xxxx"):
+        if not result.startswith("+CSIM: ") or not ',' in result:
             raise Exception("invalid response for AT+CSIM command: {}".format(repr(result)))
 
         response = result.split(',')[1]
+        if len(response) < 4:
+            raise Exception("invalid response for AT+CSIM command: {}".format(repr(result)))
+
         data = b''
         code = response[-4:]
         if len(response) > 4:
