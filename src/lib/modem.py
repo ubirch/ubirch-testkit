@@ -63,6 +63,16 @@ class Modem(ModemInterface):
             return False
 
     def send_at_cmd(self, cmd: str, expected_result_prefix: str = None, max_retries: int = 1) -> str:
+        """
+        Sends an AT command to the modem. This method uses the `send_at_cmd` method of LTE. It additionally filters 
+        its output for unsolicited messages and potentially retries if AT command returned an error or invalid response.
+        Throws an exception if all attempts fail.
+        :param cmd: AT command to send to modem
+        :param expected_result_prefix: the return value of LTE.send_at_cmd is
+            parsed by this value, if None it is extracted from the command
+        :param max_retries: the number of retries in case of an error or invalid response
+        :return: AT response
+        """
         at_prefix = "AT"
         if not cmd.startswith(at_prefix):
             raise Exception('use only for AT+ prefixed commands')
@@ -87,13 +97,12 @@ class Modem(ModemInterface):
 
     def _send_at_cmd(self, cmd: str, expected_result_prefix: str) -> str:
         """
-        Sends AT command. This function extends the `send_at_command` method of
+        Sends AT command. This method uses the `send_at_cmd` method of
         LTE. It additionally filters its output for unsolicited messages.
+        Throws an exception if the sent command returns an error or invalid response.
         :param cmd: command to send
-        :param expected_result_prefix: the return value of LTE.send_at_cmd is
-            parsed by this value, if None it is extracted from the command
-        :return: response message, None if it was a general error or just
-            unsolicited messages
+        :param expected_result_prefix: the return value of LTE.send_at_cmd is parsed by this value
+        :return: response message
         """
         result = [k for k in self.lte.send_at_cmd(cmd).split('\r\n') if len(k.strip()) > 0]
         if self.debug:
@@ -126,7 +135,7 @@ class Modem(ModemInterface):
         else:
             raise Exception("command {} returned no AT response".format(cmd))
 
-    def set_function_level(self, function_level: str):
+    def set_function_level(self, function_level: str) -> None:
         if self.debug: print("\tsetting function level: {}".format(function_level))
         self.send_at_cmd("AT+CFUN=" + function_level, expected_result_prefix="OK", max_retries=10)
 
@@ -134,7 +143,12 @@ class Modem(ModemInterface):
         result = self.send_at_cmd("AT+CFUN?", max_retries=10)
         return result.lstrip("+CFUN: ")
 
-    def reset(self):
+    def reset(self) -> None:
+        """
+        Performs a hardware reset on the cellular modem. This function can take more than 5 seconds to return
+        as it waits for the modem to shutdown, reboot and become responsive again.
+        Throws an exception if reset fails.
+        """
         function_level = "1"
 
         if self.debug: print("\twaiting for reset to finish")
@@ -167,12 +181,12 @@ class Modem(ModemInterface):
         """
         Get received signal quality parameters.
         """
-        EXPECTED_RESULT_LEN = "+CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>".split(',')
+        expected_result_len = len("+CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>".split(','))
         get_signal_quality_cmd = "AT+CESQ"
 
         if self.debug: print("\n>> getting signal quality")
         result = self.send_at_cmd(get_signal_quality_cmd, max_retries=10).split(',')
-        if len(result) != EXPECTED_RESULT_LEN:
+        if len(result) != expected_result_len:
             raise Exception("received invalid response: {}".format(result))
 
         # +CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>
