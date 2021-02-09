@@ -62,7 +62,7 @@ class Modem(ModemInterface):
         except:
             return False
 
-    def send(self, cmd: str, expected_result_prefix: str = None, max_retries: int = 1) -> str:  # todo find better name
+    def send(self, cmd: str, expected_result_prefix: str = None, max_retries: int = 10) -> str:  # todo find better name
         e = Exception()
         for _ in range(max_retries):
             try:
