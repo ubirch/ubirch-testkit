@@ -311,8 +311,7 @@ class SimProtocol:
         Select the SIM application to execute secure operations.
         """
         if self.DEBUG: print("\n>> selecting SIM application")
-        for _ in range(2):
-            time.sleep(0.2)
+        for _ in range(3):
             data, code = self._execute(STK_APP_SELECT.format(APP_DF))
             if code == STK_OK:
                 return True
