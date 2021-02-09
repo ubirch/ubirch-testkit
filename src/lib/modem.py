@@ -56,14 +56,21 @@ class Modem(ModemInterface):
         Checks Generic SIM Access.
         :return: if SIM access was successful
         """
-        for _ in range(3):
+        try:
+            self.send("AT+CSIM=?", expected_result_prefix="OK")
+            return True
+        except:
+            return False
+
+    def send(self, cmd: str, expected_result_prefix: str = None, max_retries: int = 1) -> str:  # todo find better name
+        e = Exception()
+        for _ in range(max_retries):
             try:
-                self.send_at_cmd("AT+CSIM=?", expected_result_prefix="OK")
-                return True
-            except:
+                return self.send_at_cmd(cmd, expected_result_prefix)
+            except Exception as e:
                 pass
         else:
-            return False
+            raise e
 
     def send_at_cmd(self, cmd: str, expected_result_prefix: str = None) -> str:
         """
@@ -128,23 +135,12 @@ class Modem(ModemInterface):
         self.lte.init()
 
         if self.debug: print("\tsetting function level")
-        for _ in range(15):
-            try:
-                self.send_at_cmd("AT+CFUN=" + function_level, expected_result_prefix="OK")
-                break
-            except:
-                pass
-        else:
+        result = self.send("AT+CFUN=" + function_level, expected_result_prefix="OK")
+        if result != "OK":
             raise Exception("could not set modem function level")
 
-        for _ in range(15):
-            try:
-                result = self.send_at_cmd("AT+CFUN?")
-                if result == "+CFUN: " + function_level:
-                    break
-            except:
-                pass
-        else:
+        result = self.send("AT+CFUN?")
+        if result != "+CFUN: " + function_level:
             raise Exception("could not get modem function level")
 
         if self.debug: print("\twaiting for SIM to be responsive")
@@ -159,39 +155,23 @@ class Modem(ModemInterface):
         get_imsi_cmd = "AT+CIMI"
 
         if self.debug: print("\n>> getting IMSI")
-        result = None
-        for _ in range(3):
-            try:
-                result = self.send_at_cmd(get_imsi_cmd, expected_result_prefix="")
-                if len(result) == IMSI_LEN:
-                    try:
-                        int(result)  # throws ValueError if IMSI has invalid syntax for integer with base 10
-                    except ValueError:
-                        continue
-                    else:
-                        return result
-            except:
-                pass
-        else:
-            raise Exception("getting IMSI failed: {}".format(repr(result)))
+        result = self.send(get_imsi_cmd, expected_result_prefix="")
+        if len(result) != IMSI_LEN:
+            raise Exception("received invalid response: {}".format(result))
+        int(result)  # throws ValueError if IMSI has invalid syntax for integer with base 10
+        return result
 
     def get_signal_quality(self) -> str:
         """
         Get received signal quality parameters.
         """
-        expected_result_len = "+CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>".split(',')
+        EXPECTED_RESULT_LEN = "+CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>".split(',')
         get_signal_quality_cmd = "AT+CESQ"
-        if self.debug:
-            print("\n>> getting signal quality")
-        for _ in range(3):
-            try:
-                result = self.send_at_cmd(get_signal_quality_cmd).split(',')
-                if len(result) == expected_result_len:
-                    break
-            except:
-                pass
-        else:
-            raise Exception("getting signal quality failed")
+
+        if self.debug: print("\n>> getting signal quality")
+        result = self.send(get_signal_quality_cmd).split(',')
+        if len(result) != EXPECTED_RESULT_LEN:
+            raise Exception("received invalid response: {}".format(result))
 
         # +CESQ: <rxlev>,<ber>,<rscp>,<ecno>,<rsrq>,<rsrp>
         return "RSRQ: {}, RSRP: {}".format(result[4], result[5])
