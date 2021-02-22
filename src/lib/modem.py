@@ -131,9 +131,9 @@ class Modem(ModemInterface):
         if retval is not None:
             return retval
         elif error is not None:
-            raise Exception("command {} returned {}".format(cmd, error))
+            raise Exception("command {} returned {}:\n{}".format(cmd, error, repr(result)))
         else:
-            raise Exception("command {} returned no AT response".format(cmd))
+            raise Exception("command {} returned no AT response:\n{}".format(cmd, repr(result)))
 
     def set_function_level(self, function_level: str) -> None:
         if self.debug: print("\tsetting function level: {}".format(function_level))
