@@ -16,4 +16,5 @@
 
 ## [1.1] - 2020-07-06
 ### Added
-- First version of Ubirch Testkit application, which works on a GPy and a PySense or PyTrack from PyCom (version 1.20.2.rc10) together with a NB-IoT SIM card with connectivity from 1nce. This application can be used to test the "Ubirch protocol" in general, and espacially to test "Ubirch on a SIM". You can build your own ubirch application based on this. This Version runs with pycom firmware version 1.20.2.rc10 and modem firmware version 41019 (NB-IoT).
+- First version of Ubirch Testkit application, which works on a GPy and a PySense or PyTrack from PyCom together with a NB-IoT SIM card with connectivity from 1nce. This application can be used to test the "Ubirch protocol" in general, and espacially to test "Ubirch on a SIM". You can build your own ubirch application based on this.
+- This Version runs with pycom firmware version 1.20.2.rc10 and modem firmware version 41019 (NB-IoT).
