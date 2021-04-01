@@ -1,7 +1,8 @@
-from binascii import hexlify
-import machine
 import sys
 import time
+from binascii import hexlify
+
+import machine
 
 
 class Connection:
@@ -18,7 +19,7 @@ class Connection:
 
 class NB_IoT(Connection):
 
-    def __init__(self, lte: LTE, apn: str, band: int or None, attachtimeout: int, connecttimeout:int):
+    def __init__(self, lte: LTE, apn: str, band: int or None, attachtimeout: int, connecttimeout: int):
         self.lte = lte
         self.apn = apn
         self.band = band
@@ -30,8 +31,9 @@ class NB_IoT(Connection):
             return
 
         sys.stdout.write("\tattaching to the NB-IoT network")
-        # since we disable unsolicited CEREG messages in modem.py, as they interfere with AT communication with the SIM via CSIM commands,
-        # we are required to use an attach method that does not require cereg messages, for pycom that is legacyattach=false
+        # we need to use lte.attach method with legacyattach=False, because
+        # the pycom firmware fails to parse the CEREG-responses in firmware
+        # v1.20.2.r2 and the following
         self.lte.attach(band=self.band, apn=self.apn,legacyattach=False)
         i = 0
         while not self.lte.isattached() and i < self.attachtimeout:
@@ -129,7 +131,8 @@ def get_connection(lte: LTE, cfg: dict) -> Connection:
         connectionInstance = WIFI(cfg['networks'])
         return connectionInstance
     elif cfg['connection'] == "nbiot":
-        connectionInstance = NB_IoT(lte, cfg['apn'], cfg['band'],cfg['nbiot_attach_timeout'],cfg['nbiot_connect_timeout'])
+        connectionInstance = NB_IoT(lte, cfg['apn'], cfg['band'], cfg['nbiot_attach_timeout'],
+                                    cfg['nbiot_connect_timeout'])
         return connectionInstance
     else:
         raise Exception(

@@ -8,7 +8,8 @@ import machine
 
 # set watchdog: if execution hangs/takes longer than 'timeout' an automatic reset is triggered
 # we need to do this as early as possible in case an import cause a freeze for some reason
-wdt = machine.WDT(timeout=5 * 60 * 1000)  # we set it to 5 minutes here and will reconfigure it when we have loaded the configuration
+wdt = machine.WDT(
+    timeout=5 * 60 * 1000)  # we set it to 5 minutes here and will reconfigure it when we have loaded the configuration
 wdt.feed()  # we only feed it once since this code hopefully finishes with deepsleep (=no WDT) before reset_after_ms
 
 from binascii import hexlify, b2a_base64
@@ -16,7 +17,7 @@ from config import load_config
 from connection import get_connection, NB_IoT
 from error_handling import *
 from helpers import *
-from modem import get_imsi
+from modem import Modem
 from network import LTE
 from os import listdir
 from realtimeclock import *
@@ -58,15 +59,16 @@ error_handler = ErrorHandler(file_logging_enabled=True, max_file_size_kb=max_fil
 try:
     # initialize modem
     lte = LTE()
+    modem = Modem(lte, error_handler)
 
     try:
         # reset modem on any non-normal loop (modem might be in a strange state)
         if not COMING_FROM_DEEPSLEEP:
             print("++ not coming from sleep, resetting modem")
-            reset_modem(lte)
+            modem.reset()
 
         print("++ getting IMSI")
-        imsi = get_imsi(lte)
+        imsi = modem.get_imsi()
         print("IMSI: " + imsi)
     except Exception as e:
         print("\tERROR setting up modem")
@@ -97,16 +99,16 @@ try:
         while True:
             machine.idle()
 
-    #configure watchdog and connection timeouts according to config and reset reason
+    # configure watchdog and connection timeouts according to config and reset reason
     if COMING_FROM_DEEPSLEEP:
-        #this is a normal boot after sleep
-        wdt.init(cfg["watchdog_timeout"]*1000)
+        # this is a normal boot after sleep
+        wdt.init(cfg["watchdog_timeout"] * 1000)
         if isinstance(connection, NB_IoT):
             connection.setattachtimeout(cfg["nbiot_attach_timeout"])
             connection.setconnecttimeout(cfg["nbiot_connect_timeout"])
     else:
-        #this is a boot after powercycle or error: use extended timeouts
-        wdt.init(cfg["watchdog_extended_timeout"]*1000)
+        # this is a boot after powercycle or error: use extended timeouts
+        wdt.init(cfg["watchdog_extended_timeout"] * 1000)
         if isinstance(connection, NB_IoT):
             connection.setattachtimeout(cfg["nbiot_extended_attach_timeout"])
             connection.setconnecttimeout(cfg["nbiot_extended_connect_timeout"])
@@ -138,7 +140,7 @@ try:
     # initialise ubirch SIM protocol
     print("++ initializing ubirch SIM protocol")
     try:
-        sim = ubirch.SimProtocol(lte=lte, at_debug=lvl_debug)
+        sim = ubirch.SimProtocol(modem=modem, at_debug=lvl_debug)
     except Exception as e:
         error_handler.log(e, COLOR_SIM_FAIL, reset=True)
 
@@ -242,7 +244,7 @@ try:
         # send data message to data service, with reconnects/modem resets if necessary
         print("++ sending data")
         try:
-            status_code, content = send_backend_data(sim, lte, connection, api.send_data, uuid, message)
+            status_code, content = send_backend_data(sim, modem, connection, api.send_data, uuid, message)
         except Exception as e:
             error_handler.log(e, COLOR_MODEM_FAIL, reset=True)
 
@@ -253,7 +255,7 @@ try:
         # send UPP to the ubirch authentication service to be anchored to the blockchain
         print("++ sending UPP")
         try:
-            status_code, content = send_backend_data(sim, lte, connection, api.send_upp, uuid, upp)
+            status_code, content = send_backend_data(sim, modem, connection, api.send_upp, uuid, upp)
         except Exception as e:
             error_handler.log(e, COLOR_MODEM_FAIL, reset=True)
 

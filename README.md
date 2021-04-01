@@ -62,7 +62,9 @@ Before you start, you should follow these instructions to update your pycom boar
          - enable Pybytes/SmartConfig support: no/&#9744;
          - Advanced Settings:
            - Information: `Device Type:` `GPy`
-           - Type / Version: `pybytes` **`1.20.2.rc10`**
+           - Type / Version: `pybytes` **`1.20.2.r4`**
+4. [Update modem firmware](https://docs.pycom.io/updatefirmware/ltemodem/)
+    - Please follow the instructions on the linked site.
 
 You can now proceed to set up your environment, so you can upload code to the GPy and access it using the 'Pymakr'
 console.
