@@ -12,7 +12,7 @@
 - Rework of modem communication module.
 
 ### Known issues
-- When network coverage is low the modem gets quite busy leading to flaws in the communication between modem and esp. A solution to this problem could be to position the device in a place with better network coverage.
+- When the mobile network signal is weak the modem gets quite busy with handling connection losses and reconnects. This reduces the reliability of the communication between modem and the microprocessor. Characteristic of this situation are SIM commands failing with APDU exceptions such as '6D00' (unsupported command) and similar because of transmission errors. A solution to this problem is to position the device in a place with better network coverage.
 
 ## [1.1] - 2020-07-06
 ### Added
