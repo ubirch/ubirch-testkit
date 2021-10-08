@@ -96,10 +96,11 @@ It is now time to get the Testkit code and load it into your IDE:
 
 1. Clone this repository in a directory of your choice or download and extract
    a [release zip file](https://github.com/ubirch/ubirch-testkit/releases).
+      $ 
+      ```git clone https://github.com/ubirch/ubirch-testkit.git
       ```
-      $ git clone https://github.com/ubirch/ubirch-testkit.git
-      ```
-
+1. ```sudo usermod -a -G dialout $USER
+```
 1. Add the project directory to your IDE's working directory:
     - Atom: `File` -> `Add Project Folder`
     - VS Code: `File` -> `Open Folder`
